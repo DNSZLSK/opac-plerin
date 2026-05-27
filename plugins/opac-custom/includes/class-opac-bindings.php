@@ -44,6 +44,38 @@ class OPAC_Bindings {
             'get_value_callback' => [ __CLASS__, 'get_event_meta' ],
             'uses_context'       => [ 'postId', 'postType' ],
         ] );
+
+        // Source globale pour lire n'importe quelle option OPAC depuis un bloc.
+        // Args: { option: 'opac_home_hero_title' }
+        // Usage : permet de binder un wp:heading ou wp:paragraph sur une
+        // valeur du control panel admin (M10 autonomie).
+        register_block_bindings_source( 'opac/site-option', [
+            'label'              => __( 'OPAC Site Option', 'opac-custom' ),
+            'get_value_callback' => [ __CLASS__, 'get_site_option' ],
+            'uses_context'       => [],
+        ] );
+    }
+
+    public static function get_site_option( $source_args, $block_instance, $attribute_name ) {
+        $key = isset( $source_args['option'] ) ? sanitize_key( $source_args['option'] ) : '';
+        if ( ! $key || ! class_exists( 'OPAC_Settings' ) ) {
+            return '';
+        }
+
+        // Helpers computed : valeurs derivees (count, calcul d'annees).
+        if ( $key === 'stats_ateliers_resolved' ) {
+            return (string) OPAC_Settings::stats_ateliers();
+        }
+        if ( $key === 'stats_years_since_founding' ) {
+            return (string) OPAC_Settings::years_since_founding();
+        }
+
+        // Securite : on n'autorise que les options prefixees opac_.
+        if ( strpos( $key, 'opac_' ) !== 0 ) {
+            return '';
+        }
+        $value = OPAC_Settings::get( $key );
+        return is_scalar( $value ) ? (string) $value : '';
     }
 
     /**

@@ -37,26 +37,8 @@
         <h2 class="wp-block-heading opac-section-title has-display-font-family">Infos pratiques</h2>
         <!-- /wp:heading -->
 
-        <!-- wp:html -->
-        <div class="opac-infos-grid">
-            <div class="opac-info-card">
-                <h3>Adresse</h3>
-                <p>10A rue fleurie<br/>22190 Plérin-sur-Mer</p>
-            </div>
-            <div class="opac-info-card">
-                <h3>Secrétariat</h3>
-                <p>Lundi à vendredi<br/>14h15 à 17h45</p>
-            </div>
-            <div class="opac-info-card">
-                <h3>Téléphone</h3>
-                <p>Accueil : 02 96 74 53 08<br/>Administration : 06 74 47 98 53</p>
-            </div>
-            <div class="opac-info-card">
-                <h3>Email et réseaux</h3>
-                <p>contact@opacplerin.fr<br/><a href="#">Facebook</a> · <a href="#">Instagram (opac22190)</a></p>
-            </div>
-        </div>
-        <!-- /wp:html -->
+        <!-- Coordonnées centralisées : éditables via OPAC > Réglages > Coordonnées -->
+        <!-- wp:opac/coord-block {"variant":"infos"} /-->
 
         <!-- wp:html -->
         <div class="opac-partenaire">
@@ -68,9 +50,9 @@
         </div>
         <!-- /wp:html -->
 
-        <!-- wp:paragraph {"className":"opac-statuts-link","align":"center","style":{"spacing":{"margin":{"top":"24px"}}}} -->
-        <p class="has-text-align-center opac-statuts-link" style="margin-top:24px"><a href="#">Télécharger les statuts (PDF) →</a></p>
-        <!-- /wp:paragraph -->
+        <!-- Lien statuts PDF : URL editable via OPAC > Reglages > Coordonnees.
+             Le bloc serveur ne rend rien si l'URL est vide. -->
+        <!-- wp:opac/statuts-link /-->
 
     </section>
     <!-- /wp:group -->

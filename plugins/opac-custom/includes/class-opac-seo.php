@@ -227,27 +227,39 @@ class OPAC_SEO {
         ];
     }
 
+    /**
+     * Schema.org Organization, 100% piloté par le control panel admin
+     * (OPAC > Réglages > Coordonnées). Si l'asso change d'adresse ou
+     * de telephone, le JSON-LD reflete automatiquement.
+     */
     private static function build_organization() {
         $home = home_url( '/' );
+        $has_settings = class_exists( 'OPAC_Settings' );
+
+        $tel_raw   = $has_settings ? OPAC_Settings::get( 'opac_org_phone_accueil' ) : '02 96 74 53 08';
+        $tel_clean = '+33-' . ltrim( preg_replace( '/[^\d]/', '-', (string) $tel_raw ), '0' );
+
+        $founding = $has_settings ? (int) OPAC_Settings::get( 'opac_org_founding_year' ) : 1980;
+
         return [
             '@context'      => 'https://schema.org',
             '@type'         => 'Organization',
             '@id'           => $home . self::ORG_ID,
-            'name'          => 'Association OPAC',
+            'name'          => $has_settings ? OPAC_Settings::get( 'opac_org_name' ) : 'Association OPAC',
             'alternateName' => 'Office Plérinais d\'Action Culturelle',
-            'legalName'     => 'Association Office Plérinais d\'Action Culturelle',
+            'legalName'     => $has_settings ? OPAC_Settings::get( 'opac_org_legal_name' ) : 'Association Office Plérinais d\'Action Culturelle',
             'url'           => $home,
-            'telephone'     => '+33-2-96-74-53-08',
-            'email'         => 'contact@opacplerin.fr',
-            'foundingDate'  => '1980-11',
+            'telephone'     => $tel_clean,
+            'email'         => $has_settings ? OPAC_Settings::get( 'opac_org_email' ) : 'contact@opacplerin.fr',
+            'foundingDate'  => (string) $founding,
             'address'       => [
                 '@type'           => 'PostalAddress',
-                'streetAddress'   => '10A rue fleurie',
-                'postalCode'      => '22190',
-                'addressLocality' => 'Plérin-sur-Mer',
+                'streetAddress'   => $has_settings ? OPAC_Settings::get( 'opac_org_address_street' ) : '10A rue fleurie',
+                'postalCode'      => $has_settings ? OPAC_Settings::get( 'opac_org_address_postal' ) : '22190',
+                'addressLocality' => $has_settings ? OPAC_Settings::get( 'opac_org_address_city' )   : 'Plérin-sur-Mer',
                 'addressCountry'  => 'FR',
             ],
-            'areaServed'    => 'Plérin-sur-Mer',
+            'areaServed'    => $has_settings ? OPAC_Settings::get( 'opac_org_address_city' ) : 'Plérin-sur-Mer',
         ];
     }
 
