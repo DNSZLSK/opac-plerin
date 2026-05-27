@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class OPAC_Taxonomies {
 
     public static function register() {
-        // Périodes des stages (Toussaint, Hiver, Printemps, Été).
+        // Périodes des stages (Automne, Hiver, Printemps, Été).
         register_taxonomy( 'opac_period', 'opac_stage', [
             'labels' => [
                 'name' => __( 'Périodes', 'opac-custom' ),
@@ -79,7 +79,7 @@ class OPAC_Taxonomies {
     public static function seed_default_terms() {
         $defaults = [
             'opac_period' => [
-                'toussaint' => 'Vacances de Toussaint',
+                'automne' => 'Vacances d\'automne',
                 'hiver' => 'Vacances d\'hiver',
                 'printemps' => 'Vacances de printemps',
                 'ete' => 'Été',

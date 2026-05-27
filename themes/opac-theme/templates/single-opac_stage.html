@@ -1,0 +1,113 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+
+    <!-- Breadcrumb -->
+    <!-- wp:group {"align":"wide","className":"opac-breadcrumb-wrap","style":{"spacing":{"padding":{"top":"16px","right":"32px","bottom":"0","left":"32px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <div class="wp-block-group alignwide opac-breadcrumb-wrap" style="padding-top:16px;padding-right:32px;padding-bottom:0;padding-left:32px">
+        <!-- wp:opac/breadcrumb /-->
+    </div>
+    <!-- /wp:group -->
+
+    <!-- Detail (photo + content) -->
+    <!-- wp:group {"align":"wide","className":"opac-detail","style":{"spacing":{"padding":{"top":"24px","right":"32px","bottom":"40px","left":"32px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <div class="wp-block-group alignwide opac-detail" style="padding-top:24px;padding-right:32px;padding-bottom:40px;padding-left:32px">
+
+        <!-- Colonne gauche : photo placeholder -->
+        <!-- wp:group {"className":"opac-detail-photo opac-card-cover"} -->
+        <div class="wp-block-group opac-detail-photo opac-card-cover">
+            <!-- wp:group {"className":"opac-card-cover-fill"} -->
+            <div class="wp-block-group opac-card-cover-fill"></div>
+            <!-- /wp:group -->
+        </div>
+        <!-- /wp:group -->
+
+        <!-- Colonne droite : contenu -->
+        <!-- wp:group {"className":"opac-detail-content"} -->
+        <div class="wp-block-group opac-detail-content">
+
+            <!-- wp:post-title {"level":1,"className":"opac-detail-title","fontFamily":"display"} /-->
+
+            <!-- wp:paragraph {"className":"opac-detail-tagline","textColor":"muted","metadata":{"bindings":{"content":{"source":"opac/stage-meta","args":{"key":"opac_tagline"}}}}} -->
+            <p class="opac-detail-tagline has-muted-color has-text-color">Description longue du stage.</p>
+            <!-- /wp:paragraph -->
+
+            <!-- Info grid : date + public -->
+            <!-- wp:group {"className":"opac-info-grid","layout":{"type":"default"}} -->
+            <div class="wp-block-group opac-info-grid">
+
+                <!-- wp:group {"className":"opac-info-item","backgroundColor":"card"} -->
+                <div class="wp-block-group opac-info-item has-card-background-color has-background">
+                    <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
+                    <p class="opac-info-label has-muted-color has-text-color">Date</p>
+                    <!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"opac/stage-meta","args":{"key":"opac_date_debut","part":"month"}}}}} -->
+                    <p class="opac-info-value">Avr.</p>
+                    <!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+
+                <!-- wp:group {"className":"opac-info-item","backgroundColor":"card"} -->
+                <div class="wp-block-group opac-info-item has-card-background-color has-background">
+                    <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
+                    <p class="opac-info-label has-muted-color has-text-color">Public</p>
+                    <!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_public"}}}}} -->
+                    <p class="opac-info-value">Adultes</p>
+                    <!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+
+            </div>
+            <!-- /wp:group -->
+
+            <!-- Tarif séance -->
+            <!-- wp:group {"className":"opac-creneaux","backgroundColor":"card"} -->
+            <div class="wp-block-group opac-creneaux has-card-background-color has-background">
+                <!-- wp:paragraph {"className":"opac-creneaux-title","textColor":"muted"} -->
+                <p class="opac-creneaux-title has-muted-color has-text-color">Tarif séance</p>
+                <!-- /wp:paragraph -->
+                <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"opac/stage-meta","args":{"key":"opac_tarif_seance"}}}}} -->
+                <p class="opac-info-value">35 €</p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+
+            <!-- Tag Sur inscription (statique pour les stages) -->
+            <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} -->
+            <p class="opac-tag opac-tag-ok">Sur inscription</p>
+            <!-- /wp:paragraph -->
+
+            <!-- Boutons inscription + contact -->
+            <!-- wp:buttons {"className":"opac-detail-actions","style":{"spacing":{"margin":{"top":"16px"}}}} -->
+            <div class="wp-block-buttons opac-detail-actions" style="margin-top:16px">
+                <!-- wp:button {"className":"is-style-opac-primary"} -->
+                <div class="wp-block-button is-style-opac-primary"><a class="wp-block-button__link wp-element-button" href="#">S'inscrire</a></div>
+                <!-- /wp:button -->
+                <!-- wp:button {"className":"is-style-opac-secondary"} -->
+                <div class="wp-block-button is-style-opac-secondary"><a class="wp-block-button__link wp-element-button" href="/contact/">Poser une question</a></div>
+                <!-- /wp:button -->
+            </div>
+            <!-- /wp:buttons -->
+
+            <!-- Notice adhesion (statique) -->
+            <!-- wp:paragraph {"className":"opac-notice-adhesion","textColor":"muted"} -->
+            <p class="opac-notice-adhesion has-muted-color has-text-color">Adhésion annuelle requise (15 € Plérinais / 30 € extérieur / 10 € mineur), à régler sur place au secrétariat.</p>
+            <!-- /wp:paragraph -->
+
+            <!-- Notice speciale (vide par defaut, cachee si meta vide) -->
+            <!-- wp:paragraph {"className":"opac-detail-notice","metadata":{"bindings":{"content":{"source":"opac/stage-meta","args":{"key":"opac_notice"}}}}} -->
+            <p class="opac-detail-notice"></p>
+            <!-- /wp:paragraph -->
+
+        </div>
+        <!-- /wp:group -->
+
+    </div>
+    <!-- /wp:group -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

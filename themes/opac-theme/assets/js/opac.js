@@ -59,9 +59,43 @@
         });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCtaDropdown);
-    } else {
+    /**
+     * Tabs de filtrage des stages ephemeres par periode (archive page).
+     * Show/hide cards en jouant sur la classe opac-period-<slug> ajoutee
+     * au wrapper post WP par le filter post_class du plugin opac-custom.
+     */
+    function initStageTabs() {
+        var tabs = document.querySelectorAll('.opac-stage-tabs [data-period]');
+        if (!tabs.length) {
+            return;
+        }
+        var cards = document.querySelectorAll('.opac-stages-list > .wp-block-post');
+        if (!cards.length) {
+            return;
+        }
+
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                tabs.forEach(function (t) { t.classList.remove('is-active'); });
+                tab.classList.add('is-active');
+
+                var period = tab.getAttribute('data-period');
+                cards.forEach(function (card) {
+                    var match = period === 'all' || card.classList.contains('opac-period-' + period);
+                    card.style.display = match ? '' : 'none';
+                });
+            });
+        });
+    }
+
+    function initAll() {
         initCtaDropdown();
+        initStageTabs();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+        initAll();
     }
 })();

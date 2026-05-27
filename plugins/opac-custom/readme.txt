@@ -25,7 +25,7 @@ Plugin développé spécifiquement pour `opacplerin.fr` (Association OPAC, Offic
 
 = Taxonomies =
 
-* `opac_period` - Périodes des stages (Toussaint, Hiver, Printemps, Été).
+* `opac_period` - Périodes des stages (Automne, Hiver, Printemps, Été).
 * `opac_event_cat` - Catégories d'événements (Sortie, Expo, Association, Éphémère, Partenaire).
 * `opac_person_type` - Types de membre (Pédagogique, Administrative, Bureau, CA).
 * `opac_inscription_status` - Statut des inscriptions (En attente, Validée, Refusée, Liste d'attente).
@@ -38,7 +38,7 @@ Chaque CPT a ses méta fields enregistrés via `register_post_meta` avec `show_i
 
 1. Copier le dossier `opac-custom` dans `wp-content/plugins/`.
 2. Activer le plugin via le menu Extensions.
-3. Les termes par défaut des taxonomies (Toussaint, Printemps, En attente, etc.) sont seedés automatiquement à l'activation.
+3. Les termes par défaut des taxonomies (Automne, Printemps, En attente, etc.) sont seedés automatiquement à l'activation.
 
 == Compatibilité ==
 
