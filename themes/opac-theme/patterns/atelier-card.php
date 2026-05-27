@@ -11,8 +11,8 @@
 <!-- wp:group {"className":"opac-card opac-atelier-card","backgroundColor":"card","layout":{"type":"default"}} -->
 <div class="wp-block-group opac-card opac-atelier-card has-card-background-color has-background">
 
-    <!-- wp:group {"className":"opac-card-cover","backgroundColor":"accent-light","style":{"spacing":{"padding":{"top":"50px","bottom":"50px"}}}} -->
-    <div class="wp-block-group opac-card-cover has-accent-light-background-color has-background" style="padding-top:50px;padding-bottom:50px"></div>
+    <!-- wp:group {"className":"opac-card-cover","backgroundColor":"accent-light"} -->
+    <div class="wp-block-group opac-card-cover has-accent-light-background-color has-background"></div>
     <!-- /wp:group -->
 
     <!-- wp:group {"className":"opac-card-body","style":{"spacing":{"padding":{"top":"14px","right":"16px","bottom":"10px","left":"16px"}}}} -->
