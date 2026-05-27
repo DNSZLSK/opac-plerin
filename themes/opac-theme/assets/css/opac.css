@@ -664,4 +664,33 @@
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 16px !important;
     padding: 0 !important;
+    align-items: stretch !important;
+}
+
+/*
+ * Reset crucial : WP applique `:where(.is-layout-flow) > * {
+ * margin-block-start: 24px }` à tous les enfants d'un container flow
+ * sauf le premier. Sur une grille (où on utilise `gap` pour le
+ * spacing), ce margin crée une asymétrie : la première card reste
+ * en haut de sa cellule, les autres sont décalées de 24px vers le
+ * bas et stretchées en moins. Résultat : la card de gauche apparait
+ * plus haute que les autres. On reset.
+ */
+.opac-ateliers-grid > * {
+    margin: 0 !important;
+}
+
+/*
+ * Cards : flexbox vertical pour que le footer colle en bas même si
+ * le body est court. Garantit un alignement parfait du tarif/lien
+ * "Détails" en pied de toutes les cards de la rangée.
+ */
+.opac-card {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.opac-card-body,
+.opac-card > .wp-block-group:not(.opac-card-cover):not(.opac-card-footer) {
+    flex: 1 1 auto !important;
 }

@@ -20,12 +20,13 @@ if ( ! defined( 'OPAC_THEME_VERSION' ) ) {
 
 /**
  * Renvoie la version pour cache-busting d'un asset du thème.
- * En dev (WP_DEBUG ON), utilise filemtime pour invalider à chaque save.
- * En prod, retombe sur OPAC_THEME_VERSION.
+ * Utilise filemtime() quand le fichier existe (cache busté à chaque
+ * save). Retombe sur OPAC_THEME_VERSION si le fichier est introuvable.
+ * Fonctionne en dev comme en prod : pas de cache obsolète possible.
  */
 function opac_asset_version( $relative_path ) {
     $abs = get_template_directory() . '/' . ltrim( $relative_path, '/' );
-    if ( ( defined( 'WP_DEBUG' ) && WP_DEBUG ) && file_exists( $abs ) ) {
+    if ( file_exists( $abs ) ) {
         return (string) filemtime( $abs );
     }
     return OPAC_THEME_VERSION;
