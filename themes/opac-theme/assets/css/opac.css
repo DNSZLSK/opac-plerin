@@ -54,8 +54,8 @@
  * ---------------------------------------------------------------- */
 
 .opac-nav-logo-circle {
-    width: 36px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
     background: var(--opac-accent);
     border-radius: 50%;
     display: inline-flex;
@@ -63,7 +63,7 @@
     justify-content: center;
     color: #fff;
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 500;
     flex-shrink: 0;
     text-decoration: none;
@@ -658,12 +658,16 @@ a.opac-card-link:hover,
     gap: 16px;
 }
 
+/* M9 : !important sur les media queries pour vaincre la specificite
+   du fix M1 covers edge-to-edge (.opac-ateliers-grid base avec !important
+   ligne 1166+). Sans ces !important, la grille restait en 3 colonnes
+   sur mobile (bug signale par le directeur). */
 @media (max-width: 880px) {
-    .opac-ateliers-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opac-ateliers-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 }
 
 @media (max-width: 580px) {
-    .opac-ateliers-grid { grid-template-columns: 1fr; }
+    .opac-ateliers-grid { grid-template-columns: 1fr !important; }
     .opac-section-padded { padding: 32px 20px; }
     .opac-hero { padding: 40px 24px; }
     .opac-cta-band { padding: 28px 24px; }
@@ -880,6 +884,123 @@ a.opac-card-link:hover,
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     gap: 12px !important;
+}
+
+/* M9 : sur mobile etroit, .opac-info-grid (single atelier 2x2 infos)
+   passe en 1 colonne pour eviter l'ecrasement des cards Tarif/Public. */
+@media (max-width: 580px) {
+    .opac-info-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ========================================================================
+   M9 : Mobile fixes (header CTA, burger menu, overlay nav)
+   ======================================================================== */
+
+@media (max-width: 768px) {
+    /* Cache le dropdown CTA "S'inscrire" du header en mobile.
+       Les liens d'inscription restent accessibles via le menu burger
+       (Ateliers a l'annee + Ateliers ephemeres pointent vers les archives
+       d'ou on peut s'inscrire). */
+    .opac-header-wrapper .opac-cta {
+        display: none !important;
+    }
+}
+
+/* Burger menu (bouton ouvrir) - couleur et taille match design.
+   !important sur display pour vaincre la specificite WP responsive. */
+.wp-block-navigation__responsive-container-open {
+    color: var(--opac-ink) !important;
+    padding: 6px !important;
+    width: 40px !important;
+    height: 40px !important;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Force le burger visible en mobile (WP par defaut a un @media min-width:600px
+   qui le cache, donc on respecte ce breakpoint en miroir : visible sous 768px). */
+@media (max-width: 767px) {
+    .wp-block-navigation__responsive-container-open:not(.always-shown) {
+        display: flex !important;
+    }
+}
+
+.wp-block-navigation__responsive-container-open:hover {
+    color: var(--opac-accent) !important;
+}
+
+/* Overlay menu ouvert : fond crème, items espacés en colonne, font display */
+.wp-block-navigation__responsive-container.is-menu-open {
+    background-color: var(--opac-bg) !important;
+    color: var(--opac-ink) !important;
+}
+
+.wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__container {
+    gap: 8px !important;
+}
+
+.wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation-item__content {
+    font-family: var(--wp--preset--font-family--display, Georgia, serif);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--opac-ink) !important;
+    padding: 12px 0 !important;
+}
+
+.wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation-item__content:hover {
+    color: var(--opac-accent) !important;
+}
+
+.wp-block-navigation__responsive-container-close {
+    color: var(--opac-ink) !important;
+    width: 40px;
+    height: 40px;
+    padding: 6px !important;
+}
+
+/* Header fixed : visible a tout moment du scroll. Contrairement a sticky,
+   fixed est rendu sur un layer GPU compositor isole = pas de tremblement
+   subpixel au scroll (bug notoire sticky sur Safari iOS / Chromium mobile).
+   Compensation : padding-top sur main calcule en JS via --opac-header-h
+   pour eviter que le contenu remonte sous le header. */
+.wp-site-blocks > header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: var(--opac-card);
+}
+
+/* Compensation hauteur header : appliquee sur le main via var CSS set
+   par JS initStickyHeader(). Fallback 80px = hauteur typique (16+48+16). */
+.wp-site-blocks > main,
+.wp-site-blocks > .wp-block-group > main {
+    padding-top: var(--opac-header-h, 80px);
+}
+
+.opac-header-wrapper {
+    border-bottom: 0 !important;
+}
+
+/* Lisse le texte au scroll (anti-flou subpixel) */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Card footer atelier sur mobile : eviter overflow "Detail →" hors carte.
+   Reduit le padding lateral via container query (sur petits viewports). */
+@media (max-width: 580px) {
+    .opac-ateliers-grid .opac-card-footer {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+    .opac-ateliers-grid .opac-card-price,
+    .opac-ateliers-grid .opac-card-link {
+        font-size: 12px;
+    }
 }
 
 .opac-info-grid > * {
@@ -1171,6 +1292,16 @@ a.opac-card-link:hover,
     margin: 0 !important;
     align-items: stretch !important;
     list-style: none;
+}
+
+/* M9 : media queries DOIVENT venir APRES la declaration base avec !important,
+   sinon la cascade fait gagner la base meme avec !important sur le @media
+   (specificite egale + same source order = derniere gagne). */
+@media (max-width: 880px) {
+    .opac-ateliers-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 580px) {
+    .opac-ateliers-grid { grid-template-columns: 1fr !important; }
 }
 
 /* Reset des marges WP is-layout-flow sur tous les enfants de la grille

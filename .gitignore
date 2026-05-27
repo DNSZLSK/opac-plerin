@@ -21,8 +21,11 @@ plugins/akismet/
 plugins/wp-mail-smtp/        # config locale, à exclure
 plugins/contact-form-7/      # plugin tiers, géré via composer/admin
 
-# Uploads et upgrades (gérés hors versioning)
-uploads/
+# Uploads et upgrades (gérés hors versioning).
+# Exception M9 : uploads/.htaccess versionné (bloque PHP execution
+# dans le dossier uploads, security hardening).
+uploads/*
+!uploads/.htaccess
 upgrade/
 upgrade-temp-backup/
 languages/

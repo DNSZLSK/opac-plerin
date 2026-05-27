@@ -1,0 +1,23 @@
+# OPAC Plerin - Security : bloque l'execution de fichiers PHP dans uploads.
+# Defense en profondeur contre les uploads malveillants (RCE si fichier PHP
+# upload + execution serveur). Les fichiers media legitimes (img, pdf, etc.)
+# restent accessibles normalement.
+#
+# Pour Apache 2.4+
+<FilesMatch "\.(php|phtml|php3|php5|phps|pl|py|sh|cgi)$">
+    Require all denied
+</FilesMatch>
+
+# Fallback pour Apache 2.2 (au cas ou)
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.(php|phtml|php3|php5|phps|pl|py|sh|cgi)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# Pour nginx (prod OVH si applicable), ajouter au server block :
+#   location ~* /wp-content/uploads/.*\.(php|phtml|php3|php5|phps|pl|py|sh|cgi)$ {
+#       deny all;
+#       return 403;
+#   }

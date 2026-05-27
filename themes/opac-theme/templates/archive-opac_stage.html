@@ -22,15 +22,15 @@
     </section>
     <!-- /wp:group -->
 
-    <!-- Tabs filtres par période (JS client-side) -->
+    <!-- Tabs filtres par période (JS client-side, ARIA tablist pour A11y) -->
     <!-- wp:group {"align":"wide","className":"opac-stage-tabs","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"center"}} -->
-    <div class="wp-block-group alignwide opac-stage-tabs">
+    <div class="wp-block-group alignwide opac-stage-tabs" role="tablist" aria-label="Filtrer par période">
         <!-- wp:html -->
-        <button type="button" class="opac-tab is-active" data-period="all">Tous</button>
-        <button type="button" class="opac-tab" data-period="automne">Automne</button>
-        <button type="button" class="opac-tab" data-period="hiver">Hiver</button>
-        <button type="button" class="opac-tab" data-period="printemps">Printemps</button>
-        <button type="button" class="opac-tab" data-period="ete">Été</button>
+        <button type="button" class="opac-tab is-active" data-period="all" role="tab" aria-selected="true">Tous</button>
+        <button type="button" class="opac-tab" data-period="automne" role="tab" aria-selected="false">Automne</button>
+        <button type="button" class="opac-tab" data-period="hiver" role="tab" aria-selected="false">Hiver</button>
+        <button type="button" class="opac-tab" data-period="printemps" role="tab" aria-selected="false">Printemps</button>
+        <button type="button" class="opac-tab" data-period="ete" role="tab" aria-selected="false">Été</button>
         <!-- /wp:html -->
     </div>
     <!-- /wp:group -->
