@@ -23,6 +23,8 @@ class OPAC_Admin {
         add_action( 'manage_opac_atelier_posts_custom_column', [ __CLASS__, 'atelier_column_content' ], 10, 2 );
         add_filter( 'manage_opac_inscription_posts_columns', [ __CLASS__, 'inscription_columns' ] );
         add_action( 'manage_opac_inscription_posts_custom_column', [ __CLASS__, 'inscription_column_content' ], 10, 2 );
+        add_filter( 'post_row_actions', [ __CLASS__, 'inscription_row_actions' ], 10, 2 );
+        add_action( 'admin_notices', [ __CLASS__, 'inscription_action_notice' ] );
     }
 
     public static function enqueue_admin_assets( $hook ) {
@@ -97,6 +99,82 @@ class OPAC_Admin {
                 }
                 break;
         }
+    }
+
+    /**
+     * Row actions Valider / Refuser / Liste d'attente sur la liste admin
+     * des inscriptions. Chaque lien declenche admin_post_opac_insc_action
+     * (cf. OPAC_Inscriptions::handle_action) qui change le term de statut
+     * + envoie un email a l'inscrit.
+     *
+     * Les actions deja appliquees sont masquees (pas de "Valider" si deja
+     * validee), pour eviter les renvois d'email accidentels.
+     */
+    public static function inscription_row_actions( $actions, $post ) {
+        if ( ! $post || $post->post_type !== 'opac_inscription' ) {
+            return $actions;
+        }
+        if ( ! current_user_can( 'edit_posts' ) ) {
+            return $actions;
+        }
+
+        $current_terms = wp_get_object_terms( $post->ID, 'opac_inscription_status', [ 'fields' => 'slugs' ] );
+        $current = is_wp_error( $current_terms ) ? [] : (array) $current_terms;
+
+        $available = [
+            'validee'       => [ 'label' => __( 'Valider', 'opac-custom' ),         'class' => 'opac-row-valider' ],
+            'refusee'       => [ 'label' => __( 'Refuser', 'opac-custom' ),         'class' => 'opac-row-refuser' ],
+            'liste-attente' => [ 'label' => __( 'Liste d\'attente', 'opac-custom' ), 'class' => 'opac-row-attente' ],
+        ];
+
+        $new_actions = [];
+        foreach ( $available as $status => $meta ) {
+            if ( in_array( $status, $current, true ) ) {
+                continue;
+            }
+            $nonce = wp_create_nonce( 'opac_insc_action_' . $post->ID . '_' . $status );
+            $url = add_query_arg(
+                [
+                    'action'   => 'opac_insc_action',
+                    'id'       => $post->ID,
+                    'status'   => $status,
+                    '_wpnonce' => $nonce,
+                ],
+                admin_url( 'admin-post.php' )
+            );
+            $new_actions[ 'opac_' . $status ] = sprintf(
+                '<a class="%s" href="%s">%s</a>',
+                esc_attr( $meta['class'] ),
+                esc_url( $url ),
+                esc_html( $meta['label'] )
+            );
+        }
+
+        return array_merge( $new_actions, $actions );
+    }
+
+    /**
+     * Notice admin apres une action row (Valider/Refuser/Liste d'attente).
+     * Lue depuis ?opac_insc_done=<status> que handle_action ajoute au redirect.
+     */
+    public static function inscription_action_notice() {
+        if ( ! isset( $_GET['opac_insc_done'] ) || ! isset( $_GET['post_type'] ) || $_GET['post_type'] !== 'opac_inscription' ) {
+            return;
+        }
+        $status = sanitize_key( wp_unslash( $_GET['opac_insc_done'] ) );
+        $labels = [
+            'validee'       => __( 'Inscription validée. Un email a été envoyé à l\'inscrit.', 'opac-custom' ),
+            'refusee'       => __( 'Inscription refusée. Un email a été envoyé à l\'inscrit.', 'opac-custom' ),
+            'liste-attente' => __( 'Inscription placée en liste d\'attente. Un email a été envoyé à l\'inscrit.', 'opac-custom' ),
+        ];
+        $msg = $labels[ $status ] ?? '';
+        if ( ! $msg ) {
+            return;
+        }
+        printf(
+            '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
+            esc_html( $msg )
+        );
     }
 
     public static function register_dashboard_widget() {

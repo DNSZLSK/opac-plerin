@@ -61,6 +61,24 @@ class OPAC_Blocks {
             'attributes'      => [],
             'supports'        => [ 'html' => false ],
         ] );
+
+        register_block_type( 'opac/inscription-button', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_inscription_button' ],
+            'uses_context'    => [ 'postId', 'postType' ],
+            'attributes'      => [
+                'label'   => [ 'type' => 'string', 'default' => 'S\'inscrire' ],
+                'variant' => [ 'type' => 'string', 'default' => 'primary' ],
+            ],
+            'supports'        => [ 'html' => false ],
+        ] );
+
+        register_block_type( 'opac/inscription-form', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_inscription_form' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
     }
 
     /**
@@ -379,6 +397,235 @@ class OPAC_Blocks {
         $out .= '<button type="submit" class="opac-form-btn">' . esc_html__( 'Envoyer le message', 'opac-custom' ) . '</button>';
 
         $out .= '</form>';
+        return $out;
+    }
+
+    /**
+     * Bouton "S'inscrire" qui pointe vers /inscription/?atelier=X ou ?stage=X
+     * selon le contexte du post courant. Resout le pb : wp:button standard
+     * ne peut pas avoir une URL dynamique avec query arg dependant du post.
+     */
+    public static function render_inscription_button( $attrs, $content, $block ) {
+        $post_id = isset( $block->context['postId'] ) ? (int) $block->context['postId'] : (int) get_the_ID();
+        if ( ! $post_id ) {
+            return '';
+        }
+
+        $post_type = get_post_type( $post_id );
+        $param     = '';
+        if ( $post_type === 'opac_atelier' ) {
+            $param = 'atelier';
+        } elseif ( $post_type === 'opac_stage' ) {
+            $param = 'stage';
+        }
+
+        if ( ! $param ) {
+            return '';
+        }
+
+        $inscription_page = get_page_by_path( 'inscription' );
+        $base_url = $inscription_page ? get_permalink( $inscription_page ) : home_url( '/inscription/' );
+        $href     = add_query_arg( $param, $post_id, $base_url );
+
+        $label   = isset( $attrs['label'] )   ? (string) $attrs['label']   : __( 'S\'inscrire', 'opac-custom' );
+        $variant = isset( $attrs['variant'] ) ? sanitize_key( $attrs['variant'] ) : 'primary';
+
+        $btn_class = 'wp-block-button is-style-opac-' . esc_attr( $variant );
+
+        return sprintf(
+            '<div class="wp-block-buttons">'
+                . '<div class="%s">'
+                    . '<a class="wp-block-button__link wp-element-button" href="%s">%s</a>'
+                . '</div>'
+            . '</div>',
+            $btn_class,
+            esc_url( $href ),
+            esc_html( $label )
+        );
+    }
+
+    /**
+     * Formulaire d'inscription frontend.
+     *
+     * Pre-remplit le contexte depuis ?atelier=ID ou ?stage=ID dans l'URL.
+     * Si ni l'un ni l'autre : affiche un select de tous les ateliers/stages.
+     * Pour atelier a l'annee : select des creneaux disponibles parses depuis
+     * opac_creneaux_text (multilignes "Lundi 14h30 - 17h30").
+     *
+     * Securite : nonce + honeypot + checkbox RGPD obligatoire.
+     * Submit : POST vers admin-post.php, action=opac_inscription.
+     */
+    public static function render_inscription_form( $attrs, $content, $block ) {
+        $notice = '';
+        if ( isset( $_GET['envoye'] ) && $_GET['envoye'] === '1' ) {
+            $notice = '<div class="opac-form-notice is-success">'
+                . esc_html__( 'Votre demande d\'inscription a bien été enregistrée. Katell ou Laurence vous contactera prochainement pour confirmation.', 'opac-custom' )
+                . '</div>';
+        } elseif ( isset( $_GET['erreur'] ) ) {
+            $err = sanitize_key( wp_unslash( $_GET['erreur'] ) );
+            $err_labels = [
+                'champs'      => __( 'Merci de remplir tous les champs obligatoires.', 'opac-custom' ),
+                'email'       => __( 'L\'adresse email saisie n\'est pas valide.', 'opac-custom' ),
+                'atelier'     => __( 'Merci de sélectionner un atelier ou un stage.', 'opac-custom' ),
+                'rgpd'        => __( 'Vous devez accepter l\'utilisation de vos données pour soumettre la demande.', 'opac-custom' ),
+                'doublon'     => __( 'Une demande a déjà été enregistrée récemment. Merci de patienter quelques instants.', 'opac-custom' ),
+                'enregistrement' => __( 'L\'enregistrement a échoué. Merci de réessayer ou de nous contacter par téléphone.', 'opac-custom' ),
+                'nonce'       => __( 'Session expirée, merci de soumettre à nouveau le formulaire.', 'opac-custom' ),
+            ];
+            $msg = $err_labels[ $err ] ?? __( 'Une erreur est survenue.', 'opac-custom' );
+            $notice = '<div class="opac-form-notice is-error">' . esc_html( $msg ) . '</div>';
+        }
+
+        // Contexte pre-rempli depuis l'URL.
+        $atelier_id = isset( $_GET['atelier'] ) ? absint( $_GET['atelier'] ) : 0;
+        $stage_id   = isset( $_GET['stage'] )   ? absint( $_GET['stage'] )   : 0;
+
+        $context_html = '';
+        $hidden_inputs = '';
+        $creneaux_lines = [];
+
+        if ( $atelier_id && get_post_type( $atelier_id ) === 'opac_atelier' ) {
+            $titre  = get_the_title( $atelier_id );
+            $tarif  = (int) get_post_meta( $atelier_id, 'opac_tarif_annuel', true );
+            $cren   = (string) get_post_meta( $atelier_id, 'opac_creneaux_text', true );
+            if ( $cren ) {
+                $lines = preg_split( '/\r?\n/', $cren );
+                foreach ( $lines as $l ) {
+                    $l = trim( $l );
+                    if ( $l !== '' ) {
+                        $creneaux_lines[] = $l;
+                    }
+                }
+            }
+            $context_html = sprintf(
+                '<div class="opac-form-context">'
+                    . '<div class="opac-form-context-label">%s</div>'
+                    . '<div class="opac-form-context-name">%s</div>'
+                    . '%s'
+                . '</div>',
+                esc_html__( 'Inscription pour atelier à l\'année', 'opac-custom' ),
+                esc_html( $titre ),
+                $tarif > 0 ? '<div class="opac-form-context-tarif">' . sprintf( esc_html__( 'Tarif annuel : %d € + adhésion', 'opac-custom' ), $tarif ) . '</div>' : ''
+            );
+            $hidden_inputs = '<input type="hidden" name="opac_atelier_id" value="' . esc_attr( $atelier_id ) . '" />';
+        } elseif ( $stage_id && get_post_type( $stage_id ) === 'opac_stage' ) {
+            $titre = get_the_title( $stage_id );
+            $tarif = (int) get_post_meta( $stage_id, 'opac_tarif_seance', true );
+            $context_html = sprintf(
+                '<div class="opac-form-context">'
+                    . '<div class="opac-form-context-label">%s</div>'
+                    . '<div class="opac-form-context-name">%s</div>'
+                    . '%s'
+                . '</div>',
+                esc_html__( 'Inscription pour atelier éphémère', 'opac-custom' ),
+                esc_html( $titre ),
+                $tarif > 0 ? '<div class="opac-form-context-tarif">' . sprintf( esc_html__( 'Tarif séance : %d € + adhésion', 'opac-custom' ), $tarif ) . '</div>' : ''
+            );
+            $hidden_inputs = '<input type="hidden" name="opac_stage_id" value="' . esc_attr( $stage_id ) . '" />';
+        }
+
+        $action_url = esc_url( admin_url( 'admin-post.php' ) );
+        $nonce      = wp_nonce_field( 'opac_inscription_submit', 'opac_inscription_nonce', true, false );
+
+        $out  = $notice;
+        $out .= '<form class="opac-form-card opac-inscription-form" method="post" action="' . $action_url . '">';
+        $out .= '<input type="hidden" name="action" value="opac_inscription" />';
+        $out .= $nonce;
+        $out .= '<div class="opac-honeypot" aria-hidden="true">'
+            . '<label>Site web<input type="text" name="opac_hp_website" tabindex="-1" autocomplete="off" /></label>'
+            . '</div>';
+
+        $out .= $context_html;
+        $out .= $hidden_inputs;
+
+        // Si pas de contexte pre-rempli : select atelier/stage.
+        if ( ! $hidden_inputs ) {
+            $ateliers = get_posts( [
+                'post_type'      => 'opac_atelier',
+                'posts_per_page' => -1,
+                'post_status'    => 'publish',
+                'orderby'        => 'title',
+                'order'          => 'ASC',
+            ] );
+            $stages = get_posts( [
+                'post_type'      => 'opac_stage',
+                'posts_per_page' => -1,
+                'post_status'    => 'publish',
+                'orderby'        => 'title',
+                'order'          => 'ASC',
+            ] );
+
+            $out .= '<div class="opac-form-row"><label for="opac-cible">' . esc_html__( 'Atelier choisi', 'opac-custom' ) . ' *</label>';
+            $out .= '<select class="opac-form-input" id="opac-cible" name="opac_cible" required>';
+            $out .= '<option value="">' . esc_html__( 'Sélectionner...', 'opac-custom' ) . '</option>';
+            if ( $ateliers ) {
+                $out .= '<optgroup label="' . esc_attr__( 'Ateliers à l\'année', 'opac-custom' ) . '">';
+                foreach ( $ateliers as $a ) {
+                    $out .= '<option value="atelier:' . (int) $a->ID . '">' . esc_html( get_the_title( $a ) ) . '</option>';
+                }
+                $out .= '</optgroup>';
+            }
+            if ( $stages ) {
+                $out .= '<optgroup label="' . esc_attr__( 'Ateliers éphémères', 'opac-custom' ) . '">';
+                foreach ( $stages as $s ) {
+                    $out .= '<option value="stage:' . (int) $s->ID . '">' . esc_html( get_the_title( $s ) ) . '</option>';
+                }
+                $out .= '</optgroup>';
+            }
+            $out .= '</select></div>';
+        }
+
+        // Creneaux pour atelier a l'annee (si plusieurs disponibles).
+        if ( $atelier_id && count( $creneaux_lines ) > 0 ) {
+            $out .= '<div class="opac-form-row"><label for="opac-creneau">' . esc_html__( 'Créneau choisi', 'opac-custom' ) . ' *</label>';
+            $out .= '<select class="opac-form-input" id="opac-creneau" name="opac_creneau" required>';
+            $out .= '<option value="">' . esc_html__( 'Sélectionner un créneau...', 'opac-custom' ) . '</option>';
+            foreach ( $creneaux_lines as $line ) {
+                $out .= '<option value="' . esc_attr( $line ) . '">' . esc_html( $line ) . '</option>';
+            }
+            $out .= '</select></div>';
+        }
+
+        $out .= '<div class="opac-form-row-2">';
+        $out .= '<div class="opac-form-row"><label for="opac-nom">' . esc_html__( 'Nom', 'opac-custom' ) . ' *</label>'
+            . '<input class="opac-form-input" type="text" id="opac-nom" name="opac_nom" required /></div>';
+        $out .= '<div class="opac-form-row"><label for="opac-prenom">' . esc_html__( 'Prénom', 'opac-custom' ) . ' *</label>'
+            . '<input class="opac-form-input" type="text" id="opac-prenom" name="opac_prenom" required /></div>';
+        $out .= '</div>';
+
+        $out .= '<div class="opac-form-row-2">';
+        $out .= '<div class="opac-form-row"><label for="opac-email">' . esc_html__( 'Email', 'opac-custom' ) . ' *</label>'
+            . '<input class="opac-form-input" type="email" id="opac-email" name="opac_email" required /></div>';
+        $out .= '<div class="opac-form-row"><label for="opac-tel">' . esc_html__( 'Téléphone', 'opac-custom' ) . '</label>'
+            . '<input class="opac-form-input" type="tel" id="opac-tel" name="opac_telephone" /></div>';
+        $out .= '</div>';
+
+        // Type d'adhesion (info pratique pour rappel montant).
+        $out .= '<div class="opac-form-row"><label>' . esc_html__( 'Type d\'adhésion', 'opac-custom' ) . '</label>';
+        $out .= '<div class="opac-form-radios">';
+        $adhesions = [
+            'plerinais' => __( 'Plérinais (15 €)', 'opac-custom' ),
+            'exterieur' => __( 'Extérieur (30 €)', 'opac-custom' ),
+            'mineur'    => __( 'Mineur (10 €)', 'opac-custom' ),
+        ];
+        foreach ( $adhesions as $val => $lab ) {
+            $checked = ( $val === 'plerinais' ) ? ' checked' : '';
+            $out .= '<label class="opac-form-radio"><input type="radio" name="opac_adhesion" value="' . esc_attr( $val ) . '"' . $checked . ' /> ' . esc_html( $lab ) . '</label>';
+        }
+        $out .= '</div></div>';
+
+        $out .= '<div class="opac-form-row"><label for="opac-message">' . esc_html__( 'Message (optionnel)', 'opac-custom' ) . '</label>'
+            . '<textarea class="opac-form-input opac-form-textarea" id="opac-message" name="opac_message" rows="4"></textarea></div>';
+
+        // RGPD checkbox obligatoire.
+        $out .= '<div class="opac-form-rgpd"><label>'
+            . '<input type="checkbox" name="opac_rgpd" value="1" required /> '
+            . esc_html__( 'J\'accepte que ces données soient utilisées par l\'OPAC pour traiter ma demande d\'inscription (RGPD).', 'opac-custom' )
+            . '</label></div>';
+
+        $out .= '<button type="submit" class="opac-form-btn">' . esc_html__( 'Envoyer ma demande', 'opac-custom' ) . '</button>';
+        $out .= '</form>';
+
         return $out;
     }
 
