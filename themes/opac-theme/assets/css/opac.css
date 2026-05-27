@@ -578,32 +578,34 @@
 /*
  * Frame : juste le cadrage (dimensions + clip). Pas de background ici
  * pour ne pas écraser les couleurs preset WP ni les inline styles des
- * éléments fill internes.
+ * éléments fill internes. !important pour battre les règles WP par
+ * défaut sur is-layout-flow > * qui ajoutent margin-block-start.
  */
 .opac-img-frame,
 .opac-card-cover,
 .opac-atelier-hero,
 .opac-gallery-item,
 .opac-stage-cover {
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
     position: relative;
     flex-shrink: 0;
-    display: block;
+    display: block !important;
+    box-sizing: border-box;
 }
 
-.opac-card-cover    { height: 110px; }
-.opac-stage-cover   { height: 110px; }
-.opac-atelier-hero  { height: 280px; border-radius: var(--opac-radius); }
-.opac-gallery-item  { height: 100px; border-radius: 8px; }
+.opac-card-cover    { height: 110px !important; }
+.opac-stage-cover   { height: 110px !important; }
+.opac-atelier-hero  { height: 280px !important; border-radius: var(--opac-radius); }
+.opac-gallery-item  { height: 100px !important; border-radius: 8px; }
 
 /*
  * Fill : l'élément qui remplit le frame. Soit un div coloré (placeholder
  * en attendant la photo), soit une figure.wp-block-image avec l'image.
- * On force width/height 100% pour TOUS les enfants directs et le wrapper
- * figure que WordPress génère autour des img.
+ * Width/height 100% en !important pour battre le margin-block-start
+ * de WP qui s'applique à tous les .is-layout-flow > *.
  */
 .opac-img-frame > *,
 .opac-card-cover > *,
@@ -615,31 +617,51 @@
 .opac-atelier-hero .wp-block-image,
 .opac-gallery-item .wp-block-image,
 .opac-stage-cover .wp-block-image {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    display: block;
-    box-sizing: border-box;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    max-width: none !important;
+    flex: 1;
+    inset: 0;
 }
 
-/* Image proprement dite : object-fit pour gérer les ratios variables */
+/* Image : object-fit pour ratios variables */
 .opac-img-frame img,
 .opac-card-cover img,
 .opac-atelier-hero img,
 .opac-gallery-item img,
 .opac-stage-cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    display: block;
-    max-width: none;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
+    max-width: none !important;
 }
 
-/* Le fill placeholder (div coloré utilisé tant qu'aucune photo n'est uploadée) */
+/* Fill placeholder */
 .opac-card-cover-fill {
-    width: 100%;
-    height: 100%;
-    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Reset des paddings/margins inline-direction sur les cards et la grille
+   (WP n'en applique pas par défaut, mais ceinture+bretelles pour éviter
+   toute surprise avec des thèmes/plugins additionnels) */
+.opac-card {
+    padding: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.opac-ateliers-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    padding: 0 !important;
 }

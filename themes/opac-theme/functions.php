@@ -15,7 +15,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'OPAC_THEME_VERSION' ) ) {
-    define( 'OPAC_THEME_VERSION', '0.1.0' );
+    define( 'OPAC_THEME_VERSION', '0.2.0' );
+}
+
+/**
+ * Renvoie la version pour cache-busting d'un asset du thème.
+ * En dev (WP_DEBUG ON), utilise filemtime pour invalider à chaque save.
+ * En prod, retombe sur OPAC_THEME_VERSION.
+ */
+function opac_asset_version( $relative_path ) {
+    $abs = get_template_directory() . '/' . ltrim( $relative_path, '/' );
+    if ( ( defined( 'WP_DEBUG' ) && WP_DEBUG ) && file_exists( $abs ) ) {
+        return (string) filemtime( $abs );
+    }
+    return OPAC_THEME_VERSION;
 }
 
 add_action( 'after_setup_theme', static function () {
@@ -51,14 +64,14 @@ add_action( 'wp_enqueue_scripts', static function () {
         'opac-main',
         get_template_directory_uri() . '/assets/css/opac.css',
         [ 'opac-fonts' ],
-        OPAC_THEME_VERSION
+        opac_asset_version( 'assets/css/opac.css' )
     );
 
     wp_enqueue_script(
         'opac-main',
         get_template_directory_uri() . '/assets/js/opac.js',
         [],
-        OPAC_THEME_VERSION,
+        opac_asset_version( 'assets/js/opac.js' ),
         true
     );
 } );
