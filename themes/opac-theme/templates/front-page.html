@@ -7,15 +7,16 @@
     <!-- wp:group {"tagName":"section","align":"full","className":"opac-hero","backgroundColor":"hero","textColor":"card","layout":{"type":"constrained","contentSize":"720px","justifyContent":"left"}} -->
     <section class="wp-block-group alignfull opac-hero has-card-color has-hero-background-color has-text-color has-background">
 
-        <!-- wp:paragraph {"className":"opac-hero-badge"} -->
+        <!-- Hero : titres et intro lus depuis OPAC > Réglages > Saison + Page d'accueil -->
+        <!-- wp:paragraph {"className":"opac-hero-badge","metadata":{"bindings":{"content":{"source":"opac/site-option","args":{"option":"opac_home_saison_badge"}}}}} -->
         <p class="opac-hero-badge">Saison 2025 / 2026</p>
         <!-- /wp:paragraph -->
 
-        <!-- wp:heading {"className":"opac-hero-title","fontFamily":"display"} -->
+        <!-- wp:heading {"className":"opac-hero-title","fontFamily":"display","metadata":{"bindings":{"content":{"source":"opac/site-option","args":{"option":"opac_home_hero_title"}}}}} -->
         <h1 class="wp-block-heading opac-hero-title has-display-font-family">La culture au bout des doigts</h1>
         <!-- /wp:heading -->
 
-        <!-- wp:paragraph {"className":"opac-hero-intro"} -->
+        <!-- wp:paragraph {"className":"opac-hero-intro","metadata":{"bindings":{"content":{"source":"opac/site-option","args":{"option":"opac_home_hero_intro"}}}}} -->
         <p class="opac-hero-intro">Ateliers d'expression culturelle, activités éphémères et sorties pour tous les âges. Association OPAC, asso loi 1901 à Plérin-sur-Mer.</p>
         <!-- /wp:paragraph -->
 
@@ -30,11 +31,14 @@
         </div>
         <!-- /wp:buttons -->
 
+        <!-- Stats : 3 chiffres bindés sur OPAC > Réglages. Ateliers = count auto
+             si l'option opac_stats_ateliers_auto est cochée. Années = calcul
+             dynamique depuis l'année de fondation. -->
         <!-- wp:group {"className":"opac-hero-stats","layout":{"type":"flex","flexWrap":"wrap"}} -->
         <div class="wp-block-group opac-hero-stats">
             <!-- wp:group {"layout":{"type":"flex","orientation":"vertical"},"style":{"spacing":{"blockGap":"2px"}}} -->
             <div class="wp-block-group">
-                <!-- wp:paragraph {"className":"opac-stat-num","fontFamily":"display"} -->
+                <!-- wp:paragraph {"className":"opac-stat-num","fontFamily":"display","metadata":{"bindings":{"content":{"source":"opac/site-option","args":{"option":"stats_ateliers_resolved"}}}}} -->
                 <p class="opac-stat-num has-display-font-family">10</p>
                 <!-- /wp:paragraph -->
                 <!-- wp:paragraph {"className":"opac-stat-label"} -->
@@ -44,7 +48,7 @@
             <!-- /wp:group -->
             <!-- wp:group {"layout":{"type":"flex","orientation":"vertical"},"style":{"spacing":{"blockGap":"2px"}}} -->
             <div class="wp-block-group">
-                <!-- wp:paragraph {"className":"opac-stat-num","fontFamily":"display"} -->
+                <!-- wp:paragraph {"className":"opac-stat-num","fontFamily":"display","metadata":{"bindings":{"content":{"source":"opac/site-option","args":{"option":"opac_stats_adherents"}}}}} -->
                 <p class="opac-stat-num has-display-font-family">200+</p>
                 <!-- /wp:paragraph -->
                 <!-- wp:paragraph {"className":"opac-stat-label"} -->
@@ -54,7 +58,7 @@
             <!-- /wp:group -->
             <!-- wp:group {"layout":{"type":"flex","orientation":"vertical"},"style":{"spacing":{"blockGap":"2px"}}} -->
             <div class="wp-block-group">
-                <!-- wp:paragraph {"className":"opac-stat-num","fontFamily":"display"} -->
+                <!-- wp:paragraph {"className":"opac-stat-num","fontFamily":"display","metadata":{"bindings":{"content":{"source":"opac/site-option","args":{"option":"stats_years_since_founding"}}}}} -->
                 <p class="opac-stat-num has-display-font-family">46</p>
                 <!-- /wp:paragraph -->
                 <!-- wp:paragraph {"className":"opac-stat-label"} -->
@@ -225,44 +229,10 @@
         </div>
         <!-- /wp:group -->
 
-        <!-- wp:columns {"className":"opac-actus-columns"} -->
-        <div class="wp-block-columns opac-actus-columns">
-            <!-- wp:column -->
-            <div class="wp-block-column">
-                <!-- wp:group {"className":"opac-card","backgroundColor":"bg","style":{"spacing":{"padding":{"top":"20px","right":"20px","bottom":"20px","left":"20px"}},"border":{"radius":"10px"}}} -->
-                <div class="wp-block-group opac-card has-bg-background-color has-background" style="border-radius:10px;padding-top:20px;padding-right:20px;padding-bottom:20px;padding-left:20px">
-                    <!-- wp:paragraph {"className":"opac-event-date","textColor":"muted","style":{"typography":{"textTransform":"uppercase","letterSpacing":"0.06em"}}} -->
-                    <p class="opac-event-date has-muted-color has-text-color" style="text-transform:uppercase;letter-spacing:0.06em">Mai 2026</p>
-                    <!-- /wp:paragraph -->
-                    <!-- wp:paragraph {"className":"opac-card-name"} -->
-                    <p class="opac-card-name">Inscriptions saison 2025-2026 ouvertes</p>
-                    <!-- /wp:paragraph -->
-                    <!-- wp:paragraph {"className":"opac-actu-excerpt","textColor":"muted","style":{"typography":{"fontSize":"13px","lineHeight":"1.5"}}} -->
-                    <p class="opac-actu-excerpt has-muted-color has-text-color" style="font-size:13px;line-height:1.5">Les inscriptions pour la saison à venir sont ouvertes. Passez au secrétariat ou inscrivez-vous en ligne sur la page de l'atelier de votre choix.</p>
-                    <!-- /wp:paragraph -->
-                </div>
-                <!-- /wp:group -->
-            </div>
-            <!-- /wp:column -->
-            <!-- wp:column -->
-            <div class="wp-block-column">
-                <!-- wp:group {"className":"opac-card","backgroundColor":"bg","style":{"spacing":{"padding":{"top":"20px","right":"20px","bottom":"20px","left":"20px"}},"border":{"radius":"10px"}}} -->
-                <div class="wp-block-group opac-card has-bg-background-color has-background" style="border-radius:10px;padding-top:20px;padding-right:20px;padding-bottom:20px;padding-left:20px">
-                    <!-- wp:paragraph {"className":"opac-event-date","textColor":"muted","style":{"typography":{"textTransform":"uppercase","letterSpacing":"0.06em"}}} -->
-                    <p class="opac-event-date has-muted-color has-text-color" style="text-transform:uppercase;letter-spacing:0.06em">Juin 2026</p>
-                    <!-- /wp:paragraph -->
-                    <!-- wp:paragraph {"className":"opac-card-name"} -->
-                    <p class="opac-card-name">Exposition de fin de saison</p>
-                    <!-- /wp:paragraph -->
-                    <!-- wp:paragraph {"className":"opac-actu-excerpt","textColor":"muted","style":{"typography":{"fontSize":"13px","lineHeight":"1.5"}}} -->
-                    <p class="opac-actu-excerpt has-muted-color has-text-color" style="font-size:13px;line-height:1.5">Venez découvrir les réalisations des adhérents de tous nos ateliers. Vernissage ouvert à tous, entrée libre.</p>
-                    <!-- /wp:paragraph -->
-                </div>
-                <!-- /wp:group -->
-            </div>
-            <!-- /wp:column -->
-        </div>
-        <!-- /wp:columns -->
+        <!-- Section actualités : les 2 prochains événements à venir (Query Loop
+             interne). Si moins de 2 events futurs, fallback sur les 2 derniers
+             passés. Katell crée/modifie via /wp-admin > Agenda. -->
+        <!-- wp:opac/upcoming-events {"count":2} /-->
 
     </section>
     <!-- /wp:group -->
@@ -274,12 +244,13 @@
         <!-- wp:group {"className":"opac-cta-band-inner","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between","verticalAlignment":"center"}} -->
         <div class="wp-block-group opac-cta-band-inner">
 
+            <!-- CTA band : titre + texte lus depuis OPAC > Réglages > Saison + Page d'accueil -->
             <!-- wp:group {"layout":{"type":"flex","orientation":"vertical"},"style":{"spacing":{"blockGap":"4px"}}} -->
             <div class="wp-block-group">
-                <!-- wp:heading {"level":3,"className":"opac-cta-band-title","fontFamily":"display"} -->
+                <!-- wp:heading {"level":3,"className":"opac-cta-band-title","fontFamily":"display","metadata":{"bindings":{"content":{"source":"opac/site-option","args":{"option":"opac_home_cta_band_title"}}}}} -->
                 <h3 class="wp-block-heading opac-cta-band-title has-display-font-family">Inscription pour la saison 2025 / 2026</h3>
                 <!-- /wp:heading -->
-                <!-- wp:paragraph {"className":"opac-cta-band-desc"} -->
+                <!-- wp:paragraph {"className":"opac-cta-band-desc","metadata":{"bindings":{"content":{"source":"opac/site-option","args":{"option":"opac_home_cta_band_text"}}}}} -->
                 <p class="opac-cta-band-desc">Inscription en ligne, paiement sur place au secrétariat. Adhésion annuelle requise.</p>
                 <!-- /wp:paragraph -->
             </div>

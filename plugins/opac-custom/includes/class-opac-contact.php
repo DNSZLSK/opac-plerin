@@ -24,9 +24,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OPAC_Contact {
 
-    const ACTION       = 'opac_contact';
-    const RECIPIENT    = 'contact@opacplerin.fr';
-    const PAGE_SLUG    = 'contact';
+    const ACTION    = 'opac_contact';
+    const PAGE_SLUG = 'contact';
+
+    private static function recipient() {
+        return class_exists( 'OPAC_Settings' )
+            ? (string) OPAC_Settings::get( 'opac_org_email' )
+            : 'contact@opacplerin.fr';
+    }
 
     public static function register() {
         add_action( 'admin_post_' . self::ACTION, [ __CLASS__, 'handle_submit' ] );
@@ -66,14 +71,11 @@ class OPAC_Contact {
             exit;
         }
 
-        $subjects_labels = [
-            'renseignement' => 'Renseignement général',
-            'atelier-annee' => 'Inscription atelier à l\'année',
-            'ephemere'      => 'Atelier éphémère',
-            'adhesion'      => 'Adhésion',
-            'autre'         => 'Autre',
-        ];
-        $sujet_label = $subjects_labels[ $sujet ] ?? 'Renseignement général';
+        // Resolution label sujet via le panel admin (memes sujets que le form).
+        $subjects_labels = class_exists( 'OPAC_Settings' )
+            ? OPAC_Settings::contact_subjects()
+            : [ 'renseignement' => 'Renseignement général', 'autre' => 'Autre' ];
+        $sujet_label = $subjects_labels[ $sujet ] ?? reset( $subjects_labels );
 
         $subject_mail = sprintf( '[OPAC contact] %s - %s %s', $sujet_label, $prenom, $nom );
 
@@ -90,7 +92,7 @@ class OPAC_Contact {
             'Reply-To: ' . sprintf( '%s %s <%s>', $prenom, $nom, $email ),
         ];
 
-        $sent = wp_mail( self::RECIPIENT, $subject_mail, $body, $headers );
+        $sent = wp_mail( self::recipient(), $subject_mail, $body, $headers );
 
         if ( ! $sent ) {
             error_log( '[OPAC contact] wp_mail failed for ' . $email );

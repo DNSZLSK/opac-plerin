@@ -23,8 +23,13 @@ class OPAC_Inscriptions {
 
     const ACTION_SUBMIT = 'opac_inscription';
     const ACTION_ADMIN  = 'opac_insc_action';
-    const RECIPIENT     = 'contact@opacplerin.fr';
     const RATE_LIMIT_S  = 60;
+
+    private static function recipient() {
+        return class_exists( 'OPAC_Settings' )
+            ? (string) OPAC_Settings::get( 'opac_org_email' )
+            : 'contact@opacplerin.fr';
+    }
 
     public static function register() {
         // Form public.
@@ -221,61 +226,67 @@ class OPAC_Inscriptions {
             'Reply-To: ' . sprintf( '%s %s <%s>', $data['prenom'], $data['nom'], $data['email'] ),
         ];
 
-        $sent = wp_mail( self::RECIPIENT, $subject, $body, $headers );
+        $sent = wp_mail( self::recipient(), $subject, $body, $headers );
         if ( ! $sent ) {
             error_log( '[OPAC inscription] admin notification wp_mail failed for ID ' . $post_id );
         }
     }
 
+    /**
+     * Email a l'inscrit selon le statut choisi par Katell.
+     * Templates lus depuis OPAC_Settings (control panel admin), avec
+     * substitution des placeholders {prenom}, {nom}, {atelier}, {tarif},
+     * {adresse}, {tel}, {email}, {horaires}, {nom_asso}.
+     */
     private static function send_user_notification( $post_id, $status ) {
-        $nom         = (string) get_post_meta( $post_id, 'opac_insc_nom', true );
-        $prenom      = (string) get_post_meta( $post_id, 'opac_insc_prenom', true );
-        $email       = (string) get_post_meta( $post_id, 'opac_insc_email', true );
-        $cible_id    = (int) get_post_meta( $post_id, 'opac_insc_atelier_id', true );
-        $cible_titre = $cible_id ? get_the_title( $cible_id ) : '';
-
+        $email = (string) get_post_meta( $post_id, 'opac_insc_email', true );
         if ( ! $email || ! is_email( $email ) ) {
             return;
         }
 
-        $hello = sprintf( "Bonjour %s,\n\n", $prenom );
-        $foot  = "\n\n--\nAssociation OPAC - Office Plerinais d'Action Culturelle\n10A rue fleurie, 22190 Plerin-sur-Mer\n02 96 74 53 08 - contact@opacplerin.fr\n";
+        $cible_id    = (int) get_post_meta( $post_id, 'opac_insc_atelier_id', true );
+        $cible_titre = $cible_id ? get_the_title( $cible_id ) : '';
 
-        switch ( $status ) {
-            case 'validee':
-                $subject = sprintf( '[OPAC] Votre inscription à %s est validée', $cible_titre );
-                $body = $hello;
-                $body .= "Votre demande d'inscription pour \"{$cible_titre}\" a ete validee.\n\n";
-                $body .= "Le reglement (tarif de l'atelier + adhesion annuelle a l'association) s'effectue sur place au secretariat, en cheque, especes ou CB :\n";
-                $body .= "Lundi a vendredi, de 14h15 a 17h45.\n";
-                $body .= "10A rue fleurie, 22190 Plerin-sur-Mer.\n\n";
-                $body .= "A tres bientot !";
-                $body .= $foot;
-                break;
-
-            case 'refusee':
-                $subject = sprintf( '[OPAC] Concernant votre demande pour %s', $cible_titre );
-                $body = $hello;
-                $body .= "Nous vous remercions de l'interet porte a \"{$cible_titre}\".\n\n";
-                $body .= "Apres examen, nous ne pouvons pas donner suite favorablement a votre demande pour le moment.\n";
-                $body .= "N'hesitez pas a nous contacter au 02 96 74 53 08 pour en discuter ou nous orienter vers un autre atelier susceptible de vous interesser.\n\n";
-                $body .= "Bien cordialement,";
-                $body .= $foot;
-                break;
-
-            case 'liste-attente':
-                $subject = sprintf( '[OPAC] Votre inscription à %s : liste d\'attente', $cible_titre );
-                $body = $hello;
-                $body .= "L'atelier \"{$cible_titre}\" etant complet a ce jour, votre demande a ete enregistree en liste d'attente.\n\n";
-                $body .= "Nous vous recontacterons des qu'une place se libere.\n\n";
-                $body .= "Vous pouvez egalement nous contacter au 02 96 74 53 08 si vous souhaitez vous orienter vers un autre atelier.\n\n";
-                $body .= "Bien cordialement,";
-                $body .= $foot;
-                break;
-
-            default:
-                return;
+        $template_key = 'opac_email_' . str_replace( '-', '_', $status );
+        $template     = class_exists( 'OPAC_Settings' ) ? (string) OPAC_Settings::get( $template_key ) : '';
+        if ( ! $template ) {
+            return;
         }
+
+        // Resolution du tarif selon le type cible (atelier annuel ou stage).
+        $tarif = '';
+        if ( $cible_id ) {
+            if ( get_post_type( $cible_id ) === 'opac_atelier' ) {
+                $tarif = (int) get_post_meta( $cible_id, 'opac_tarif_annuel', true );
+                $tarif = $tarif > 0 ? $tarif . ' € / an' : '';
+            } elseif ( get_post_type( $cible_id ) === 'opac_stage' ) {
+                $tarif = (int) get_post_meta( $cible_id, 'opac_tarif_seance', true );
+                $tarif = $tarif > 0 ? $tarif . ' €' : '';
+            }
+        }
+
+        $vars = [];
+        if ( class_exists( 'OPAC_Settings' ) ) {
+            $vars = [
+                '{prenom}'   => (string) get_post_meta( $post_id, 'opac_insc_prenom', true ),
+                '{nom}'      => (string) get_post_meta( $post_id, 'opac_insc_nom', true ),
+                '{atelier}'  => $cible_titre,
+                '{tarif}'    => $tarif,
+                '{adresse}'  => OPAC_Settings::full_address(),
+                '{tel}'      => (string) OPAC_Settings::get( 'opac_org_phone_accueil' ),
+                '{email}'    => (string) OPAC_Settings::get( 'opac_org_email' ),
+                '{horaires}' => (string) OPAC_Settings::get( 'opac_org_hours' ),
+                '{nom_asso}' => (string) OPAC_Settings::get( 'opac_org_legal_name' ),
+            ];
+        }
+        $body = strtr( $template, $vars );
+
+        $subjects_map = [
+            'validee'       => sprintf( '[OPAC] Votre inscription à %s est validée', $cible_titre ),
+            'refusee'       => sprintf( '[OPAC] Concernant votre demande pour %s', $cible_titre ),
+            'liste-attente' => sprintf( '[OPAC] Votre inscription à %s : liste d\'attente', $cible_titre ),
+        ];
+        $subject = $subjects_map[ $status ] ?? '[OPAC] Votre inscription';
 
         $headers = [ 'Content-Type: text/plain; charset=UTF-8' ];
         $sent = wp_mail( $email, $subject, $body, $headers );

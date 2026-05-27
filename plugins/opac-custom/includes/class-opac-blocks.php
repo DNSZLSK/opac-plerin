@@ -79,6 +79,43 @@ class OPAC_Blocks {
             'attributes'      => [],
             'supports'        => [ 'html' => false ],
         ] );
+
+        register_block_type( 'opac/coord-block', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_coord_block' ],
+            'attributes'      => [
+                'variant' => [ 'type' => 'string', 'default' => 'compact' ],
+            ],
+            'supports'        => [ 'html' => false ],
+        ] );
+
+        register_block_type( 'opac/upcoming-events', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_upcoming_events' ],
+            'attributes'      => [
+                'count' => [ 'type' => 'number', 'default' => 2 ],
+            ],
+            'supports'        => [ 'html' => false ],
+        ] );
+
+        register_block_type( 'opac/statuts-link', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_statuts_link' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+    }
+
+    public static function render_statuts_link( $attrs, $content, $block ) {
+        $url = class_exists( 'OPAC_Settings' ) ? (string) OPAC_Settings::get( 'opac_org_statuts_pdf_url' ) : '';
+        if ( ! $url ) {
+            return '';
+        }
+        return sprintf(
+            '<p class="has-text-align-center opac-statuts-link" style="margin-top:24px"><a href="%s">%s</a></p>',
+            esc_url( $url ),
+            esc_html__( 'Télécharger les statuts (PDF) →', 'opac-custom' )
+        );
     }
 
     /**
@@ -351,13 +388,10 @@ class OPAC_Blocks {
             $notice = '<div class="opac-form-notice is-error" role="alert" aria-live="assertive">' . esc_html( $msg ) . '</div>';
         }
 
-        $subjects = [
-            'renseignement' => __( 'Renseignement général', 'opac-custom' ),
-            'atelier-annee' => __( 'Inscription atelier à l\'année', 'opac-custom' ),
-            'ephemere'      => __( 'Atelier éphémère', 'opac-custom' ),
-            'adhesion'      => __( 'Adhésion', 'opac-custom' ),
-            'autre'         => __( 'Autre', 'opac-custom' ),
-        ];
+        // Sujets dropdown : lus depuis le panel admin OPAC > Reglages.
+        $subjects = class_exists( 'OPAC_Settings' )
+            ? OPAC_Settings::contact_subjects()
+            : [ 'renseignement' => 'Renseignement général', 'autre' => 'Autre' ];
 
         $action_url = esc_url( admin_url( 'admin-post.php' ) );
         $nonce      = wp_nonce_field( 'opac_contact_submit', 'opac_contact_nonce', true, false );
@@ -603,10 +637,14 @@ class OPAC_Blocks {
         // Type d'adhesion (info pratique pour rappel montant).
         $out .= '<div class="opac-form-row"><label>' . esc_html__( 'Type d\'adhésion', 'opac-custom' ) . '</label>';
         $out .= '<div class="opac-form-radios">';
+        // Tarifs adhesion lus depuis le panel admin OPAC > Reglages.
+        $tarif_p = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_plerinais' ) : 15;
+        $tarif_e = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_exterieur' ) : 30;
+        $tarif_m = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_mineur' )    : 10;
         $adhesions = [
-            'plerinais' => __( 'Plérinais (15 €)', 'opac-custom' ),
-            'exterieur' => __( 'Extérieur (30 €)', 'opac-custom' ),
-            'mineur'    => __( 'Mineur (10 €)', 'opac-custom' ),
+            'plerinais' => sprintf( __( 'Plérinais (%d €)', 'opac-custom' ), $tarif_p ),
+            'exterieur' => sprintf( __( 'Extérieur (%d €)', 'opac-custom' ), $tarif_e ),
+            'mineur'    => sprintf( __( 'Mineur (%d €)', 'opac-custom' ), $tarif_m ),
         ];
         foreach ( $adhesions as $val => $lab ) {
             $checked = ( $val === 'plerinais' ) ? ' checked' : '';
@@ -626,6 +664,195 @@ class OPAC_Blocks {
         $out .= '<button type="submit" class="opac-form-btn">' . esc_html__( 'Envoyer ma demande', 'opac-custom' ) . '</button>';
         $out .= '</form>';
 
+        return $out;
+    }
+
+    /**
+     * Bloc coordonnees centralisees. Lit toutes les data depuis OPAC_Settings
+     * options (tel, email, adresse, horaires, reseaux, statuts). 3 variants :
+     *   - compact  : pour footer brand (nom + adresse simple)
+     *   - infos    : pour page Association (grid 2x2 cards)
+     *   - sidebar  : pour page Contact (4 cards verticales)
+     */
+    public static function render_coord_block( $attrs, $content, $block ) {
+        if ( ! class_exists( 'OPAC_Settings' ) ) {
+            return '';
+        }
+        $variant = isset( $attrs['variant'] ) ? sanitize_key( $attrs['variant'] ) : 'compact';
+
+        $street   = OPAC_Settings::get( 'opac_org_address_street' );
+        $postal   = OPAC_Settings::get( 'opac_org_address_postal' );
+        $city     = OPAC_Settings::get( 'opac_org_address_city' );
+        $tel_acc  = OPAC_Settings::get( 'opac_org_phone_accueil' );
+        $tel_adm  = OPAC_Settings::get( 'opac_org_phone_admin' );
+        $email    = OPAC_Settings::get( 'opac_org_email' );
+        $hours    = OPAC_Settings::get( 'opac_org_hours' );
+        $name     = OPAC_Settings::get( 'opac_org_name' );
+        $legal    = OPAC_Settings::get( 'opac_org_legal_name' );
+        $fb_url   = OPAC_Settings::get( 'opac_org_facebook_url' );
+        $ig_url   = OPAC_Settings::get( 'opac_org_instagram_url' );
+
+        // Construit le bloc reseaux (avec masquage si vide).
+        $reseaux_links = [];
+        if ( $fb_url ) {
+            $reseaux_links[] = '<a href="' . esc_url( $fb_url ) . '">' . esc_html__( 'Facebook', 'opac-custom' ) . '</a>';
+        }
+        if ( $ig_url ) {
+            $reseaux_links[] = '<a href="' . esc_url( $ig_url ) . '">' . esc_html__( 'Instagram', 'opac-custom' ) . '</a>';
+        }
+        $reseaux_html = $reseaux_links ? implode( ' · ', $reseaux_links ) : '<span class="opac-empty-inline">' . esc_html__( 'À venir', 'opac-custom' ) . '</span>';
+
+        switch ( $variant ) {
+            case 'infos':
+                // Page Association : 2x2 grid cards.
+                return sprintf(
+                    '<div class="opac-infos-grid">'
+                        . '<div class="opac-info-card"><h3>%s</h3><p>%s<br/>%s %s</p></div>'
+                        . '<div class="opac-info-card"><h3>%s</h3><p>%s</p></div>'
+                        . '<div class="opac-info-card"><h3>%s</h3><p>%s : %s<br/>%s : %s</p></div>'
+                        . '<div class="opac-info-card"><h3>%s</h3><p>%s<br/>%s</p></div>'
+                    . '</div>',
+                    esc_html__( 'Adresse', 'opac-custom' ),
+                    esc_html( $street ),
+                    esc_html( $postal ),
+                    esc_html( $city ),
+                    esc_html__( 'Secrétariat', 'opac-custom' ),
+                    esc_html( $hours ),
+                    esc_html__( 'Téléphone', 'opac-custom' ),
+                    esc_html__( 'Accueil', 'opac-custom' ),
+                    esc_html( $tel_acc ),
+                    esc_html__( 'Administration', 'opac-custom' ),
+                    esc_html( $tel_adm ),
+                    esc_html__( 'Email et réseaux', 'opac-custom' ),
+                    esc_html( $email ),
+                    $reseaux_html
+                );
+
+            case 'sidebar':
+                // Page Contact : 4 cards verticales.
+                return sprintf(
+                    '<div class="opac-info-card"><h3>%s</h3><p>%s<br/>%s %s</p></div>'
+                    . '<div class="opac-info-card"><h3>%s</h3><p>%s : %s<br/>%s : %s</p></div>'
+                    . '<div class="opac-info-card"><h3>%s</h3><p>%s</p></div>'
+                    . '<div class="opac-info-card"><h3>%s</h3><p>%s</p></div>',
+                    esc_html__( 'Adresse', 'opac-custom' ),
+                    esc_html( $street ),
+                    esc_html( $postal ),
+                    esc_html( $city ),
+                    esc_html__( 'Téléphone', 'opac-custom' ),
+                    esc_html__( 'Accueil', 'opac-custom' ),
+                    esc_html( $tel_acc ),
+                    esc_html__( 'Administration', 'opac-custom' ),
+                    esc_html( $tel_adm ),
+                    esc_html__( 'Secrétariat', 'opac-custom' ),
+                    esc_html( $hours ),
+                    esc_html__( 'Réseaux', 'opac-custom' ),
+                    $reseaux_html
+                );
+
+            case 'coord-only':
+                // Footer colonne 3 : tel + email + horaires.
+                return sprintf(
+                    '<p class="has-muted-color has-text-color" style="font-size:13px;line-height:1.7">%s<br/>%s<br/>%s</p>',
+                    esc_html( $tel_acc ),
+                    esc_html( $email ),
+                    esc_html( $hours )
+                );
+
+            case 'compact':
+            default:
+                // Footer brand block : nom + tagline + adresse simple.
+                return sprintf(
+                    '<h3 class="wp-block-heading has-display-font-family" style="font-size:18px;font-weight:500;line-height:1.2">%s</h3>'
+                    . '<p class="has-muted-color has-text-color" style="margin-top:6px;font-size:13px;line-height:1.7">%s<br/>%s, %s %s</p>',
+                    esc_html( $name ),
+                    esc_html( $legal ),
+                    esc_html( $street ),
+                    esc_html( $postal ),
+                    esc_html( $city )
+                );
+        }
+    }
+
+    /**
+     * Bloc upcoming events : affiche les N prochains opac_event a venir
+     * (date_event >= aujourd'hui), fallback sur les N derniers passes
+     * si pas assez d'a venir. Utilise pour la section "Actualités" homepage.
+     */
+    public static function render_upcoming_events( $attrs, $content, $block ) {
+        $count = isset( $attrs['count'] ) ? max( 1, (int) $attrs['count'] ) : 2;
+        $today = wp_date( 'Y-m-d' );
+
+        // Fetch tous les events publies en une query, tri par date ASC.
+        $all = get_posts( [
+            'post_type'      => 'opac_event',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'meta_key'       => 'opac_date_event',
+            'orderby'        => 'meta_value',
+            'order'          => 'ASC',
+        ] );
+
+        // Split upcoming vs past cote PHP (plus stable que double meta_query).
+        $upcoming = [];
+        $past     = [];
+        foreach ( $all as $e ) {
+            $d = (string) get_post_meta( $e->ID, 'opac_date_event', true );
+            if ( $d && $d >= $today ) {
+                $upcoming[] = $e;
+            } elseif ( $d ) {
+                $past[] = $e;
+            }
+        }
+        // Past les plus récents en premier.
+        $past = array_reverse( $past );
+
+        $events = array_slice( $upcoming, 0, $count );
+        if ( count( $events ) < $count ) {
+            $needed = $count - count( $events );
+            $events = array_merge( $events, array_slice( $past, 0, $needed ) );
+        }
+
+        if ( empty( $events ) ) {
+            return '';
+        }
+
+        $months_fr = [
+            1 => 'Janvier', 2 => 'Février',  3 => 'Mars',     4 => 'Avril',
+            5 => 'Mai',     6 => 'Juin',     7 => 'Juillet',  8 => 'Août',
+            9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre',
+        ];
+
+        // Markup aligne avec l'ancien design statique : wp-block-columns +
+        // wp-block-column + opac-card avec fond bg + padding + border-radius.
+        // Memes classes CSS donc styles existants s'appliquent sans ajout.
+        $out = '<div class="wp-block-columns opac-actus-columns is-layout-flex wp-container-core-columns-is-layout-1 wp-block-columns-is-layout-flex">';
+        foreach ( $events as $event ) {
+            $date_raw = (string) get_post_meta( $event->ID, 'opac_date_event', true );
+            $ts       = $date_raw ? strtotime( $date_raw ) : false;
+            $date_lbl = '';
+            if ( $ts ) {
+                $n     = (int) wp_date( 'n', $ts );
+                $year  = wp_date( 'Y', $ts );
+                $date_lbl = ( $months_fr[ $n ] ?? '' ) . ' ' . $year;
+            }
+            $desc = (string) get_post_meta( $event->ID, 'opac_description_courte', true );
+
+            $out .= sprintf(
+                '<div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow">'
+                    . '<div class="wp-block-group opac-card has-bg-background-color has-background" style="border-radius:10px;padding:20px;height:100%%">'
+                        . '<p class="opac-event-date has-muted-color has-text-color" style="text-transform:uppercase;letter-spacing:0.06em">%s</p>'
+                        . '<p class="opac-card-name"><a href="%s" style="color:inherit;text-decoration:none">%s</a></p>'
+                        . '%s'
+                    . '</div>'
+                . '</div>',
+                esc_html( strtoupper( $date_lbl ) ),
+                esc_url( get_permalink( $event ) ),
+                esc_html( get_the_title( $event ) ),
+                $desc ? '<p class="opac-actu-excerpt has-muted-color has-text-color" style="font-size:13px;line-height:1.5">' . esc_html( $desc ) . '</p>' : ''
+            );
+        }
+        $out .= '</div>';
         return $out;
     }
 
