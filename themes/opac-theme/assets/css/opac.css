@@ -759,6 +759,33 @@
     padding: 0 !important;
 }
 
+/*
+ * Annule le padding par defaut que WP applique a tous les wp-block-group
+ * .has-background via la regle :
+ *   :where(.wp-block-group.has-background){padding:1.25em 2.375em}
+ * Cette regle WP padde la card de ~20px haut/bas et ~38px gauche/droite,
+ * ce qui empeche le cover frame d'atteindre les bords du card. On annule
+ * UNIQUEMENT sur les atelier cards (.opac-ateliers-grid .opac-card) pour
+ * que le cover puisse aller edge-to-edge. Les autres usages de .opac-card
+ * (notamment les actu cards dans wp:columns) gardent leur padding inline
+ * propre (20px sur les actu cards) car elles n'ont pas de cover frame
+ * et ont besoin de l'espace interne pour leur texte.
+ */
+.opac-ateliers-grid .opac-card {
+    padding: 0 !important;
+}
+
+/* Empeche le footer (tarif + lien Details) de wrap sur 2 lignes quand
+   le texte du lien est plus long (ex: "Liste d'attente" sur la card
+   Mosaique). Scope explicite a la grille atelier vu que .opac-card-footer
+   est specifique aux cards atelier (les actu et stage cards n'ont pas
+   cet element). */
+.opac-ateliers-grid .opac-card-footer .opac-card-price,
+.opac-ateliers-grid .opac-card-footer .opac-card-link {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 .opac-ateliers-grid {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
