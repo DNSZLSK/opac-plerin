@@ -1,0 +1,51 @@
+# OPAC Plerin - versionner uniquement le theme custom et le plugin custom
+
+# WordPress core files in wp-content
+index.php
+debug.log
+*.log
+
+# Default & boilerplate themes (we don't customize them)
+themes/index.php
+themes/twentytwentyone/
+themes/twentytwentytwo/
+themes/twentytwentythree/
+themes/twentytwentyfour/
+themes/twentytwentyfive/
+themes/twentytwentysix/
+
+# Default & boilerplate plugins
+plugins/index.php
+plugins/hello.php
+plugins/akismet/
+plugins/wp-mail-smtp/        # config locale, à exclure
+plugins/contact-form-7/      # plugin tiers, géré via composer/admin
+
+# Uploads et upgrades (gérés hors versioning)
+uploads/
+upgrade/
+upgrade-temp-backup/
+languages/
+mu-plugins/
+
+# Cache et build
+cache/
+*.cache
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local config overrides
+*.local.php
+local-config.php
+
+# WP-Rocket / cache plugins
+wp-rocket-config/
+advanced-cache.php
+object-cache.php
