@@ -1,7 +1,26 @@
 /* OPAC Custom - admin styles
  *
- * Vide en P0. Sera utilisé en M7 (Inscriptions) pour styliser :
- * - les boutons d'action Valider / Refuser / Liste d'attente
- * - les meta boxes custom (créneaux atelier, galerie)
- * - le dashboard widget si on lui ajoute des éléments visuels
+ * M7 : row actions Valider / Refuser / Liste d'attente sur la liste
+ * admin /wp-admin/edit.php?post_type=opac_inscription.
  */
+
+/* Row actions sur la liste inscriptions */
+.post-type-opac_inscription .row-actions .opac-row-valider a,
+.post-type-opac_inscription .row-actions .opac-row-valider {
+    color: #2a7a6e;
+    font-weight: 600;
+}
+
+.post-type-opac_inscription .row-actions .opac-row-refuser a,
+.post-type-opac_inscription .row-actions .opac-row-refuser {
+    color: #c0583a;
+}
+
+.post-type-opac_inscription .row-actions .opac-row-attente a,
+.post-type-opac_inscription .row-actions .opac-row-attente {
+    color: #9a6b1e;
+}
+
+.post-type-opac_inscription .row-actions a:hover {
+    text-decoration: underline;
+}

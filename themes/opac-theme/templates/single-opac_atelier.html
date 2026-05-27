@@ -77,15 +77,17 @@
             <!-- Tag de disponibilité -->
             <!-- wp:opac/places-tag /-->
 
-            <!-- Boutons inscription + contact -->
-            <!-- wp:buttons {"className":"opac-detail-actions","style":{"spacing":{"margin":{"top":"16px"}}}} -->
-            <div class="wp-block-buttons opac-detail-actions" style="margin-top:16px">
-                <!-- wp:button {"className":"is-style-opac-primary"} -->
-                <div class="wp-block-button is-style-opac-primary"><a class="wp-block-button__link wp-element-button" href="#">S'inscrire</a></div>
-                <!-- /wp:button -->
-                <!-- wp:button {"className":"is-style-opac-secondary"} -->
-                <div class="wp-block-button is-style-opac-secondary"><a class="wp-block-button__link wp-element-button" href="/contact/">Poser une question</a></div>
-                <!-- /wp:button -->
+            <!-- Boutons inscription (dynamique via bloc serveur) + contact -->
+            <!-- wp:group {"className":"opac-detail-actions","style":{"spacing":{"margin":{"top":"16px"},"blockGap":"8px"}},"layout":{"type":"flex","flexWrap":"wrap"}} -->
+            <div class="wp-block-group opac-detail-actions" style="margin-top:16px">
+                <!-- wp:opac/inscription-button /-->
+                <!-- wp:buttons -->
+                <div class="wp-block-buttons">
+                    <!-- wp:button {"className":"is-style-opac-secondary"} -->
+                    <div class="wp-block-button is-style-opac-secondary"><a class="wp-block-button__link wp-element-button" href="/contact/">Poser une question</a></div>
+                    <!-- /wp:button -->
+                </div>
+                <!-- /wp:buttons -->
             </div>
             <!-- /wp:buttons -->
 

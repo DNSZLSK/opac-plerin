@@ -1675,3 +1675,95 @@ a.opac-card-link:hover,
     border-radius: 10px;
     display: block;
 }
+
+/* ========================================================================
+   M7 : Inscriptions (form public + page d'inscription)
+   ======================================================================== */
+
+.opac-inscription-form {
+    /* Heritage de .opac-form-card (M6) */
+}
+
+/* Encart contexte pre-rempli ("Inscription pour : Ceramique - 335 €") */
+.opac-form-context {
+    background: var(--wp--preset--color--accent-light);
+    border: 1px solid var(--wp--preset--color--accent);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 8px;
+}
+
+.opac-form-context-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--wp--preset--color--accent);
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.opac-form-context-name {
+    font-family: var(--wp--preset--font-family--display, Georgia, serif);
+    font-size: 18px;
+    color: var(--opac-ink);
+    line-height: 1.3;
+}
+
+.opac-form-context-tarif {
+    font-size: 13px;
+    color: var(--opac-muted);
+    margin-top: 6px;
+}
+
+/* Radios type adhesion en ligne */
+.opac-form-radios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.opac-form-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--opac-ink);
+    cursor: pointer;
+    padding: 6px 12px;
+    border: 1px solid var(--opac-border);
+    border-radius: 6px;
+    background: var(--opac-card);
+}
+
+.opac-form-radio input[type="radio"] {
+    margin: 0;
+}
+
+/* RGPD checkbox */
+.opac-form-rgpd {
+    background: var(--opac-bg);
+    border: 1px solid var(--opac-border);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.opac-form-rgpd label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--opac-muted);
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.opac-form-rgpd input[type="checkbox"] {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* Heritage : .opac-detail-actions devient un container flex pour
+   accommoder inscription-button + bouton "Poser une question" cote a cote */
+.opac-detail-actions {
+    align-items: center;
+}

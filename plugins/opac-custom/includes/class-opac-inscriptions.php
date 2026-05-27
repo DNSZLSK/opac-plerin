@@ -1,0 +1,294 @@
+<?php
+/**
+ * OPAC Custom - Pipeline inscriptions
+ *
+ * 1. handle_submit() : recoit le form public, valide, cree un post
+ *    opac_inscription en statut taxonomy 'en-attente', notifie Katell.
+ *
+ * 2. handle_action() : recoit les clics admin row actions
+ *    (Valider / Refuser / Liste d'attente), change le term de status,
+ *    envoie un email a l'inscrit.
+ *
+ * Securite : nonce + honeypot + rate-limit transient + capability check
+ * cote admin. PII non exposees en REST (declare en class-opac-meta).
+ *
+ * @package OPAC\Custom
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+class OPAC_Inscriptions {
+
+    const ACTION_SUBMIT = 'opac_inscription';
+    const ACTION_ADMIN  = 'opac_insc_action';
+    const RECIPIENT     = 'contact@opacplerin.fr';
+    const RATE_LIMIT_S  = 60;
+
+    public static function register() {
+        // Form public.
+        add_action( 'admin_post_' . self::ACTION_SUBMIT, [ __CLASS__, 'handle_submit' ] );
+        add_action( 'admin_post_nopriv_' . self::ACTION_SUBMIT, [ __CLASS__, 'handle_submit' ] );
+
+        // Workflow admin (Valider / Refuser / Liste d'attente).
+        add_action( 'admin_post_' . self::ACTION_ADMIN, [ __CLASS__, 'handle_action' ] );
+    }
+
+    public static function handle_submit() {
+        $back = self::inscription_url();
+
+        // Honeypot : silent success si rempli (bots).
+        if ( ! empty( $_POST['opac_hp_website'] ) ) {
+            wp_safe_redirect( add_query_arg( 'envoye', '1', $back ) );
+            exit;
+        }
+
+        // Nonce.
+        if ( ! isset( $_POST['opac_inscription_nonce'] )
+            || ! wp_verify_nonce( wp_unslash( $_POST['opac_inscription_nonce'] ), 'opac_inscription_submit' ) ) {
+            wp_safe_redirect( add_query_arg( 'erreur', 'nonce', $back ) );
+            exit;
+        }
+
+        $nom       = isset( $_POST['opac_nom'] )       ? sanitize_text_field( wp_unslash( $_POST['opac_nom'] ) )       : '';
+        $prenom    = isset( $_POST['opac_prenom'] )    ? sanitize_text_field( wp_unslash( $_POST['opac_prenom'] ) )    : '';
+        $email     = isset( $_POST['opac_email'] )     ? sanitize_email( wp_unslash( $_POST['opac_email'] ) )          : '';
+        $telephone = isset( $_POST['opac_telephone'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_telephone'] ) ) : '';
+        $creneau   = isset( $_POST['opac_creneau'] )   ? sanitize_text_field( wp_unslash( $_POST['opac_creneau'] ) )   : '';
+        $adhesion  = isset( $_POST['opac_adhesion'] )  ? sanitize_key( wp_unslash( $_POST['opac_adhesion'] ) )         : '';
+        $message   = isset( $_POST['opac_message'] )   ? sanitize_textarea_field( wp_unslash( $_POST['opac_message'] ) ) : '';
+        $rgpd      = ! empty( $_POST['opac_rgpd'] );
+
+        // Resolution de l'atelier/stage cible : soit via hidden inputs (URL pre-remplie),
+        // soit via le select unifie opac_cible=atelier:ID ou stage:ID.
+        $atelier_id  = isset( $_POST['opac_atelier_id'] ) ? absint( $_POST['opac_atelier_id'] ) : 0;
+        $stage_id    = isset( $_POST['opac_stage_id'] )   ? absint( $_POST['opac_stage_id'] )   : 0;
+        if ( ! $atelier_id && ! $stage_id && isset( $_POST['opac_cible'] ) ) {
+            $cible = sanitize_text_field( wp_unslash( $_POST['opac_cible'] ) );
+            if ( preg_match( '/^(atelier|stage):(\d+)$/', $cible, $m ) ) {
+                if ( $m[1] === 'atelier' ) {
+                    $atelier_id = (int) $m[2];
+                } else {
+                    $stage_id = (int) $m[2];
+                }
+            }
+        }
+
+        if ( ! $nom || ! $prenom || ! $email ) {
+            wp_safe_redirect( add_query_arg( 'erreur', 'champs', $back ) );
+            exit;
+        }
+        if ( ! is_email( $email ) ) {
+            wp_safe_redirect( add_query_arg( 'erreur', 'email', $back ) );
+            exit;
+        }
+        if ( ! $atelier_id && ! $stage_id ) {
+            wp_safe_redirect( add_query_arg( 'erreur', 'atelier', $back ) );
+            exit;
+        }
+        if ( ! $rgpd ) {
+            wp_safe_redirect( add_query_arg( 'erreur', 'rgpd', $back ) );
+            exit;
+        }
+
+        // Rate-limit transient (anti double-submit + flood).
+        $ip       = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+        $rl_key   = 'opac_insc_rl_' . md5( $ip . '|' . strtolower( $email ) );
+        if ( get_transient( $rl_key ) ) {
+            wp_safe_redirect( add_query_arg( 'erreur', 'doublon', $back ) );
+            exit;
+        }
+        set_transient( $rl_key, 1, self::RATE_LIMIT_S );
+
+        // Verifie que l'atelier/stage existe encore (peut avoir ete supprime).
+        $cible_id    = $atelier_id ? $atelier_id : $stage_id;
+        $cible_post  = get_post( $cible_id );
+        $cible_type  = $atelier_id ? 'opac_atelier' : 'opac_stage';
+        if ( ! $cible_post || $cible_post->post_type !== $cible_type ) {
+            wp_safe_redirect( add_query_arg( 'erreur', 'atelier', $back ) );
+            exit;
+        }
+        $cible_titre = get_the_title( $cible_post );
+
+        // Cree le post opac_inscription.
+        $insc_title = sprintf( '[%s] %s %s', $cible_titre, $prenom, $nom );
+        $post_id = wp_insert_post( [
+            'post_type'   => 'opac_inscription',
+            'post_status' => 'publish',
+            'post_title'  => $insc_title,
+        ] );
+        if ( ! $post_id || is_wp_error( $post_id ) ) {
+            wp_safe_redirect( add_query_arg( 'erreur', 'enregistrement', $back ) );
+            exit;
+        }
+
+        update_post_meta( $post_id, 'opac_insc_nom',            $nom );
+        update_post_meta( $post_id, 'opac_insc_prenom',         $prenom );
+        update_post_meta( $post_id, 'opac_insc_email',          $email );
+        update_post_meta( $post_id, 'opac_insc_telephone',      $telephone );
+        update_post_meta( $post_id, 'opac_insc_atelier_id',     $cible_id );
+        update_post_meta( $post_id, 'opac_insc_creneau',        $creneau );
+        update_post_meta( $post_id, 'opac_insc_message',        $message );
+        update_post_meta( $post_id, 'opac_insc_date_submitted', current_time( 'mysql' ) );
+        update_post_meta( $post_id, 'opac_insc_source',         'form-frontend' );
+        if ( $adhesion ) {
+            update_post_meta( $post_id, 'opac_insc_adhesion', $adhesion );
+        }
+
+        wp_set_object_terms( $post_id, [ 'en-attente' ], 'opac_inscription_status', false );
+
+        // Notification Katell.
+        self::send_admin_notification( $post_id, [
+            'nom'         => $nom,
+            'prenom'      => $prenom,
+            'email'       => $email,
+            'telephone'   => $telephone,
+            'cible_titre' => $cible_titre,
+            'cible_type'  => $cible_type,
+            'creneau'     => $creneau,
+            'adhesion'    => $adhesion,
+            'message'     => $message,
+        ] );
+
+        wp_safe_redirect( add_query_arg( 'envoye', '1', $back ) );
+        exit;
+    }
+
+    public static function handle_action() {
+        $id     = isset( $_GET['id'] )     ? absint( $_GET['id'] )                            : 0;
+        $status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) )    : '';
+        $nonce  = isset( $_GET['_wpnonce'] ) ? (string) $_GET['_wpnonce']                     : '';
+
+        if ( ! current_user_can( 'edit_posts' ) ) {
+            wp_die( esc_html__( 'Permissions insuffisantes.', 'opac-custom' ) );
+        }
+        if ( ! wp_verify_nonce( $nonce, 'opac_insc_action_' . $id . '_' . $status ) ) {
+            wp_die( esc_html__( 'Lien de validation invalide ou expiré.', 'opac-custom' ) );
+        }
+        $valid_statuses = [ 'validee', 'refusee', 'liste-attente' ];
+        if ( ! in_array( $status, $valid_statuses, true ) ) {
+            wp_die( esc_html__( 'Statut inconnu.', 'opac-custom' ) );
+        }
+
+        $post = get_post( $id );
+        if ( ! $post || $post->post_type !== 'opac_inscription' ) {
+            wp_die( esc_html__( 'Inscription introuvable.', 'opac-custom' ) );
+        }
+
+        wp_set_object_terms( $id, [ $status ], 'opac_inscription_status', false );
+
+        self::send_user_notification( $id, $status );
+
+        $redirect = add_query_arg(
+            [
+                'post_type'      => 'opac_inscription',
+                'opac_insc_done' => $status,
+            ],
+            admin_url( 'edit.php' )
+        );
+        wp_safe_redirect( $redirect );
+        exit;
+    }
+
+    private static function send_admin_notification( $post_id, $data ) {
+        $type_label = $data['cible_type'] === 'opac_atelier' ? 'Atelier à l\'année' : 'Atelier éphémère';
+        $subject = sprintf( '[OPAC inscription] %s - %s %s', $data['cible_titre'], $data['prenom'], $data['nom'] );
+
+        $edit_link = get_edit_post_link( $post_id, '' );
+
+        $body  = "Nouvelle demande d'inscription enregistree sur opacplerin.fr\n\n";
+        $body .= "Type : {$type_label}\n";
+        $body .= "Atelier / stage : {$data['cible_titre']}\n";
+        if ( $data['creneau'] ) {
+            $body .= "Creneau : {$data['creneau']}\n";
+        }
+        if ( $data['adhesion'] ) {
+            $body .= "Adhesion choisie : {$data['adhesion']}\n";
+        }
+        $body .= "\n";
+        $body .= "Nom : {$data['nom']}\n";
+        $body .= "Prenom : {$data['prenom']}\n";
+        $body .= "Email : {$data['email']}\n";
+        $body .= "Telephone : {$data['telephone']}\n";
+        if ( $data['message'] ) {
+            $body .= "\nMessage :\n{$data['message']}\n";
+        }
+        $body .= "\n--\nGerer cette inscription : {$edit_link}\n";
+
+        $headers = [
+            'Content-Type: text/plain; charset=UTF-8',
+            'Reply-To: ' . sprintf( '%s %s <%s>', $data['prenom'], $data['nom'], $data['email'] ),
+        ];
+
+        $sent = wp_mail( self::RECIPIENT, $subject, $body, $headers );
+        if ( ! $sent ) {
+            error_log( '[OPAC inscription] admin notification wp_mail failed for ID ' . $post_id );
+        }
+    }
+
+    private static function send_user_notification( $post_id, $status ) {
+        $nom         = (string) get_post_meta( $post_id, 'opac_insc_nom', true );
+        $prenom      = (string) get_post_meta( $post_id, 'opac_insc_prenom', true );
+        $email       = (string) get_post_meta( $post_id, 'opac_insc_email', true );
+        $cible_id    = (int) get_post_meta( $post_id, 'opac_insc_atelier_id', true );
+        $cible_titre = $cible_id ? get_the_title( $cible_id ) : '';
+
+        if ( ! $email || ! is_email( $email ) ) {
+            return;
+        }
+
+        $hello = sprintf( "Bonjour %s,\n\n", $prenom );
+        $foot  = "\n\n--\nAssociation OPAC - Office Plerinais d'Action Culturelle\n10A rue fleurie, 22190 Plerin-sur-Mer\n02 96 74 53 08 - contact@opacplerin.fr\n";
+
+        switch ( $status ) {
+            case 'validee':
+                $subject = sprintf( '[OPAC] Votre inscription à %s est validée', $cible_titre );
+                $body = $hello;
+                $body .= "Votre demande d'inscription pour \"{$cible_titre}\" a ete validee.\n\n";
+                $body .= "Le reglement (tarif de l'atelier + adhesion annuelle a l'association) s'effectue sur place au secretariat, en cheque, especes ou CB :\n";
+                $body .= "Lundi a vendredi, de 14h15 a 17h45.\n";
+                $body .= "10A rue fleurie, 22190 Plerin-sur-Mer.\n\n";
+                $body .= "A tres bientot !";
+                $body .= $foot;
+                break;
+
+            case 'refusee':
+                $subject = sprintf( '[OPAC] Concernant votre demande pour %s', $cible_titre );
+                $body = $hello;
+                $body .= "Nous vous remercions de l'interet porte a \"{$cible_titre}\".\n\n";
+                $body .= "Apres examen, nous ne pouvons pas donner suite favorablement a votre demande pour le moment.\n";
+                $body .= "N'hesitez pas a nous contacter au 02 96 74 53 08 pour en discuter ou nous orienter vers un autre atelier susceptible de vous interesser.\n\n";
+                $body .= "Bien cordialement,";
+                $body .= $foot;
+                break;
+
+            case 'liste-attente':
+                $subject = sprintf( '[OPAC] Votre inscription à %s : liste d\'attente', $cible_titre );
+                $body = $hello;
+                $body .= "L'atelier \"{$cible_titre}\" etant complet a ce jour, votre demande a ete enregistree en liste d'attente.\n\n";
+                $body .= "Nous vous recontacterons des qu'une place se libere.\n\n";
+                $body .= "Vous pouvez egalement nous contacter au 02 96 74 53 08 si vous souhaitez vous orienter vers un autre atelier.\n\n";
+                $body .= "Bien cordialement,";
+                $body .= $foot;
+                break;
+
+            default:
+                return;
+        }
+
+        $headers = [ 'Content-Type: text/plain; charset=UTF-8' ];
+        $sent = wp_mail( $email, $subject, $body, $headers );
+        if ( ! $sent ) {
+            error_log( '[OPAC inscription] user notification wp_mail failed for ' . $email );
+        }
+    }
+
+    private static function inscription_url() {
+        $page = get_page_by_path( 'inscription' );
+        if ( $page ) {
+            return get_permalink( $page );
+        }
+        return home_url( '/inscription/' );
+    }
+}
