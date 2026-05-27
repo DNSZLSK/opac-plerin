@@ -336,7 +336,7 @@ class OPAC_Blocks {
     public static function render_contact_form( $attrs, $content, $block ) {
         $notice = '';
         if ( isset( $_GET['envoye'] ) && $_GET['envoye'] === '1' ) {
-            $notice = '<div class="opac-form-notice is-success">'
+            $notice = '<div class="opac-form-notice is-success" role="status" aria-live="polite">'
                 . esc_html__( 'Votre message a bien été envoyé. Nous vous répondrons rapidement.', 'opac-custom' )
                 . '</div>';
         } elseif ( isset( $_GET['erreur'] ) ) {
@@ -348,7 +348,7 @@ class OPAC_Blocks {
                 'nonce'   => __( 'Session expirée, merci de soumettre à nouveau le formulaire.', 'opac-custom' ),
             ];
             $msg = $err_labels[ $err ] ?? __( 'Une erreur est survenue.', 'opac-custom' );
-            $notice = '<div class="opac-form-notice is-error">' . esc_html( $msg ) . '</div>';
+            $notice = '<div class="opac-form-notice is-error" role="alert" aria-live="assertive">' . esc_html( $msg ) . '</div>';
         }
 
         $subjects = [
@@ -458,7 +458,7 @@ class OPAC_Blocks {
     public static function render_inscription_form( $attrs, $content, $block ) {
         $notice = '';
         if ( isset( $_GET['envoye'] ) && $_GET['envoye'] === '1' ) {
-            $notice = '<div class="opac-form-notice is-success">'
+            $notice = '<div class="opac-form-notice is-success" role="status" aria-live="polite">'
                 . esc_html__( 'Votre demande d\'inscription a bien été enregistrée. Katell ou Laurence vous contactera prochainement pour confirmation.', 'opac-custom' )
                 . '</div>';
         } elseif ( isset( $_GET['erreur'] ) ) {
@@ -473,7 +473,7 @@ class OPAC_Blocks {
                 'nonce'       => __( 'Session expirée, merci de soumettre à nouveau le formulaire.', 'opac-custom' ),
             ];
             $msg = $err_labels[ $err ] ?? __( 'Une erreur est survenue.', 'opac-custom' );
-            $notice = '<div class="opac-form-notice is-error">' . esc_html( $msg ) . '</div>';
+            $notice = '<div class="opac-form-notice is-error" role="alert" aria-live="assertive">' . esc_html( $msg ) . '</div>';
         }
 
         // Contexte pre-rempli depuis l'URL.

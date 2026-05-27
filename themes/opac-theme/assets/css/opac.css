@@ -907,12 +907,13 @@ a.opac-card-link:hover,
 }
 
 /* Burger menu (bouton ouvrir) - couleur et taille match design.
-   !important sur display pour vaincre la specificite WP responsive. */
+   !important sur display pour vaincre la specificite WP responsive.
+   Taille 44x44 conforme WCAG 2.5.5 (touch target minimum). */
 .wp-block-navigation__responsive-container-open {
     color: var(--opac-ink) !important;
-    padding: 6px !important;
-    width: 40px !important;
-    height: 40px !important;
+    padding: 8px !important;
+    width: 44px !important;
+    height: 44px !important;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
@@ -988,6 +989,18 @@ a.opac-card-link:hover,
 body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+/* Respect preference utilisateur "motion reduced" (WCAG 2.3.3 AAA + UX).
+   Coupe toutes les animations/transitions au minimum (1ms) pour les
+   utilisateurs sensibles aux mouvements. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 /* Card footer atelier sur mobile : eviter overflow "Detail →" hors carte.
