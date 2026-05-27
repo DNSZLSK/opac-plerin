@@ -365,10 +365,18 @@
     margin: 0;
 }
 
+/* Lien "Détails →" du footer card. Deux formes supportées :
+   - <p class="opac-card-link"><a>...</a></p>  (markup legacy / éventuel)
+   - <a class="opac-card-link wp-block-read-more">...</a>  (M3+, généré
+     par le bloc core/read-more dans le Query Loop, pointe automatiquement
+     vers le permalink du post atelier courant). */
 .opac-card-link {
     font-size: 13px;
     font-weight: 500;
     margin: 0;
+    color: var(--opac-accent);
+    text-decoration: none;
+    display: inline-block;
 }
 
 .opac-card-link a {
@@ -376,6 +384,7 @@
     text-decoration: none;
 }
 
+a.opac-card-link:hover,
 .opac-card-link a:hover {
     text-decoration: underline;
 }
