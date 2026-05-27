@@ -122,6 +122,10 @@ add_action( 'init', static function () {
         'name'  => 'opac-on-teal',
         'label' => __( 'OPAC Sur fond teal', 'opac' ),
     ] );
+    register_block_style( 'core/button', [
+        'name'  => 'opac-secondary',
+        'label' => __( 'OPAC Secondaire (outline clair)', 'opac' ),
+    ] );
 } );
 
 // Shortcode utilitaire pour l'année courante (footer dynamique).

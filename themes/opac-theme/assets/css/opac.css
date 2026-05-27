@@ -705,12 +705,294 @@
    En attendant M3 ou Laurence uploadera les vraies photos via
    post-featured-image, on garde les 6 teintes du mockup ai1-ai6
    en rotation. */
+.opac-card-cover-fill {
+    background-color: var(--opac-accent-light); /* fallback pour single page */
+}
+
 .opac-ateliers-grid > *:nth-child(6n+1) .opac-card-cover-fill { background-color: #f0e6dc; }
 .opac-ateliers-grid > *:nth-child(6n+2) .opac-card-cover-fill { background-color: #e0e8e6; }
 .opac-ateliers-grid > *:nth-child(6n+3) .opac-card-cover-fill { background-color: #e6e0ee; }
 .opac-ateliers-grid > *:nth-child(6n+4) .opac-card-cover-fill { background-color: #f5e6e0; }
 .opac-ateliers-grid > *:nth-child(6n+5) .opac-card-cover-fill { background-color: #dce8f0; }
 .opac-ateliers-grid > *:nth-child(6n+6) .opac-card-cover-fill { background-color: #f0ece0; }
+.opac-ateliers-grid > *:nth-child(6n+7) .opac-card-cover-fill { background-color: #e8e2d8; }
+.opac-ateliers-grid > *:nth-child(6n+8) .opac-card-cover-fill { background-color: #ede6e2; }
+.opac-ateliers-grid > *:nth-child(6n+9) .opac-card-cover-fill { background-color: #e6eae0; }
+.opac-ateliers-grid > *:nth-child(6n+10) .opac-card-cover-fill { background-color: #e0ebe8; }
+
+/* ----------------------------------------------------------------
+ * M3 : Archive ateliers (header + info-bar adhesion)
+ * ---------------------------------------------------------------- */
+
+.opac-archive-header {
+    padding-top: 56px;
+    padding-bottom: 24px;
+}
+
+.opac-archive-title {
+    font-size: 28px;
+    font-weight: 400;
+    margin: 0 0 8px;
+}
+
+.opac-archive-intro {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 0 16px;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.opac-info-bar {
+    font-size: 12px;
+    color: var(--opac-muted);
+    margin: 0;
+}
+
+.opac-info-bar strong {
+    color: var(--opac-ink);
+    font-weight: 500;
+}
+
+/* ----------------------------------------------------------------
+ * M3 : Single atelier (breadcrumb + detail + gallery + animateur)
+ * ---------------------------------------------------------------- */
+
+.opac-breadcrumb {
+    font-size: 12px;
+    color: var(--opac-muted);
+    line-height: 1.6;
+}
+
+.opac-breadcrumb a {
+    color: var(--opac-muted);
+    text-decoration: none;
+}
+
+.opac-breadcrumb a:hover {
+    color: var(--opac-accent);
+    text-decoration: underline;
+}
+
+.opac-breadcrumb [aria-current="page"] {
+    color: var(--opac-accent);
+    font-weight: 500;
+}
+
+.opac-breadcrumb-sep {
+    margin: 0 4px;
+    color: var(--opac-border);
+}
+
+.opac-detail {
+    display: grid !important;
+    grid-template-columns: 1.4fr 1fr !important;
+    gap: 32px !important;
+    align-items: start !important;
+}
+
+@media (max-width: 760px) {
+    .opac-detail {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.opac-detail > * {
+    margin: 0 !important;
+}
+
+.opac-detail-photo {
+    height: 280px !important;
+    border-radius: var(--opac-radius);
+}
+
+.opac-detail-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px;
+}
+
+.opac-detail-content > * {
+    margin: 0 !important;
+}
+
+.opac-detail-title {
+    font-size: 26px !important;
+    font-weight: 400 !important;
+    line-height: 1.2 !important;
+    margin: 0 0 4px !important;
+}
+
+.opac-detail-tagline {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.opac-info-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+}
+
+.opac-info-grid > * {
+    margin: 0 !important;
+}
+
+.opac-info-item {
+    padding: 12px 14px !important;
+    border-radius: 8px;
+    border: 1px solid var(--opac-border);
+}
+
+.opac-info-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 4px;
+}
+
+.opac-info-value {
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.opac-creneaux {
+    padding: 14px !important;
+    border-radius: 8px;
+    border: 1px solid var(--opac-border);
+}
+
+.opac-creneaux > * {
+    margin: 0 !important;
+}
+
+.opac-creneaux-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 8px !important;
+}
+
+.opac-creneaux-list {
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--opac-ink);
+    margin: 0;
+    /* Preserve les line breaks du meta texte multilignes saisi par
+       Katell (1 creneau par ligne). */
+    white-space: pre-line;
+}
+
+.opac-detail-actions {
+    margin-top: 4px;
+}
+
+.opac-notice-adhesion {
+    font-size: 12px;
+    font-style: italic;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.opac-detail-notice {
+    background: var(--opac-teal-light);
+    color: var(--opac-teal);
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Si le meta opac_notice est vide, le binding renvoie '' et la <p> reste
+   :empty. On la cache pour ne pas afficher un encart vide. */
+.opac-detail-notice:empty {
+    display: none;
+}
+
+/* Bouton secondary : outline accent pour fond clair (vs ghost pour fond dark) */
+.wp-block-button.is-style-opac-secondary > .wp-block-button__link {
+    background-color: transparent;
+    color: var(--opac-ink);
+    border: 1px solid var(--opac-border);
+    transition: border-color var(--opac-transition), background var(--opac-transition);
+}
+
+.wp-block-button.is-style-opac-secondary > .wp-block-button__link:hover,
+.wp-block-button.is-style-opac-secondary > .wp-block-button__link:focus-visible {
+    border-color: var(--opac-accent);
+    background-color: var(--opac-bg);
+}
+
+/* Section gallery (placeholders pour M3) */
+.opac-gallery-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 12px !important;
+}
+
+@media (max-width: 700px) {
+    .opac-gallery-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+.opac-gallery-grid > * {
+    margin: 0 !important;
+}
+
+.opac-gallery-item {
+    height: 100px !important;
+    border-radius: 8px;
+}
+
+/* Section animateur (card flex) */
+.opac-animateur {
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+    padding: 20px !important;
+    border-radius: var(--opac-radius);
+    border: 1px solid var(--opac-border);
+    max-width: 420px;
+}
+
+.opac-animateur > * {
+    margin: 0 !important;
+}
+
+.opac-animateur-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--opac-accent-light);
+    color: var(--opac-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 16px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.opac-animateur-info {
+    flex: 1;
+}
+
+.opac-animateur-name {
+    font-weight: 500;
+    font-size: 14px;
+    margin: 0;
+}
+
+.opac-animateur-role {
+    font-size: 12px;
+    margin: 0;
+}
 
 /* ----------------------------------------------------------------
  * Image frames (règle GLOBALE pour toutes les zones d'image)
