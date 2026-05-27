@@ -1,0 +1,64 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+
+    <!-- Hero -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded opac-archive-header","layout":{"type":"constrained","contentSize":"640px"}} -->
+    <section class="wp-block-group alignwide opac-section-padded opac-archive-header">
+
+        <!-- wp:heading {"level":1,"align":"center","className":"opac-archive-title","fontFamily":"display"} -->
+        <h1 class="wp-block-heading has-text-align-center opac-archive-title has-display-font-family">Nous contacter</h1>
+        <!-- /wp:heading -->
+
+        <!-- wp:paragraph {"align":"center","textColor":"muted","className":"opac-archive-intro"} -->
+        <p class="has-text-align-center opac-archive-intro has-muted-color has-text-color">Une question, une demande d'inscription, un renseignement ? Envoyez-nous un message ou appelez l'accueil pendant les heures d'ouverture du secrétariat.</p>
+        <!-- /wp:paragraph -->
+
+    </section>
+    <!-- /wp:group -->
+
+    <!-- Grid 2-col : form (gauche) + sidebar (droite) -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded opac-contact-grid","layout":{"type":"constrained","contentSize":"1080px"},"style":{"spacing":{"padding":{"top":"0"}}}} -->
+    <section class="wp-block-group alignwide opac-section-padded opac-contact-grid" style="padding-top:0">
+
+        <!-- Col gauche : bloc serveur opac/contact-form -->
+        <!-- wp:group {"className":"opac-contact-form-col"} -->
+        <div class="wp-block-group opac-contact-form-col">
+            <!-- wp:opac/contact-form /-->
+        </div>
+        <!-- /wp:group -->
+
+        <!-- Col droite : sidebar info + carte OSM -->
+        <!-- wp:html -->
+        <aside class="opac-contact-sidebar">
+            <div class="opac-info-card">
+                <h3>Adresse</h3>
+                <p>10A rue fleurie<br/>22190 Plérin-sur-Mer</p>
+            </div>
+            <div class="opac-info-card">
+                <h3>Téléphone</h3>
+                <p>Accueil : 02 96 74 53 08<br/>Administration : 06 74 47 98 53</p>
+            </div>
+            <div class="opac-info-card">
+                <h3>Secrétariat</h3>
+                <p>Lundi à vendredi<br/>14h15 à 17h45</p>
+            </div>
+            <div class="opac-info-card">
+                <h3>Réseaux</h3>
+                <p><a href="#">Facebook</a> · <a href="#">Instagram (opac22190)</a></p>
+            </div>
+            <iframe class="opac-osm-map"
+                    src="https://www.openstreetmap.org/export/embed.html?bbox=-2.7720%2C48.5260%2C-2.7480%2C48.5400&amp;layer=mapnik&amp;marker=48.5311%2C-2.7607"
+                    loading="lazy"
+                    title="Localisation OPAC Plérin sur OpenStreetMap"></iframe>
+        </aside>
+        <!-- /wp:html -->
+
+    </section>
+    <!-- /wp:group -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->
