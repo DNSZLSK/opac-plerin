@@ -43,6 +43,24 @@ class OPAC_Blocks {
             'attributes'      => [],
             'supports'        => [ 'html' => false ],
         ] );
+
+        register_block_type( 'opac/team-grid', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_team_grid' ],
+            'attributes'      => [
+                'type'  => [ 'type' => 'string', 'default' => '' ],
+                'title' => [ 'type' => 'string', 'default' => '' ],
+                'cols'  => [ 'type' => 'number', 'default' => 3 ],
+            ],
+            'supports'        => [ 'html' => false ],
+        ] );
+
+        register_block_type( 'opac/contact-form', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_contact_form' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
     }
 
     /**
@@ -217,6 +235,173 @@ class OPAC_Blocks {
         }
 
         $out .= '</div>';
+        return $out;
+    }
+
+    /**
+     * Grid d'equipe filtree par opac_person_type.
+     * Attributes : type (slug taxonomy), title (titre H2 affiche), cols (3 par defaut).
+     *
+     * Pourquoi un bloc serveur ? Query Loop native peut afficher des opac_person,
+     * mais pour filtrer par taxonomy + appliquer un layout grid avec avatars
+     * a initiales calculees, c'est plus simple et lisible cote serveur.
+     */
+    public static function render_team_grid( $attrs, $content, $block ) {
+        $type  = isset( $attrs['type'] ) ? sanitize_key( $attrs['type'] ) : '';
+        $title = isset( $attrs['title'] ) ? (string) $attrs['title'] : '';
+        $cols  = isset( $attrs['cols'] ) ? max( 1, (int) $attrs['cols'] ) : 3;
+
+        if ( ! $type ) {
+            return '';
+        }
+
+        $persons = get_posts( [
+            'post_type'      => 'opac_person',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'menu_order title',
+            'order'          => 'ASC',
+            'tax_query'      => [
+                [
+                    'taxonomy' => 'opac_person_type',
+                    'field'    => 'slug',
+                    'terms'    => $type,
+                ],
+            ],
+        ] );
+
+        if ( empty( $persons ) ) {
+            return '';
+        }
+
+        $out = '<section class="opac-team-section">';
+        if ( $title ) {
+            $out .= '<h2 class="opac-section-title">' . esc_html( $title ) . '</h2>';
+        }
+        $out .= '<div class="opac-team-grid is-cols-' . (int) $cols . '">';
+
+        foreach ( $persons as $person ) {
+            $name     = get_the_title( $person );
+            $role     = (string) get_post_meta( $person->ID, 'opac_role', true );
+            $initials = (string) get_post_meta( $person->ID, 'opac_initials', true );
+            if ( ! $initials ) {
+                $initials = self::compute_initials( $name );
+            }
+
+            // Rotation deterministe sur 8 couleurs basee sur le hash du nom.
+            $color_index = ( abs( crc32( $name ) ) % 8 ) + 1;
+
+            $out .= sprintf(
+                '<div class="opac-person">'
+                    . '<div class="opac-person-avatar opac-person-color-%d" aria-hidden="true">%s</div>'
+                    . '<div class="opac-person-name">%s</div>'
+                    . '%s'
+                . '</div>',
+                $color_index,
+                esc_html( $initials ),
+                esc_html( $name ),
+                $role ? '<div class="opac-person-role">' . esc_html( $role ) . '</div>' : ''
+            );
+        }
+
+        $out .= '</div></section>';
+        return $out;
+    }
+
+    /**
+     * Form de contact custom, leger.
+     * Champs : nom, prenom, email, telephone, sujet (select), message.
+     * Securite : nonce WP + honeypot off-screen.
+     * Submit : POST vers admin-post.php avec action=opac_contact, handled
+     * par OPAC_Contact::handle_submit qui valide + wp_mail + redirect.
+     */
+    public static function render_contact_form( $attrs, $content, $block ) {
+        $notice = '';
+        if ( isset( $_GET['envoye'] ) && $_GET['envoye'] === '1' ) {
+            $notice = '<div class="opac-form-notice is-success">'
+                . esc_html__( 'Votre message a bien été envoyé. Nous vous répondrons rapidement.', 'opac-custom' )
+                . '</div>';
+        } elseif ( isset( $_GET['erreur'] ) ) {
+            $err = sanitize_key( wp_unslash( $_GET['erreur'] ) );
+            $err_labels = [
+                'champs'  => __( 'Merci de remplir tous les champs obligatoires.', 'opac-custom' ),
+                'email'   => __( 'L\'adresse email saisie n\'est pas valide.', 'opac-custom' ),
+                'envoi'   => __( 'L\'envoi a échoué. Merci de réessayer ou de nous contacter par téléphone.', 'opac-custom' ),
+                'nonce'   => __( 'Session expirée, merci de soumettre à nouveau le formulaire.', 'opac-custom' ),
+            ];
+            $msg = $err_labels[ $err ] ?? __( 'Une erreur est survenue.', 'opac-custom' );
+            $notice = '<div class="opac-form-notice is-error">' . esc_html( $msg ) . '</div>';
+        }
+
+        $subjects = [
+            'renseignement' => __( 'Renseignement général', 'opac-custom' ),
+            'atelier-annee' => __( 'Inscription atelier à l\'année', 'opac-custom' ),
+            'ephemere'      => __( 'Atelier éphémère', 'opac-custom' ),
+            'adhesion'      => __( 'Adhésion', 'opac-custom' ),
+            'autre'         => __( 'Autre', 'opac-custom' ),
+        ];
+
+        $action_url = esc_url( admin_url( 'admin-post.php' ) );
+        $nonce      = wp_nonce_field( 'opac_contact_submit', 'opac_contact_nonce', true, false );
+
+        $out  = $notice;
+        $out .= '<form class="opac-form-card" method="post" action="' . $action_url . '">';
+        $out .= '<input type="hidden" name="action" value="opac_contact" />';
+        $out .= $nonce;
+        // Honeypot : champ off-screen, doit rester vide. Si rempli = bot.
+        $out .= '<div class="opac-honeypot" aria-hidden="true">'
+            . '<label>Site web<input type="text" name="opac_hp_website" tabindex="-1" autocomplete="off" /></label>'
+            . '</div>';
+
+        $out .= '<div class="opac-form-row-2">';
+        $out .= '<div class="opac-form-row"><label for="opac-nom">' . esc_html__( 'Nom', 'opac-custom' ) . '</label>'
+            . '<input class="opac-form-input" type="text" id="opac-nom" name="opac_nom" required /></div>';
+        $out .= '<div class="opac-form-row"><label for="opac-prenom">' . esc_html__( 'Prénom', 'opac-custom' ) . '</label>'
+            . '<input class="opac-form-input" type="text" id="opac-prenom" name="opac_prenom" required /></div>';
+        $out .= '</div>';
+
+        $out .= '<div class="opac-form-row"><label for="opac-email">' . esc_html__( 'Email', 'opac-custom' ) . '</label>'
+            . '<input class="opac-form-input" type="email" id="opac-email" name="opac_email" required /></div>';
+
+        $out .= '<div class="opac-form-row"><label for="opac-tel">' . esc_html__( 'Téléphone', 'opac-custom' ) . '</label>'
+            . '<input class="opac-form-input" type="tel" id="opac-tel" name="opac_telephone" /></div>';
+
+        $out .= '<div class="opac-form-row"><label for="opac-sujet">' . esc_html__( 'Sujet', 'opac-custom' ) . '</label>'
+            . '<select class="opac-form-input" id="opac-sujet" name="opac_sujet" required>';
+        foreach ( $subjects as $val => $lab ) {
+            $out .= '<option value="' . esc_attr( $val ) . '">' . esc_html( $lab ) . '</option>';
+        }
+        $out .= '</select></div>';
+
+        $out .= '<div class="opac-form-row"><label for="opac-message">' . esc_html__( 'Message', 'opac-custom' ) . '</label>'
+            . '<textarea class="opac-form-input opac-form-textarea" id="opac-message" name="opac_message" rows="6" required></textarea></div>';
+
+        $out .= '<button type="submit" class="opac-form-btn">' . esc_html__( 'Envoyer le message', 'opac-custom' ) . '</button>';
+
+        $out .= '</form>';
+        return $out;
+    }
+
+    /**
+     * Calcule les initiales (max 2 lettres) depuis un nom complet.
+     * "Anne Lemogne" => "AL", "Katell Guerin-Metrope" => "KG".
+     */
+    private static function compute_initials( $full_name ) {
+        $full_name = trim( (string) $full_name );
+        if ( ! $full_name ) {
+            return '';
+        }
+        $parts = preg_split( '/[\s\-]+/u', $full_name );
+        $out = '';
+        foreach ( $parts as $part ) {
+            if ( $part === '' ) {
+                continue;
+            }
+            $out .= mb_strtoupper( mb_substr( $part, 0, 1 ) );
+            if ( mb_strlen( $out ) >= 2 ) {
+                break;
+            }
+        }
         return $out;
     }
 }

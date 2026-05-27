@@ -1370,3 +1370,308 @@ a.opac-card-link:hover,
     gap: 12px;
     margin: 16px 0 20px;
 }
+
+/* ========================================================================
+   M6 : Association (equipes + infos pratiques) + Contact (form + sidebar)
+   ======================================================================== */
+
+/* Section title generique reutilise sur Association */
+.opac-section-title {
+    font-family: var(--wp--preset--font-family--display, Georgia, serif);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--opac-ink);
+    margin: 0 0 20px;
+}
+
+/* Team grids */
+.opac-team-section {
+    margin: 0 auto 40px;
+    max-width: 1080px;
+    padding: 0 32px;
+}
+
+.opac-team-grid {
+    display: grid;
+    gap: 14px;
+}
+
+.opac-team-grid.is-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.opac-team-grid.is-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.opac-team-grid.is-cols-5 { grid-template-columns: repeat(5, 1fr); }
+
+@media (max-width: 720px) {
+    .opac-team-grid.is-cols-3,
+    .opac-team-grid.is-cols-5 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .opac-team-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Person card */
+.opac-person {
+    background: var(--opac-card);
+    border: 1px solid var(--opac-border);
+    border-radius: 10px;
+    padding: 18px 14px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.opac-person-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--wp--preset--font-family--display, Georgia, serif);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--opac-card);
+    line-height: 1;
+}
+
+/* Rotation 8 couleurs pour avatars (deterministe par hash du nom) */
+.opac-person-color-1 { background: var(--wp--preset--color--accent); }
+.opac-person-color-2 { background: var(--wp--preset--color--teal); }
+.opac-person-color-3 { background: var(--wp--preset--color--mauve); }
+.opac-person-color-4 { background: var(--wp--preset--color--gold); }
+.opac-person-color-5 { background: var(--wp--preset--color--ink); }
+.opac-person-color-6 { background: #5e7a8a; }
+.opac-person-color-7 { background: #8a7a5e; }
+.opac-person-color-8 { background: var(--wp--preset--color--amber); }
+
+.opac-person-name {
+    font-family: var(--wp--preset--font-family--display, Georgia, serif);
+    font-size: 14px;
+    color: var(--opac-ink);
+    font-weight: 500;
+}
+
+.opac-person-role {
+    font-size: 12px;
+    color: var(--opac-muted);
+}
+
+/* Infos pratiques grid 2x2 */
+.opac-infos-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 720px) {
+    .opac-infos-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.opac-info-card {
+    background: var(--opac-card);
+    border: 1px solid var(--opac-border);
+    border-radius: 10px;
+    padding: 18px;
+}
+
+.opac-info-card h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--opac-muted);
+    margin: 0 0 8px;
+    font-weight: 500;
+    font-family: var(--wp--preset--font-family--body, sans-serif);
+}
+
+.opac-info-card p {
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0;
+    color: var(--opac-ink);
+}
+
+/* Partenaire Plerin */
+.opac-partenaire {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--wp--preset--color--teal-light);
+    border-radius: 10px;
+    padding: 18px;
+    margin-top: 8px;
+}
+
+.opac-part-logo {
+    width: 56px;
+    height: 56px;
+    background: var(--opac-card);
+    color: var(--wp--preset--color--teal);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.1;
+    flex-shrink: 0;
+}
+
+.opac-part-name {
+    font-family: var(--wp--preset--font-family--display, Georgia, serif);
+    font-size: 15px;
+    color: var(--opac-ink);
+}
+
+.opac-part-sub {
+    font-size: 12px;
+    color: var(--opac-muted);
+    margin-top: 2px;
+}
+
+.opac-statuts-link a {
+    font-size: 13px;
+}
+
+/* Contact grid 2-col */
+.opac-contact-grid {
+    display: grid !important;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 32px !important;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px 40px;
+}
+
+@media (max-width: 860px) {
+    .opac-contact-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.opac-contact-form-col {
+    min-width: 0;
+}
+
+.opac-form-card {
+    background: var(--opac-card);
+    border: 1px solid var(--opac-border);
+    border-radius: 10px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.opac-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.opac-form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.opac-form-row label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--opac-muted);
+    font-weight: 500;
+}
+
+.opac-form-input {
+    padding: 10px 12px;
+    border: 1px solid var(--opac-border);
+    border-radius: 6px;
+    background: var(--opac-card);
+    font: inherit;
+    color: var(--opac-ink);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.opac-form-input:focus {
+    outline: 2px solid var(--wp--preset--color--accent);
+    outline-offset: 1px;
+    border-color: var(--wp--preset--color--accent);
+}
+
+.opac-form-textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.opac-form-btn {
+    align-self: flex-start;
+    background: var(--wp--preset--color--accent);
+    color: var(--opac-card);
+    border: none;
+    border-radius: 6px;
+    padding: 10px 22px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--opac-transition);
+}
+
+.opac-form-btn:hover {
+    background: var(--opac-ink);
+}
+
+.opac-honeypot {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+}
+
+.opac-form-notice {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.opac-form-notice.is-success {
+    background: var(--wp--preset--color--teal-light);
+    color: var(--wp--preset--color--teal);
+    border: 1px solid var(--wp--preset--color--teal);
+}
+
+.opac-form-notice.is-error {
+    background: var(--wp--preset--color--accent-light);
+    color: var(--wp--preset--color--accent);
+    border: 1px solid var(--wp--preset--color--accent);
+}
+
+.opac-contact-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.opac-osm-map {
+    width: 100%;
+    height: 200px;
+    border: 1px solid var(--opac-border);
+    border-radius: 10px;
+    display: block;
+}
