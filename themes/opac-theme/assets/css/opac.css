@@ -1,11 +1,13 @@
-/* OPAC Plérin - utility & component styles
+/* ================================================================
+ * OPAC Plérin - utility & component styles
  *
- * Styles non couvrables par theme.json : composants custom (dropdown CTA,
- * logo circle), transitions hover, focus A11y. Les tokens (couleurs, typo,
- * espacements) sont déclarés dans theme.json et exposés en custom properties
- * WordPress (`--wp--preset--color--accent`, etc.). On les redéclare ici sous
- * un alias `--opac-*` pour la lisibilité des règles CSS custom.
- */
+ * Styles non couvrables par theme.json : composants custom (hero,
+ * cards, tags, dropdown CTA, logo circle), transitions hover, focus
+ * A11y, block styles custom des boutons. Les tokens (couleurs, typo,
+ * espacements) sont déclarés dans theme.json et exposés en custom
+ * properties WordPress (--wp--preset--color--accent, etc.).
+ * On les redéclare ici sous un alias --opac-* pour la lisibilité.
+ * ================================================================ */
 
 :root {
     --opac-ink: var(--wp--preset--color--ink, #1a1a1a);
@@ -13,6 +15,7 @@
     --opac-bg: var(--wp--preset--color--bg, #faf9f6);
     --opac-card: var(--wp--preset--color--card, #ffffff);
     --opac-accent: var(--wp--preset--color--accent, #c0583a);
+    --opac-accent-dark: #a64a30;
     --opac-accent-light: var(--wp--preset--color--accent-light, #f3ebe7);
     --opac-teal: var(--wp--preset--color--teal, #2a7a6e);
     --opac-teal-light: var(--wp--preset--color--teal-light, #e4f0ee);
@@ -25,13 +28,15 @@
     --opac-transition: 150ms ease-out;
 }
 
-/* A11y - focus visible cohérent sur toute l'interface */
+/* ----------------------------------------------------------------
+ * Global / A11y
+ * ---------------------------------------------------------------- */
+
 *:focus-visible {
     outline: 2px solid var(--opac-accent);
     outline-offset: 2px;
 }
 
-/* Skip link (sera ajouté en M9 - A11y/sécurité) */
 .skip-link.screen-reader-text:focus {
     position: absolute;
     top: 8px;
@@ -44,7 +49,10 @@
     border-radius: 4px;
 }
 
-/* Logo circle dans le header (cercle terracotta avec O) */
+/* ----------------------------------------------------------------
+ * Header components (logo circle + dropdown CTA)
+ * ---------------------------------------------------------------- */
+
 .opac-nav-logo-circle {
     width: 36px;
     height: 36px;
@@ -58,9 +66,9 @@
     font-size: 15px;
     font-weight: 500;
     flex-shrink: 0;
+    text-decoration: none;
 }
 
-/* CTA dropdown - "S'inscrire ▾" dans le header */
 .opac-cta {
     position: relative;
     display: inline-block;
@@ -81,7 +89,7 @@
 
 .opac-cta-btn:hover,
 .opac-cta-btn:focus-visible {
-    background: #a64a30;
+    background: var(--opac-accent-dark);
 }
 
 .opac-cta-dd {
@@ -91,7 +99,7 @@
     min-width: 220px;
     padding: 8px 0;
     background: #fff;
-    border: 0.5px solid var(--opac-border);
+    border: 1px solid var(--opac-border);
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     z-index: 100;
@@ -123,4 +131,433 @@
     font-size: 11px;
     color: var(--opac-muted);
     line-height: 1.4;
+}
+
+/* ----------------------------------------------------------------
+ * Button block styles (is-style-opac-primary, -ghost, -on-teal)
+ * Enregistrés dans functions.php via register_block_style().
+ * ---------------------------------------------------------------- */
+
+.wp-block-button.is-style-opac-primary > .wp-block-button__link {
+    background-color: var(--opac-accent);
+    color: #fff;
+    border: none;
+    transition: background var(--opac-transition);
+}
+.wp-block-button.is-style-opac-primary > .wp-block-button__link:hover,
+.wp-block-button.is-style-opac-primary > .wp-block-button__link:focus-visible {
+    background-color: var(--opac-accent-dark);
+}
+
+.wp-block-button.is-style-opac-ghost > .wp-block-button__link {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    transition: background var(--opac-transition), border-color var(--opac-transition);
+}
+.wp-block-button.is-style-opac-ghost > .wp-block-button__link:hover,
+.wp-block-button.is-style-opac-ghost > .wp-block-button__link:focus-visible {
+    background-color: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+.wp-block-button.is-style-opac-on-teal > .wp-block-button__link {
+    background-color: #fff;
+    color: var(--opac-teal);
+    border: none;
+}
+.wp-block-button.is-style-opac-on-teal > .wp-block-button__link:hover,
+.wp-block-button.is-style-opac-on-teal > .wp-block-button__link:focus-visible {
+    background-color: rgba(255, 255, 255, 0.92);
+}
+
+/* ----------------------------------------------------------------
+ * Hero (homepage)
+ * ---------------------------------------------------------------- */
+
+.opac-hero {
+    padding: 56px 40px 48px;
+    position: relative;
+    overflow: hidden;
+}
+
+.opac-hero-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 5px 14px;
+    border-radius: var(--opac-radius-pill);
+    margin: 0 0 20px;
+}
+
+.opac-hero-title {
+    font-size: clamp(26px, 4vw, 34px);
+    line-height: 1.25;
+    max-width: 460px;
+    margin: 0 0 14px;
+    font-weight: 400;
+}
+
+.opac-hero-intro {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 460px;
+    line-height: 1.6;
+    margin: 0 0 24px;
+}
+
+.opac-hero-actions {
+    gap: 12px;
+    margin: 0;
+}
+
+.opac-hero-stats {
+    gap: 40px;
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.opac-stat-num {
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1;
+    margin: 0;
+}
+
+.opac-stat-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+    margin: 0;
+}
+
+/* ----------------------------------------------------------------
+ * Section header (titre + lien)
+ * ---------------------------------------------------------------- */
+
+.opac-section-header {
+    margin-bottom: 24px;
+    align-items: baseline;
+}
+
+.opac-section-title {
+    font-size: 22px;
+    font-weight: 400;
+    margin: 0;
+}
+
+.opac-section-link {
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.opac-section-link a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.opac-section-link a:hover {
+    text-decoration: underline;
+}
+
+/* ----------------------------------------------------------------
+ * Cards (commun)
+ * ---------------------------------------------------------------- */
+
+.opac-card {
+    border-radius: var(--opac-radius);
+    border: 1px solid var(--opac-border);
+    overflow: hidden;
+    transition: transform var(--opac-transition), box-shadow var(--opac-transition);
+}
+
+.opac-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.opac-card-cover {
+    min-height: 100px;
+}
+
+.opac-card-name {
+    font-weight: 500;
+    font-size: 14px;
+    margin: 0 0 4px;
+}
+
+.opac-card-meta {
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 0 0 8px;
+}
+
+.opac-card-price {
+    font-weight: 500;
+    font-size: 13px;
+    margin: 0;
+}
+
+.opac-card-link {
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.opac-card-link a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.opac-card-link a:hover {
+    text-decoration: underline;
+}
+
+/* ----------------------------------------------------------------
+ * Tags (pills colorés)
+ * ---------------------------------------------------------------- */
+
+.opac-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: var(--opac-radius-pill);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.opac-tag-ok       { background: var(--opac-teal-light);   color: var(--opac-teal); }
+.opac-tag-full     { background: var(--opac-accent-light); color: var(--opac-accent); }
+.opac-tag-few      { background: var(--opac-amber-light);  color: var(--opac-amber); }
+.opac-tag-neutral  { background: #eee;                     color: #666; }
+
+/* Tags d'événements agenda (catégories) */
+.opac-tag-sortie     { background: var(--opac-teal-light);   color: var(--opac-teal); text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
+.opac-tag-expo       { background: #eeebf5;                  color: #5a4d8a;          text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
+.opac-tag-asso       { background: var(--opac-accent-light); color: var(--opac-accent); text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
+.opac-tag-eph        { background: var(--opac-amber-light);  color: var(--opac-amber); text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
+.opac-tag-partenaire { background: #eee;                     color: #666;             text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
+
+/* ----------------------------------------------------------------
+ * Stage card (horizontal : date / corps / action)
+ * ---------------------------------------------------------------- */
+
+.opac-stage-card {
+    gap: 0 !important;
+    align-items: stretch;
+}
+
+.opac-stage-date {
+    flex: 0 0 100px;
+    padding: 16px 12px;
+    text-align: center;
+}
+
+.opac-stage-day {
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1;
+    margin: 0;
+}
+
+.opac-stage-month {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 4px 0 0;
+}
+
+.opac-stage-body {
+    flex: 1 1 auto;
+}
+
+.opac-stage-name {
+    font-weight: 500;
+    font-size: 15px;
+    margin: 0;
+}
+
+.opac-stage-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.opac-stage-action {
+    flex: 0 0 auto;
+}
+
+/* ----------------------------------------------------------------
+ * Event card (agenda timeline row)
+ * ---------------------------------------------------------------- */
+
+.opac-event-card {
+    gap: 0 !important;
+    align-items: stretch;
+}
+
+.opac-event-stripe {
+    flex: 0 0 4px;
+    min-height: 100%;
+    align-self: stretch;
+}
+
+.opac-event-body {
+    flex: 1 1 auto;
+}
+
+.opac-event-date {
+    font-size: 12px;
+    margin: 0;
+}
+
+.opac-event-name {
+    font-weight: 500;
+    font-size: 14px;
+    margin: 0;
+}
+
+.opac-event-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* ----------------------------------------------------------------
+ * CTA band (bande teal)
+ * ---------------------------------------------------------------- */
+
+.opac-cta-band {
+    padding: 36px 32px;
+}
+
+.opac-cta-band-inner {
+    gap: 20px;
+}
+
+.opac-cta-band-title {
+    font-size: 20px;
+    font-weight: 400;
+    margin: 0;
+    color: #fff;
+}
+
+.opac-cta-band-desc {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+    margin: 0;
+}
+
+/* ----------------------------------------------------------------
+ * Person card (équipe)
+ * ---------------------------------------------------------------- */
+
+.opac-person-card {
+    text-align: center;
+}
+
+.opac-person-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0 auto;
+    background: var(--opac-accent-light);
+    color: var(--opac-accent);
+}
+
+.opac-person-avatar-1 { background: #f0e6dc; color: var(--opac-accent); }
+.opac-person-avatar-2 { background: var(--opac-teal-light); color: var(--opac-teal); }
+.opac-person-avatar-3 { background: #eeebf5; color: #5a4d8a; }
+.opac-person-avatar-4 { background: #dce8f0; color: #2a5f8a; }
+.opac-person-avatar-5 { background: var(--opac-amber-light); color: var(--opac-amber); }
+.opac-person-avatar-6 { background: #e0ebe8; color: var(--opac-teal); }
+.opac-person-avatar-7 { background: #f5e6e0; color: var(--opac-accent); }
+.opac-person-avatar-8 { background: #e6e0ee; color: #5a4d8a; }
+
+.opac-person-name {
+    font-weight: 500;
+    font-size: 12px;
+    margin: 0;
+}
+
+.opac-person-role {
+    font-size: 11px;
+    margin: 0;
+}
+
+/* ----------------------------------------------------------------
+ * Info card (h3 + paragraphe)
+ * ---------------------------------------------------------------- */
+
+.opac-info-card-title {
+    font-weight: 500;
+    font-size: 14px;
+    margin: 0;
+}
+
+.opac-info-card-content {
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ----------------------------------------------------------------
+ * Page layout helpers
+ * ---------------------------------------------------------------- */
+
+.opac-section-padded {
+    padding: 40px 32px;
+}
+
+.opac-ateliers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+@media (max-width: 880px) {
+    .opac-ateliers-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 580px) {
+    .opac-ateliers-grid { grid-template-columns: 1fr; }
+    .opac-section-padded { padding: 32px 20px; }
+    .opac-hero { padding: 40px 24px; }
+    .opac-cta-band { padding: 28px 24px; }
+}
+
+.opac-eph-section {
+    background: var(--opac-hero);
+    color: #fff;
+}
+
+.opac-eph-section .opac-section-title,
+.opac-eph-section .opac-section-link a {
+    color: #fff;
+}
+
+.opac-eph-section .opac-stage-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.opac-eph-section .opac-stage-name { color: #fff; }
+.opac-eph-section .opac-stage-desc { color: rgba(255, 255, 255, 0.55) !important; }
+
+.opac-stages-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }

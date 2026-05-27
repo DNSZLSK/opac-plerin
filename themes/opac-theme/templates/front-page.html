@@ -1,19 +1,417 @@
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 
-<!-- wp:group {"tagName":"main","layout":{"type":"constrained"},"style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}}} -->
-<main class="wp-block-group" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)">
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
 
-    <!-- wp:heading {"level":1,"fontFamily":"display"} -->
-    <h1 class="wp-block-heading has-display-font-family">OPAC Plérin - fondations en place</h1>
-    <!-- /wp:heading -->
+    <!-- Hero -->
+    <!-- wp:group {"tagName":"section","align":"full","className":"opac-hero","backgroundColor":"hero","textColor":"card","layout":{"type":"constrained","contentSize":"720px","justifyContent":"left"}} -->
+    <section class="wp-block-group alignfull opac-hero has-card-color has-hero-background-color has-text-color has-background">
 
-    <!-- wp:paragraph {"textColor":"muted"} -->
-    <p class="has-muted-color has-text-color">Le squelette du thème FSE et du plugin opac-custom est opérationnel. La page d'accueil sera construite au module M2 avec des block patterns réutilisables : hero, grille d'ateliers, éphémères, actualités, CTA d'inscription.</p>
-    <!-- /wp:paragraph -->
+        <!-- wp:paragraph {"className":"opac-hero-badge"} -->
+        <p class="opac-hero-badge">Saison 2025 / 2026</p>
+        <!-- /wp:paragraph -->
 
-    <!-- wp:paragraph {"textColor":"muted","style":{"typography":{"fontSize":"13px"}}} -->
-    <p class="has-muted-color has-text-color" style="font-size:13px">Pour vérifier l'installation : créer un atelier de test depuis l'admin (menu <em>Ateliers</em>), vérifier que les CPTs OPAC apparaissent, que la palette de couleurs est disponible dans l'éditeur Gutenberg, et que les fonts Playfair Display + DM Sans chargent.</p>
-    <!-- /wp:paragraph -->
+        <!-- wp:heading {"className":"opac-hero-title","fontFamily":"display"} -->
+        <h1 class="wp-block-heading opac-hero-title has-display-font-family">La culture au bout des doigts</h1>
+        <!-- /wp:heading -->
+
+        <!-- wp:paragraph {"className":"opac-hero-intro"} -->
+        <p class="opac-hero-intro">Ateliers d'expression culturelle, activités éphémères et sorties pour tous les âges. Association OPAC, asso loi 1901 à Plérin-sur-Mer.</p>
+        <!-- /wp:paragraph -->
+
+        <!-- wp:buttons {"className":"opac-hero-actions","layout":{"type":"flex","flexWrap":"wrap"}} -->
+        <div class="wp-block-buttons opac-hero-actions">
+            <!-- wp:button {"className":"is-style-opac-primary"} -->
+            <div class="wp-block-button is-style-opac-primary"><a class="wp-block-button__link wp-element-button" href="/ateliers/">Découvrir les ateliers</a></div>
+            <!-- /wp:button -->
+            <!-- wp:button {"className":"is-style-opac-ghost"} -->
+            <div class="wp-block-button is-style-opac-ghost"><a class="wp-block-button__link wp-element-button" href="/ephemeres/">Nos éphémères</a></div>
+            <!-- /wp:button -->
+        </div>
+        <!-- /wp:buttons -->
+
+        <!-- wp:group {"className":"opac-hero-stats","layout":{"type":"flex","flexWrap":"wrap"}} -->
+        <div class="wp-block-group opac-hero-stats">
+            <!-- wp:group {"layout":{"type":"flex","orientation":"vertical"},"style":{"spacing":{"blockGap":"2px"}}} -->
+            <div class="wp-block-group">
+                <!-- wp:paragraph {"className":"opac-stat-num","fontFamily":"display"} -->
+                <p class="opac-stat-num has-display-font-family">10</p>
+                <!-- /wp:paragraph -->
+                <!-- wp:paragraph {"className":"opac-stat-label"} -->
+                <p class="opac-stat-label">Ateliers à l'année</p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+            <!-- wp:group {"layout":{"type":"flex","orientation":"vertical"},"style":{"spacing":{"blockGap":"2px"}}} -->
+            <div class="wp-block-group">
+                <!-- wp:paragraph {"className":"opac-stat-num","fontFamily":"display"} -->
+                <p class="opac-stat-num has-display-font-family">200+</p>
+                <!-- /wp:paragraph -->
+                <!-- wp:paragraph {"className":"opac-stat-label"} -->
+                <p class="opac-stat-label">Adhérents</p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+            <!-- wp:group {"layout":{"type":"flex","orientation":"vertical"},"style":{"spacing":{"blockGap":"2px"}}} -->
+            <div class="wp-block-group">
+                <!-- wp:paragraph {"className":"opac-stat-num","fontFamily":"display"} -->
+                <p class="opac-stat-num has-display-font-family">46</p>
+                <!-- /wp:paragraph -->
+                <!-- wp:paragraph {"className":"opac-stat-label"} -->
+                <p class="opac-stat-label">Années d'activité</p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+        </div>
+        <!-- /wp:group -->
+
+    </section>
+    <!-- /wp:group -->
+
+    <!-- Section ateliers à l'année -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <section class="wp-block-group alignwide opac-section-padded">
+
+        <!-- wp:group {"className":"opac-section-header","layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between","verticalAlignment":"bottom"}} -->
+        <div class="wp-block-group opac-section-header">
+            <!-- wp:heading {"level":2,"className":"opac-section-title","fontFamily":"display"} -->
+            <h2 class="wp-block-heading opac-section-title has-display-font-family">Ateliers à l'année</h2>
+            <!-- /wp:heading -->
+            <!-- wp:paragraph {"className":"opac-section-link","textColor":"accent"} -->
+            <p class="opac-section-link has-accent-color has-text-color"><a href="/ateliers/">Tous les ateliers →</a></p>
+            <!-- /wp:paragraph -->
+        </div>
+        <!-- /wp:group -->
+
+        <!-- wp:group {"className":"opac-ateliers-grid","layout":{"type":"default"}} -->
+        <div class="wp-block-group opac-ateliers-grid">
+
+            <!-- Atelier card 1 -->
+            <!-- wp:group {"className":"opac-card","backgroundColor":"card","layout":{"type":"default"}} -->
+            <div class="wp-block-group opac-card has-card-background-color has-background">
+                <!-- wp:group {"className":"opac-card-cover","backgroundColor":"accent-light","style":{"spacing":{"padding":{"top":"50px","bottom":"50px"}}}} -->
+                <div class="wp-block-group opac-card-cover has-accent-light-background-color has-background" style="padding-top:50px;padding-bottom:50px"></div>
+                <!-- /wp:group -->
+                <!-- wp:group {"style":{"spacing":{"padding":{"top":"14px","right":"16px","bottom":"10px","left":"16px"}}}} -->
+                <div class="wp-block-group" style="padding-top:14px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-name"} --><p class="opac-card-name">Céramique</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-meta","textColor":"muted"} --><p class="opac-card-meta has-muted-color has-text-color">7 créneaux par semaine · Anne Lemogne</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} --><p class="opac-tag opac-tag-ok">Places disponibles</p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+                <!-- wp:group {"className":"opac-card-footer","style":{"spacing":{"padding":{"top":"10px","right":"16px","bottom":"10px","left":"16px"}},"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+                <div class="wp-block-group opac-card-footer" style="border-top-color:#e8e5e0;border-top-width:1px;padding-top:10px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-price"} --><p class="opac-card-price">335 € / an</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-link","textColor":"accent"} --><p class="opac-card-link has-accent-color has-text-color"><a href="#">Détails →</a></p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+            </div>
+            <!-- /wp:group -->
+
+            <!-- Atelier card 2 -->
+            <!-- wp:group {"className":"opac-card","backgroundColor":"card","layout":{"type":"default"}} -->
+            <div class="wp-block-group opac-card has-card-background-color has-background">
+                <!-- wp:group {"className":"opac-card-cover","style":{"color":{"background":"#e0e8e6"},"spacing":{"padding":{"top":"50px","bottom":"50px"}}}} -->
+                <div class="wp-block-group opac-card-cover has-background" style="background-color:#e0e8e6;padding-top:50px;padding-bottom:50px"></div>
+                <!-- /wp:group -->
+                <!-- wp:group {"style":{"spacing":{"padding":{"top":"14px","right":"16px","bottom":"10px","left":"16px"}}}} -->
+                <div class="wp-block-group" style="padding-top:14px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-name"} --><p class="opac-card-name">Sculpture</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-meta","textColor":"muted"} --><p class="opac-card-meta has-muted-color has-text-color">Terre, plâtre, pierre · Jacques Chauvel</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} --><p class="opac-tag opac-tag-ok">Places disponibles</p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+                <!-- wp:group {"className":"opac-card-footer","style":{"spacing":{"padding":{"top":"10px","right":"16px","bottom":"10px","left":"16px"}},"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+                <div class="wp-block-group opac-card-footer" style="border-top-color:#e8e5e0;border-top-width:1px;padding-top:10px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-price"} --><p class="opac-card-price">255 € / an</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-link","textColor":"accent"} --><p class="opac-card-link has-accent-color has-text-color"><a href="#">Détails →</a></p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+            </div>
+            <!-- /wp:group -->
+
+            <!-- Atelier card 3 -->
+            <!-- wp:group {"className":"opac-card","backgroundColor":"card","layout":{"type":"default"}} -->
+            <div class="wp-block-group opac-card has-card-background-color has-background">
+                <!-- wp:group {"className":"opac-card-cover","style":{"color":{"background":"#e6e0ee"},"spacing":{"padding":{"top":"50px","bottom":"50px"}}}} -->
+                <div class="wp-block-group opac-card-cover has-background" style="background-color:#e6e0ee;padding-top:50px;padding-bottom:50px"></div>
+                <!-- /wp:group -->
+                <!-- wp:group {"style":{"spacing":{"padding":{"top":"14px","right":"16px","bottom":"10px","left":"16px"}}}} -->
+                <div class="wp-block-group" style="padding-top:14px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-name"} --><p class="opac-card-name">Mosaïque</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-meta","textColor":"muted"} --><p class="opac-card-meta has-muted-color has-text-color">Tesselles de verre et céramique · Nathalie Lesaicherre</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-tag opac-tag-full"} --><p class="opac-tag opac-tag-full">Complet</p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+                <!-- wp:group {"className":"opac-card-footer","style":{"spacing":{"padding":{"top":"10px","right":"16px","bottom":"10px","left":"16px"}},"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+                <div class="wp-block-group opac-card-footer" style="border-top-color:#e8e5e0;border-top-width:1px;padding-top:10px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-price"} --><p class="opac-card-price">265 € / an</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-link","textColor":"muted"} --><p class="opac-card-link has-muted-color has-text-color"><a href="#">Liste d'attente</a></p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+            </div>
+            <!-- /wp:group -->
+
+            <!-- Atelier card 4 -->
+            <!-- wp:group {"className":"opac-card","backgroundColor":"card","layout":{"type":"default"}} -->
+            <div class="wp-block-group opac-card has-card-background-color has-background">
+                <!-- wp:group {"className":"opac-card-cover","style":{"color":{"background":"#f5e6e0"},"spacing":{"padding":{"top":"50px","bottom":"50px"}}}} -->
+                <div class="wp-block-group opac-card-cover has-background" style="background-color:#f5e6e0;padding-top:50px;padding-bottom:50px"></div>
+                <!-- /wp:group -->
+                <!-- wp:group {"style":{"spacing":{"padding":{"top":"14px","right":"16px","bottom":"10px","left":"16px"}}}} -->
+                <div class="wp-block-group" style="padding-top:14px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-name"} --><p class="opac-card-name">Couture</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-meta","textColor":"muted"} --><p class="opac-card-meta has-muted-color has-text-color">Bases et projets personnels · Présilia Letertre</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} --><p class="opac-tag opac-tag-ok">Places disponibles</p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+                <!-- wp:group {"className":"opac-card-footer","style":{"spacing":{"padding":{"top":"10px","right":"16px","bottom":"10px","left":"16px"}},"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+                <div class="wp-block-group opac-card-footer" style="border-top-color:#e8e5e0;border-top-width:1px;padding-top:10px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-price"} --><p class="opac-card-price">245 € / an</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-link","textColor":"accent"} --><p class="opac-card-link has-accent-color has-text-color"><a href="#">Détails →</a></p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+            </div>
+            <!-- /wp:group -->
+
+            <!-- Atelier card 5 -->
+            <!-- wp:group {"className":"opac-card","backgroundColor":"card","layout":{"type":"default"}} -->
+            <div class="wp-block-group opac-card has-card-background-color has-background">
+                <!-- wp:group {"className":"opac-card-cover","style":{"color":{"background":"#dce8f0"},"spacing":{"padding":{"top":"50px","bottom":"50px"}}}} -->
+                <div class="wp-block-group opac-card-cover has-background" style="background-color:#dce8f0;padding-top:50px;padding-bottom:50px"></div>
+                <!-- /wp:group -->
+                <!-- wp:group {"style":{"spacing":{"padding":{"top":"14px","right":"16px","bottom":"10px","left":"16px"}}}} -->
+                <div class="wp-block-group" style="padding-top:14px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-name"} --><p class="opac-card-name">Anglais</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-meta","textColor":"muted"} --><p class="opac-card-meta has-muted-color has-text-color">Conversation et expression orale · Sylvain Maillet</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} --><p class="opac-tag opac-tag-ok">Places disponibles</p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+                <!-- wp:group {"className":"opac-card-footer","style":{"spacing":{"padding":{"top":"10px","right":"16px","bottom":"10px","left":"16px"}},"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+                <div class="wp-block-group opac-card-footer" style="border-top-color:#e8e5e0;border-top-width:1px;padding-top:10px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-price"} --><p class="opac-card-price">170 € / an</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-link","textColor":"accent"} --><p class="opac-card-link has-accent-color has-text-color"><a href="#">Détails →</a></p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+            </div>
+            <!-- /wp:group -->
+
+            <!-- Atelier card 6 -->
+            <!-- wp:group {"className":"opac-card","backgroundColor":"card","layout":{"type":"default"}} -->
+            <div class="wp-block-group opac-card has-card-background-color has-background">
+                <!-- wp:group {"className":"opac-card-cover","style":{"color":{"background":"#e8e2d8"},"spacing":{"padding":{"top":"50px","bottom":"50px"}}}} -->
+                <div class="wp-block-group opac-card-cover has-background" style="background-color:#e8e2d8;padding-top:50px;padding-bottom:50px"></div>
+                <!-- /wp:group -->
+                <!-- wp:group {"style":{"spacing":{"padding":{"top":"14px","right":"16px","bottom":"10px","left":"16px"}}}} -->
+                <div class="wp-block-group" style="padding-top:14px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-name"} --><p class="opac-card-name">Arts plastiques</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-meta","textColor":"muted"} --><p class="opac-card-meta has-muted-color has-text-color">Enfants, ados et adultes · Jacques Chauvel</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} --><p class="opac-tag opac-tag-ok">Places disponibles</p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+                <!-- wp:group {"className":"opac-card-footer","style":{"spacing":{"padding":{"top":"10px","right":"16px","bottom":"10px","left":"16px"}},"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+                <div class="wp-block-group opac-card-footer" style="border-top-color:#e8e5e0;border-top-width:1px;padding-top:10px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                    <!-- wp:paragraph {"className":"opac-card-price"} --><p class="opac-card-price">Dès 100 € / an</p><!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-link","textColor":"accent"} --><p class="opac-card-link has-accent-color has-text-color"><a href="#">Détails →</a></p><!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+            </div>
+            <!-- /wp:group -->
+
+        </div>
+        <!-- /wp:group -->
+
+    </section>
+    <!-- /wp:group -->
+
+    <!-- Section ateliers éphémères -->
+    <!-- wp:group {"tagName":"section","align":"full","className":"opac-eph-section"} -->
+    <section class="wp-block-group alignfull opac-eph-section">
+
+        <!-- wp:group {"className":"opac-section-padded","layout":{"type":"constrained","contentSize":"1080px"}} -->
+        <div class="wp-block-group opac-section-padded">
+
+            <!-- wp:group {"className":"opac-section-header","layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between","verticalAlignment":"bottom"}} -->
+            <div class="wp-block-group opac-section-header">
+                <!-- wp:heading {"level":2,"className":"opac-section-title","fontFamily":"display"} -->
+                <h2 class="wp-block-heading opac-section-title has-display-font-family">Ateliers éphémères</h2>
+                <!-- /wp:heading -->
+                <!-- wp:paragraph {"className":"opac-section-link"} -->
+                <p class="opac-section-link"><a href="/ephemeres/">Tous les éphémères →</a></p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+
+            <!-- wp:group {"className":"opac-stages-list"} -->
+            <div class="wp-block-group opac-stages-list">
+
+                <!-- Stage card 1 -->
+                <!-- wp:group {"className":"opac-card opac-stage-card","layout":{"type":"flex","flexWrap":"nowrap"}} -->
+                <div class="wp-block-group opac-card opac-stage-card">
+                    <!-- wp:group {"className":"opac-stage-date","backgroundColor":"accent","textColor":"card","layout":{"type":"flex","orientation":"vertical","justifyContent":"center"}} -->
+                    <div class="wp-block-group opac-stage-date has-card-color has-accent-background-color has-text-color has-background">
+                        <!-- wp:paragraph {"className":"opac-stage-day","align":"center"} --><p class="opac-stage-day has-text-align-center">Avr.</p><!-- /wp:paragraph -->
+                        <!-- wp:paragraph {"className":"opac-stage-month","align":"center"} --><p class="opac-stage-month has-text-align-center">2026</p><!-- /wp:paragraph -->
+                    </div>
+                    <!-- /wp:group -->
+                    <!-- wp:group {"className":"opac-stage-body","layout":{"type":"flex","orientation":"vertical","justifyContent":"center"},"style":{"spacing":{"blockGap":"6px","padding":{"top":"16px","right":"20px","bottom":"16px","left":"20px"}}}} -->
+                    <div class="wp-block-group opac-stage-body" style="padding-top:16px;padding-right:20px;padding-bottom:16px;padding-left:20px">
+                        <!-- wp:paragraph {"className":"opac-stage-name"} --><p class="opac-stage-name">Sortie Bréhat &amp; aquarelle</p><!-- /wp:paragraph -->
+                        <!-- wp:paragraph {"className":"opac-stage-desc"} --><p class="opac-stage-desc">Journée artistique sur l'île de Bréhat. Peinture en plein air.</p><!-- /wp:paragraph -->
+                        <!-- wp:group {"className":"opac-stage-tags","layout":{"type":"flex","flexWrap":"wrap"},"style":{"spacing":{"blockGap":"6px"}}} -->
+                        <div class="wp-block-group opac-stage-tags">
+                            <!-- wp:paragraph {"className":"opac-tag opac-tag-neutral"} --><p class="opac-tag opac-tag-neutral">Adultes</p><!-- /wp:paragraph -->
+                            <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} --><p class="opac-tag opac-tag-ok">Sur inscription</p><!-- /wp:paragraph -->
+                        </div>
+                        <!-- /wp:group -->
+                    </div>
+                    <!-- /wp:group -->
+                    <!-- wp:group {"className":"opac-stage-action","layout":{"type":"flex","verticalAlignment":"center"},"style":{"spacing":{"padding":{"right":"20px","left":"10px"}}}} -->
+                    <div class="wp-block-group opac-stage-action" style="padding-right:20px;padding-left:10px">
+                        <!-- wp:buttons -->
+                        <div class="wp-block-buttons">
+                            <!-- wp:button {"className":"is-style-opac-primary"} -->
+                            <div class="wp-block-button is-style-opac-primary"><a class="wp-block-button__link wp-element-button" href="#">S'inscrire</a></div>
+                            <!-- /wp:button -->
+                        </div>
+                        <!-- /wp:buttons -->
+                    </div>
+                    <!-- /wp:group -->
+                </div>
+                <!-- /wp:group -->
+
+                <!-- Stage card 2 -->
+                <!-- wp:group {"className":"opac-card opac-stage-card","layout":{"type":"flex","flexWrap":"nowrap"}} -->
+                <div class="wp-block-group opac-card opac-stage-card">
+                    <!-- wp:group {"className":"opac-stage-date","backgroundColor":"teal","textColor":"card","layout":{"type":"flex","orientation":"vertical","justifyContent":"center"}} -->
+                    <div class="wp-block-group opac-stage-date has-card-color has-teal-background-color has-text-color has-background">
+                        <!-- wp:paragraph {"className":"opac-stage-day","align":"center"} --><p class="opac-stage-day has-text-align-center">Avr.</p><!-- /wp:paragraph -->
+                        <!-- wp:paragraph {"className":"opac-stage-month","align":"center"} --><p class="opac-stage-month has-text-align-center">2026</p><!-- /wp:paragraph -->
+                    </div>
+                    <!-- /wp:group -->
+                    <!-- wp:group {"className":"opac-stage-body","layout":{"type":"flex","orientation":"vertical","justifyContent":"center"},"style":{"spacing":{"blockGap":"6px","padding":{"top":"16px","right":"20px","bottom":"16px","left":"20px"}}}} -->
+                    <div class="wp-block-group opac-stage-body" style="padding-top:16px;padding-right:20px;padding-bottom:16px;padding-left:20px">
+                        <!-- wp:paragraph {"className":"opac-stage-name"} --><p class="opac-stage-name">Marqueterie de paille</p><!-- /wp:paragraph -->
+                        <!-- wp:paragraph {"className":"opac-stage-desc"} --><p class="opac-stage-desc">Découverte d'une technique décorative traditionnelle.</p><!-- /wp:paragraph -->
+                        <!-- wp:group {"className":"opac-stage-tags","layout":{"type":"flex","flexWrap":"wrap"},"style":{"spacing":{"blockGap":"6px"}}} -->
+                        <div class="wp-block-group opac-stage-tags">
+                            <!-- wp:paragraph {"className":"opac-tag opac-tag-neutral"} --><p class="opac-tag opac-tag-neutral">Adultes</p><!-- /wp:paragraph -->
+                            <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} --><p class="opac-tag opac-tag-ok">Sur inscription</p><!-- /wp:paragraph -->
+                        </div>
+                        <!-- /wp:group -->
+                    </div>
+                    <!-- /wp:group -->
+                    <!-- wp:group {"className":"opac-stage-action","layout":{"type":"flex","verticalAlignment":"center"},"style":{"spacing":{"padding":{"right":"20px","left":"10px"}}}} -->
+                    <div class="wp-block-group opac-stage-action" style="padding-right:20px;padding-left:10px">
+                        <!-- wp:buttons -->
+                        <div class="wp-block-buttons">
+                            <!-- wp:button {"className":"is-style-opac-primary"} -->
+                            <div class="wp-block-button is-style-opac-primary"><a class="wp-block-button__link wp-element-button" href="#">S'inscrire</a></div>
+                            <!-- /wp:button -->
+                        </div>
+                        <!-- /wp:buttons -->
+                    </div>
+                    <!-- /wp:group -->
+                </div>
+                <!-- /wp:group -->
+
+            </div>
+            <!-- /wp:group -->
+
+        </div>
+        <!-- /wp:group -->
+
+    </section>
+    <!-- /wp:group -->
+
+    <!-- Section actualités -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","backgroundColor":"card","layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <section class="wp-block-group alignwide opac-section-padded has-card-background-color has-background">
+
+        <!-- wp:group {"className":"opac-section-header","layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between","verticalAlignment":"bottom"}} -->
+        <div class="wp-block-group opac-section-header">
+            <!-- wp:heading {"level":2,"className":"opac-section-title","fontFamily":"display"} -->
+            <h2 class="wp-block-heading opac-section-title has-display-font-family">Actualités</h2>
+            <!-- /wp:heading -->
+            <!-- wp:paragraph {"className":"opac-section-link","textColor":"accent"} -->
+            <p class="opac-section-link has-accent-color has-text-color"><a href="/actus/">Toutes les actus →</a></p>
+            <!-- /wp:paragraph -->
+        </div>
+        <!-- /wp:group -->
+
+        <!-- wp:columns -->
+        <div class="wp-block-columns">
+            <!-- wp:column -->
+            <div class="wp-block-column">
+                <!-- wp:group {"className":"opac-card","backgroundColor":"bg","style":{"spacing":{"padding":{"top":"20px","right":"20px","bottom":"20px","left":"20px"}},"border":{"radius":"10px"}}} -->
+                <div class="wp-block-group opac-card has-bg-background-color has-background" style="border-radius:10px;padding-top:20px;padding-right:20px;padding-bottom:20px;padding-left:20px">
+                    <!-- wp:paragraph {"className":"opac-event-date","textColor":"muted","style":{"typography":{"textTransform":"uppercase","letterSpacing":"0.06em"}}} -->
+                    <p class="opac-event-date has-muted-color has-text-color" style="text-transform:uppercase;letter-spacing:0.06em">Mai 2026</p>
+                    <!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-name"} -->
+                    <p class="opac-card-name">Inscriptions saison 2025-2026 ouvertes</p>
+                    <!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"textColor":"muted","style":{"typography":{"fontSize":"13px","lineHeight":"1.5"}}} -->
+                    <p class="has-muted-color has-text-color" style="font-size:13px;line-height:1.5">Les inscriptions pour la saison à venir sont ouvertes. Passez au secrétariat ou inscrivez-vous en ligne sur la page de l'atelier de votre choix.</p>
+                    <!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+            </div>
+            <!-- /wp:column -->
+            <!-- wp:column -->
+            <div class="wp-block-column">
+                <!-- wp:group {"className":"opac-card","backgroundColor":"bg","style":{"spacing":{"padding":{"top":"20px","right":"20px","bottom":"20px","left":"20px"}},"border":{"radius":"10px"}}} -->
+                <div class="wp-block-group opac-card has-bg-background-color has-background" style="border-radius:10px;padding-top:20px;padding-right:20px;padding-bottom:20px;padding-left:20px">
+                    <!-- wp:paragraph {"className":"opac-event-date","textColor":"muted","style":{"typography":{"textTransform":"uppercase","letterSpacing":"0.06em"}}} -->
+                    <p class="opac-event-date has-muted-color has-text-color" style="text-transform:uppercase;letter-spacing:0.06em">Juin 2026</p>
+                    <!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-card-name"} -->
+                    <p class="opac-card-name">Exposition de fin de saison</p>
+                    <!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"textColor":"muted","style":{"typography":{"fontSize":"13px","lineHeight":"1.5"}}} -->
+                    <p class="has-muted-color has-text-color" style="font-size:13px;line-height:1.5">Venez découvrir les réalisations des adhérents de tous nos ateliers. Vernissage ouvert à tous, entrée libre.</p>
+                    <!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+            </div>
+            <!-- /wp:column -->
+        </div>
+        <!-- /wp:columns -->
+
+    </section>
+    <!-- /wp:group -->
+
+    <!-- CTA band -->
+    <!-- wp:group {"tagName":"section","align":"full","className":"opac-cta-band","backgroundColor":"teal","textColor":"card","layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <section class="wp-block-group alignfull opac-cta-band has-card-color has-teal-background-color has-text-color has-background">
+
+        <!-- wp:group {"className":"opac-cta-band-inner","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between","verticalAlignment":"center"}} -->
+        <div class="wp-block-group opac-cta-band-inner">
+
+            <!-- wp:group {"layout":{"type":"flex","orientation":"vertical"},"style":{"spacing":{"blockGap":"4px"}}} -->
+            <div class="wp-block-group">
+                <!-- wp:heading {"level":3,"className":"opac-cta-band-title","fontFamily":"display"} -->
+                <h3 class="wp-block-heading opac-cta-band-title has-display-font-family">Inscription pour la saison 2025 / 2026</h3>
+                <!-- /wp:heading -->
+                <!-- wp:paragraph {"className":"opac-cta-band-desc"} -->
+                <p class="opac-cta-band-desc">Inscription en ligne, paiement sur place au secrétariat. Adhésion annuelle requise.</p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+
+            <!-- wp:buttons -->
+            <div class="wp-block-buttons">
+                <!-- wp:button {"className":"is-style-opac-on-teal"} -->
+                <div class="wp-block-button is-style-opac-on-teal"><a class="wp-block-button__link wp-element-button" href="/ateliers/">S'inscrire à un atelier</a></div>
+                <!-- /wp:button -->
+            </div>
+            <!-- /wp:buttons -->
+
+        </div>
+        <!-- /wp:group -->
+
+    </section>
+    <!-- /wp:group -->
 
 </main>
 <!-- /wp:group -->

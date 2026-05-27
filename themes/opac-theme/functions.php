@@ -90,6 +90,26 @@ add_action( 'init', static function () {
     }
 } );
 
+// Block styles custom pour les boutons (apparaissent dans le sélecteur
+// "Styles" du bloc Bouton dans l'éditeur). CSS dans assets/css/opac.css.
+add_action( 'init', static function () {
+    if ( ! function_exists( 'register_block_style' ) ) {
+        return;
+    }
+    register_block_style( 'core/button', [
+        'name'  => 'opac-primary',
+        'label' => __( 'OPAC Primaire', 'opac' ),
+    ] );
+    register_block_style( 'core/button', [
+        'name'  => 'opac-ghost',
+        'label' => __( 'OPAC Ghost (sur fond sombre)', 'opac' ),
+    ] );
+    register_block_style( 'core/button', [
+        'name'  => 'opac-on-teal',
+        'label' => __( 'OPAC Sur fond teal', 'opac' ),
+    ] );
+} );
+
 // Shortcode utilitaire pour l'année courante (footer dynamique).
 add_shortcode( 'opac_year', static function () {
     return esc_html( wp_date( 'Y' ) );
