@@ -575,6 +575,11 @@
  * avec sa height fixe. Toujours height strict, jamais min-height.
  * ---------------------------------------------------------------- */
 
+/*
+ * Frame : juste le cadrage (dimensions + clip). Pas de background ici
+ * pour ne pas écraser les couleurs preset WP ni les inline styles des
+ * éléments fill internes.
+ */
 .opac-img-frame,
 .opac-card-cover,
 .opac-atelier-hero,
@@ -585,11 +590,8 @@
     padding: 0;
     overflow: hidden;
     position: relative;
-    background: var(--opac-bg);
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
 }
 
 .opac-card-cover    { height: 110px; }
@@ -597,33 +599,47 @@
 .opac-atelier-hero  { height: 280px; border-radius: var(--opac-radius); }
 .opac-gallery-item  { height: 100px; border-radius: 8px; }
 
-/* img directe OU figure.wp-block-image (wrap WP automatique) */
-.opac-img-frame > img,
-.opac-img-frame > figure,
+/*
+ * Fill : l'élément qui remplit le frame. Soit un div coloré (placeholder
+ * en attendant la photo), soit une figure.wp-block-image avec l'image.
+ * On force width/height 100% pour TOUS les enfants directs et le wrapper
+ * figure que WordPress génère autour des img.
+ */
+.opac-img-frame > *,
+.opac-card-cover > *,
+.opac-atelier-hero > *,
+.opac-gallery-item > *,
+.opac-stage-cover > *,
 .opac-img-frame .wp-block-image,
-.opac-img-frame .wp-block-image img,
-.opac-card-cover > img,
-.opac-card-cover > figure,
 .opac-card-cover .wp-block-image,
-.opac-card-cover .wp-block-image img,
-.opac-atelier-hero > img,
-.opac-atelier-hero > figure,
 .opac-atelier-hero .wp-block-image,
-.opac-atelier-hero .wp-block-image img,
-.opac-gallery-item > img,
-.opac-gallery-item > figure,
 .opac-gallery-item .wp-block-image,
-.opac-gallery-item .wp-block-image img,
-.opac-stage-cover > img,
-.opac-stage-cover > figure,
-.opac-stage-cover .wp-block-image,
-.opac-stage-cover .wp-block-image img {
+.opac-stage-cover .wp-block-image {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    display: block;
+    box-sizing: border-box;
+}
+
+/* Image proprement dite : object-fit pour gérer les ratios variables */
+.opac-img-frame img,
+.opac-card-cover img,
+.opac-atelier-hero img,
+.opac-gallery-item img,
+.opac-stage-cover img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center;
     display: block;
-    margin: 0;
-    padding: 0;
     max-width: none;
+}
+
+/* Le fill placeholder (div coloré utilisé tant qu'aucune photo n'est uploadée) */
+.opac-card-cover-fill {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
