@@ -33,6 +33,7 @@ require_once OPAC_CUSTOM_PATH . 'includes/class-opac-bindings.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-blocks.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-contact.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-inscriptions.php';
+require_once OPAC_CUSTOM_PATH . 'includes/class-opac-seo.php';
 
 add_action( 'init', [ 'OPAC_CPTs', 'register' ], 5 );
 add_action( 'init', [ 'OPAC_Taxonomies', 'register' ], 6 );
@@ -41,6 +42,7 @@ add_action( 'init', [ 'OPAC_Bindings', 'register' ], 8 );
 add_action( 'init', [ 'OPAC_Blocks', 'register' ], 9 );
 OPAC_Contact::register();
 OPAC_Inscriptions::register();
+OPAC_SEO::register();
 add_action( 'admin_init', [ 'OPAC_Admin', 'boot' ] );
 add_action( 'wp_dashboard_setup', [ 'OPAC_Admin', 'register_dashboard_widget' ] );
 
