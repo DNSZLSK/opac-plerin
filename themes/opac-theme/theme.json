@@ -27,7 +27,11 @@
                 { "slug": "border", "color": "#e8e5e0", "name": "Bordure" },
                 { "slug": "hero", "color": "#2c2926", "name": "Hero sombre" },
                 { "slug": "amber-light", "color": "#fef4e6", "name": "Ambre clair" },
-                { "slug": "amber", "color": "#9a6b1e", "name": "Ambre" }
+                { "slug": "amber", "color": "#9a6b1e", "name": "Ambre" },
+                { "slug": "mauve", "color": "#7a6baa", "name": "Mauve" },
+                { "slug": "mauve-light", "color": "#ece8f4", "name": "Mauve clair" },
+                { "slug": "gold", "color": "#c4953a", "name": "Or" },
+                { "slug": "gold-light", "color": "#f6ecd5", "name": "Or clair" }
             ]
         },
         "typography": {

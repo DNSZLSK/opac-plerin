@@ -36,6 +36,13 @@ class OPAC_Blocks {
             'attributes'      => [],
             'supports'        => [ 'html' => false ],
         ] );
+
+        register_block_type( 'opac/agenda-list', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_agenda_list' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
     }
 
     /**
@@ -120,5 +127,96 @@ class OPAC_Blocks {
             esc_attr__( 'Fil d\'Ariane', 'opac-custom' ),
             implode( ' <span class="opac-breadcrumb-sep" aria-hidden="true">/</span> ', $items )
         );
+    }
+
+    /**
+     * Liste agenda groupee par mois.
+     *
+     * Pourquoi un bloc serveur et pas un Query Loop + post-template ?
+     * Le groupement par mois ("Juin 2026" comme separator entre les cards)
+     * requiert un contexte "post precedent" qui ne se passe pas via
+     * block bindings. Server-side, on parse opac_date_event et on insere
+     * un <div class="opac-month-label"> quand le mois change.
+     *
+     * Chaque card est un <a href="permalink"> avec la classe opac-cat-<slug>
+     * (premier term de opac_event_cat). Le filtrage par tab (JS client-side)
+     * cible cette classe pour show/hide.
+     */
+    public static function render_agenda_list( $attrs, $content, $block ) {
+        $events = get_posts( [
+            'post_type'      => 'opac_event',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'meta_key'       => 'opac_date_event',
+            'orderby'        => 'meta_value',
+            'order'          => 'ASC',
+        ] );
+
+        if ( empty( $events ) ) {
+            return '<p class="opac-empty">' . esc_html__( 'Aucun événement programmé pour le moment.', 'opac-custom' ) . '</p>';
+        }
+
+        $months_fr = [
+            1 => 'Janvier', 2  => 'Février',  3  => 'Mars',     4 => 'Avril',
+            5 => 'Mai',     6  => 'Juin',     7  => 'Juillet',  8 => 'Août',
+            9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre',
+        ];
+
+        $out        = '<div class="opac-agenda">';
+        $last_month = '';
+
+        foreach ( $events as $event ) {
+            $date_raw = (string) get_post_meta( $event->ID, 'opac_date_event', true );
+            $ts       = $date_raw ? strtotime( $date_raw ) : false;
+            if ( ! $ts ) {
+                continue;
+            }
+
+            $ym = wp_date( 'Y-m', $ts );
+            if ( $ym !== $last_month ) {
+                $n     = (int) wp_date( 'n', $ts );
+                $year  = wp_date( 'Y', $ts );
+                $label = ( $months_fr[ $n ] ?? '' ) . ' ' . $year;
+                $out  .= '<div class="opac-month-label">' . esc_html( trim( $label ) ) . '</div>';
+                $last_month = $ym;
+            }
+
+            $terms     = wp_get_post_terms( $event->ID, 'opac_event_cat', [ 'number' => 1 ] );
+            $cat_slug  = '';
+            $cat_label = '';
+            if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
+                $cat_slug  = $terms[0]->slug;
+                $cat_label = $terms[0]->name;
+            }
+
+            $n_event   = (int) wp_date( 'n', $ts );
+            $year_ev   = wp_date( 'Y', $ts );
+            $date_card = ( $months_fr[ $n_event ] ?? '' ) . ' ' . $year_ev;
+
+            $desc = (string) get_post_meta( $event->ID, 'opac_description_courte', true );
+
+            $out .= sprintf(
+                '<a class="opac-event%s" href="%s">'
+                    . '<span class="opac-event-stripe" aria-hidden="true"></span>'
+                    . '<div class="opac-event-body">'
+                        . '<div class="opac-event-top">'
+                            . '<span class="opac-event-date">%s</span>'
+                            . '%s'
+                        . '</div>'
+                        . '<h3 class="opac-event-name">%s</h3>'
+                        . '%s'
+                    . '</div>'
+                . '</a>',
+                $cat_slug ? ' opac-cat-' . esc_attr( sanitize_html_class( $cat_slug ) ) : '',
+                esc_url( get_permalink( $event ) ),
+                esc_html( trim( $date_card ) ),
+                $cat_label ? '<span class="opac-event-cat">' . esc_html( $cat_label ) . '</span>' : '',
+                esc_html( get_the_title( $event ) ),
+                $desc ? '<p class="opac-event-desc">' . esc_html( $desc ) . '</p>' : ''
+            );
+        }
+
+        $out .= '</div>';
+        return $out;
     }
 }

@@ -38,6 +38,12 @@ class OPAC_Bindings {
             'get_value_callback' => [ __CLASS__, 'get_stage_meta' ],
             'uses_context'       => [ 'postId', 'postType' ],
         ] );
+
+        register_block_bindings_source( 'opac/event-meta', [
+            'label'              => __( 'OPAC Event Meta', 'opac-custom' ),
+            'get_value_callback' => [ __CLASS__, 'get_event_meta' ],
+            'uses_context'       => [ 'postId', 'postType' ],
+        ] );
     }
 
     /**
@@ -135,6 +141,59 @@ class OPAC_Bindings {
                 ];
                 $n = (int) wp_date( 'n', $ts );
                 return isset( $months_fr[ $n ] ) ? $months_fr[ $n ] : '';
+
+            default:
+                return is_scalar( $value ) ? (string) $value : '';
+        }
+    }
+
+    /**
+     * Source binding pour les meta d'un event de l'agenda.
+     * Args: { key: 'opac_date_event' | 'opac_lieu' | 'opac_description_courte' }
+     *       + part: 'full' | 'month' | 'year' (uniquement pour opac_date_event)
+     *
+     * Format date : "15 juin 2026" (full), "Juin" (month), "2026" (year).
+     * Locale FR forcee, independante de la locale serveur.
+     */
+    public static function get_event_meta( $source_args, $block_instance, $attribute_name ) {
+        $post_id = self::resolve_post_id( $block_instance );
+        if ( ! $post_id ) {
+            return '';
+        }
+
+        $key = isset( $source_args['key'] ) ? (string) $source_args['key'] : '';
+        if ( ! $key ) {
+            return '';
+        }
+
+        $value = get_post_meta( $post_id, $key, true );
+
+        switch ( $key ) {
+            case 'opac_date_event':
+                if ( ! $value ) {
+                    return '';
+                }
+                $ts = strtotime( $value );
+                if ( ! $ts ) {
+                    return '';
+                }
+                $months_fr = [
+                    1 => 'janvier', 2  => 'février',  3  => 'mars',     4 => 'avril',
+                    5 => 'mai',     6  => 'juin',     7  => 'juillet',  8 => 'août',
+                    9 => 'septembre', 10 => 'octobre', 11 => 'novembre', 12 => 'décembre',
+                ];
+                $n = (int) wp_date( 'n', $ts );
+                $part = isset( $source_args['part'] ) ? (string) $source_args['part'] : 'full';
+                if ( $part === 'year' ) {
+                    return wp_date( 'Y', $ts );
+                }
+                if ( $part === 'month' ) {
+                    return isset( $months_fr[ $n ] ) ? ucfirst( $months_fr[ $n ] ) : '';
+                }
+                $day  = (int) wp_date( 'j', $ts );
+                $year = wp_date( 'Y', $ts );
+                $mois = isset( $months_fr[ $n ] ) ? $months_fr[ $n ] : '';
+                return trim( $day . ' ' . $mois . ' ' . $year );
 
             default:
                 return is_scalar( $value ) ? (string) $value : '';
