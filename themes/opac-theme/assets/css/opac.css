@@ -704,7 +704,7 @@
     box-sizing: border-box;
 }
 
-.opac-card-cover    { height: 110px !important; }
+.opac-card-cover    { height: 200px !important; }
 .opac-stage-cover   { height: 110px !important; }
 .opac-atelier-hero  { height: 280px !important; border-radius: var(--opac-radius); }
 .opac-gallery-item  { height: 100px !important; border-radius: 8px; }
