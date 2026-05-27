@@ -1,0 +1,128 @@
+<?php
+/**
+ * OPAC Custom - Meta fields
+ *
+ * Enregistre les meta fields des CPTs avec show_in_rest pour qu'ils soient
+ * exploitables par le block editor (lecture / écriture dans des blocs custom
+ * ou via le panneau latéral en M1+).
+ *
+ * @package OPAC\Custom
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+class OPAC_Meta {
+
+    public static function register() {
+        self::register_atelier_meta();
+        self::register_stage_meta();
+        self::register_event_meta();
+        self::register_person_meta();
+        self::register_inscription_meta();
+        self::register_gallery_meta();
+    }
+
+    private static function auth_can_edit() {
+        return current_user_can( 'edit_posts' );
+    }
+
+    private static function args_string( $rest = true ) {
+        return [
+            'type' => 'string',
+            'single' => true,
+            'show_in_rest' => $rest,
+            'auth_callback' => [ __CLASS__, 'auth_can_edit' ],
+        ];
+    }
+
+    private static function args_int( $rest = true ) {
+        return [
+            'type' => 'integer',
+            'single' => true,
+            'show_in_rest' => $rest,
+            'auth_callback' => [ __CLASS__, 'auth_can_edit' ],
+        ];
+    }
+
+    private static function register_atelier_meta() {
+        register_post_meta( 'opac_atelier', 'opac_tarif_annuel', self::args_int() );
+        register_post_meta( 'opac_atelier', 'opac_animator', self::args_string() );
+        register_post_meta( 'opac_atelier', 'opac_public', self::args_string() );
+        register_post_meta( 'opac_atelier', 'opac_places_dispo', self::args_string() );
+        register_post_meta( 'opac_atelier', 'opac_description_courte', self::args_string() );
+
+        register_post_meta( 'opac_atelier', 'opac_creneaux', [
+            'type' => 'array',
+            'single' => true,
+            'show_in_rest' => [
+                'schema' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'jour' => [ 'type' => 'string' ],
+                            'debut' => [ 'type' => 'string' ],
+                            'fin' => [ 'type' => 'string' ],
+                            'tarif' => [ 'type' => 'integer' ],
+                            'note' => [ 'type' => 'string' ],
+                        ],
+                    ],
+                ],
+            ],
+            'auth_callback' => [ __CLASS__, 'auth_can_edit' ],
+        ] );
+
+        register_post_meta( 'opac_atelier', 'opac_gallery_ids', [
+            'type' => 'array',
+            'single' => true,
+            'show_in_rest' => [
+                'schema' => [
+                    'type' => 'array',
+                    'items' => [ 'type' => 'integer' ],
+                ],
+            ],
+            'auth_callback' => [ __CLASS__, 'auth_can_edit' ],
+        ] );
+    }
+
+    private static function register_stage_meta() {
+        register_post_meta( 'opac_stage', 'opac_date_debut', self::args_string() );
+        register_post_meta( 'opac_stage', 'opac_date_fin', self::args_string() );
+        register_post_meta( 'opac_stage', 'opac_tarif_seance', self::args_int() );
+        register_post_meta( 'opac_stage', 'opac_animator', self::args_string() );
+        register_post_meta( 'opac_stage', 'opac_public', self::args_string() );
+        register_post_meta( 'opac_stage', 'opac_places_dispo', self::args_string() );
+        register_post_meta( 'opac_stage', 'opac_lieu', self::args_string() );
+    }
+
+    private static function register_event_meta() {
+        register_post_meta( 'opac_event', 'opac_date_event', self::args_string() );
+        register_post_meta( 'opac_event', 'opac_description_courte', self::args_string() );
+        register_post_meta( 'opac_event', 'opac_lieu', self::args_string() );
+    }
+
+    private static function register_person_meta() {
+        register_post_meta( 'opac_person', 'opac_role', self::args_string() );
+        register_post_meta( 'opac_person', 'opac_initials', self::args_string() );
+    }
+
+    private static function register_inscription_meta() {
+        // Inscriptions : pas exposées en REST (PII).
+        register_post_meta( 'opac_inscription', 'opac_insc_nom', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_prenom', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_email', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_telephone', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_atelier_id', self::args_int( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_creneau', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_message', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_date_submitted', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_source', self::args_string( false ) );
+    }
+
+    private static function register_gallery_meta() {
+        register_post_meta( 'opac_gallery_item', 'opac_gallery_atelier_id', self::args_int() );
+        register_post_meta( 'opac_gallery_item', 'opac_gallery_caption', self::args_string() );
+    }
+}
