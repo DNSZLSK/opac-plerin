@@ -1,0 +1,176 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+
+    <!-- Breadcrumb -->
+    <!-- wp:group {"align":"wide","className":"opac-breadcrumb-wrap","style":{"spacing":{"padding":{"top":"16px","right":"32px","bottom":"0","left":"32px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <div class="wp-block-group alignwide opac-breadcrumb-wrap" style="padding-top:16px;padding-right:32px;padding-bottom:0;padding-left:32px">
+        <!-- wp:opac/breadcrumb /-->
+    </div>
+    <!-- /wp:group -->
+
+    <!-- Detail layout (photo + content) -->
+    <!-- wp:group {"align":"wide","className":"opac-detail","style":{"spacing":{"padding":{"top":"24px","right":"32px","bottom":"40px","left":"32px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <div class="wp-block-group alignwide opac-detail" style="padding-top:24px;padding-right:32px;padding-bottom:40px;padding-left:32px">
+
+        <!-- Colonne gauche : photo placeholder -->
+        <!-- wp:group {"className":"opac-detail-photo opac-card-cover"} -->
+        <div class="wp-block-group opac-detail-photo opac-card-cover">
+            <!-- wp:group {"className":"opac-card-cover-fill"} -->
+            <div class="wp-block-group opac-card-cover-fill"></div>
+            <!-- /wp:group -->
+        </div>
+        <!-- /wp:group -->
+
+        <!-- Colonne droite : contenu -->
+        <!-- wp:group {"className":"opac-detail-content"} -->
+        <div class="wp-block-group opac-detail-content">
+
+            <!-- wp:post-title {"level":1,"className":"opac-detail-title","fontFamily":"display"} /-->
+
+            <!-- wp:paragraph {"className":"opac-detail-tagline","textColor":"muted","metadata":{"bindings":{"content":{"source":"opac/atelier-meta","args":{"key":"opac_tagline"}}}}} -->
+            <p class="opac-detail-tagline has-muted-color has-text-color">Description longue de l'atelier.</p>
+            <!-- /wp:paragraph -->
+
+            <!-- Info grid : tarif + public -->
+            <!-- wp:group {"className":"opac-info-grid","layout":{"type":"default"}} -->
+            <div class="wp-block-group opac-info-grid">
+
+                <!-- wp:group {"className":"opac-info-item","backgroundColor":"card"} -->
+                <div class="wp-block-group opac-info-item has-card-background-color has-background">
+                    <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
+                    <p class="opac-info-label has-muted-color has-text-color">Tarif annuel</p>
+                    <!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"opac/atelier-meta","args":{"key":"opac_tarif_annuel"}}}}} -->
+                    <p class="opac-info-value">335 € / an</p>
+                    <!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+
+                <!-- wp:group {"className":"opac-info-item","backgroundColor":"card"} -->
+                <div class="wp-block-group opac-info-item has-card-background-color has-background">
+                    <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
+                    <p class="opac-info-label has-muted-color has-text-color">Public</p>
+                    <!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_public"}}}}} -->
+                    <p class="opac-info-value">Adultes</p>
+                    <!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+
+            </div>
+            <!-- /wp:group -->
+
+            <!-- Créneaux -->
+            <!-- wp:group {"className":"opac-creneaux","backgroundColor":"card"} -->
+            <div class="wp-block-group opac-creneaux has-card-background-color has-background">
+                <!-- wp:paragraph {"className":"opac-creneaux-title","textColor":"muted"} -->
+                <p class="opac-creneaux-title has-muted-color has-text-color">Créneaux par semaine</p>
+                <!-- /wp:paragraph -->
+                <!-- wp:paragraph {"className":"opac-creneaux-list","metadata":{"bindings":{"content":{"source":"opac/atelier-meta","args":{"key":"opac_creneaux_text"}}}}} -->
+                <p class="opac-creneaux-list">Liste des horaires</p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+
+            <!-- Tag de disponibilité -->
+            <!-- wp:opac/places-tag /-->
+
+            <!-- Boutons inscription + contact -->
+            <!-- wp:buttons {"className":"opac-detail-actions","style":{"spacing":{"margin":{"top":"16px"}}}} -->
+            <div class="wp-block-buttons opac-detail-actions" style="margin-top:16px">
+                <!-- wp:button {"className":"is-style-opac-primary"} -->
+                <div class="wp-block-button is-style-opac-primary"><a class="wp-block-button__link wp-element-button" href="#">S'inscrire</a></div>
+                <!-- /wp:button -->
+                <!-- wp:button {"className":"is-style-opac-secondary"} -->
+                <div class="wp-block-button is-style-opac-secondary"><a class="wp-block-button__link wp-element-button" href="/contact/">Poser une question</a></div>
+                <!-- /wp:button -->
+            </div>
+            <!-- /wp:buttons -->
+
+            <!-- Notice adhesion (statique) -->
+            <!-- wp:paragraph {"className":"opac-notice-adhesion","textColor":"muted"} -->
+            <p class="opac-notice-adhesion has-muted-color has-text-color">Adhésion annuelle requise (15 € Plérinais / 30 € extérieur / 10 € mineur), à régler sur place au secrétariat.</p>
+            <!-- /wp:paragraph -->
+
+            <!-- Notice speciale (Raku pour Ceramique, vide pour les autres) -->
+            <!-- wp:paragraph {"className":"opac-detail-notice","metadata":{"bindings":{"content":{"source":"opac/atelier-meta","args":{"key":"opac_notice"}}}}} -->
+            <p class="opac-detail-notice"></p>
+            <!-- /wp:paragraph -->
+
+        </div>
+        <!-- /wp:group -->
+
+    </div>
+    <!-- /wp:group -->
+
+    <!-- Section Realisations (placeholder pour M3, vraie galerie ulterieurement) -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","style":{"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <section class="wp-block-group alignwide opac-section-padded" style="border-top-color:#e8e5e0;border-top-width:1px">
+
+        <!-- wp:group {"className":"opac-section-header","layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between","verticalAlignment":"bottom"}} -->
+        <div class="wp-block-group opac-section-header">
+            <!-- wp:heading {"level":2,"className":"opac-section-title","fontFamily":"display"} -->
+            <h2 class="wp-block-heading opac-section-title has-display-font-family">Réalisations</h2>
+            <!-- /wp:heading -->
+            <!-- wp:paragraph {"className":"opac-section-link","textColor":"accent"} -->
+            <p class="opac-section-link has-accent-color has-text-color"><a href="#">Voir toute la galerie →</a></p>
+            <!-- /wp:paragraph -->
+        </div>
+        <!-- /wp:group -->
+
+        <!-- Placeholders galerie : 4 colored cards -->
+        <!-- wp:group {"className":"opac-gallery-grid","layout":{"type":"default"}} -->
+        <div class="wp-block-group opac-gallery-grid">
+            <!-- wp:group {"className":"opac-gallery-item","style":{"color":{"background":"#f0e6dc"}}} -->
+            <div class="wp-block-group opac-gallery-item has-background" style="background-color:#f0e6dc"></div>
+            <!-- /wp:group -->
+            <!-- wp:group {"className":"opac-gallery-item","style":{"color":{"background":"#e0e8e6"}}} -->
+            <div class="wp-block-group opac-gallery-item has-background" style="background-color:#e0e8e6"></div>
+            <!-- /wp:group -->
+            <!-- wp:group {"className":"opac-gallery-item","style":{"color":{"background":"#e6e0ee"}}} -->
+            <div class="wp-block-group opac-gallery-item has-background" style="background-color:#e6e0ee"></div>
+            <!-- /wp:group -->
+            <!-- wp:group {"className":"opac-gallery-item","style":{"color":{"background":"#f5e6e0"}}} -->
+            <div class="wp-block-group opac-gallery-item has-background" style="background-color:#f5e6e0"></div>
+            <!-- /wp:group -->
+        </div>
+        <!-- /wp:group -->
+
+    </section>
+    <!-- /wp:group -->
+
+    <!-- Section Animatrice -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","style":{"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <section class="wp-block-group alignwide opac-section-padded" style="border-top-color:#e8e5e0;border-top-width:1px">
+
+        <!-- wp:heading {"level":2,"className":"opac-section-title","fontFamily":"display","style":{"spacing":{"margin":{"bottom":"16px"}}}} -->
+        <h2 class="wp-block-heading opac-section-title has-display-font-family" style="margin-bottom:16px">Animateur</h2>
+        <!-- /wp:heading -->
+
+        <!-- wp:group {"className":"opac-animateur","backgroundColor":"card","layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"center"}} -->
+        <div class="wp-block-group opac-animateur has-card-background-color has-background">
+            <!-- wp:html -->
+            <div class="opac-animateur-avatar" aria-hidden="true">·</div>
+            <!-- /wp:html -->
+            <!-- wp:group {"className":"opac-animateur-info","layout":{"type":"flex","orientation":"vertical"},"style":{"spacing":{"blockGap":"2px"}}} -->
+            <div class="wp-block-group opac-animateur-info">
+                <!-- wp:paragraph {"className":"opac-animateur-name","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_animator"}}}}} -->
+                <p class="opac-animateur-name">Animateur·rice</p>
+                <!-- /wp:paragraph -->
+                <!-- wp:paragraph {"className":"opac-animateur-role","textColor":"muted"} -->
+                <p class="opac-animateur-role has-muted-color has-text-color">Animateur·rice de l'atelier OPAC</p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+        </div>
+        <!-- /wp:group -->
+
+    </section>
+    <!-- /wp:group -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

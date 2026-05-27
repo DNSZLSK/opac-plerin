@@ -1,0 +1,80 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+
+    <!-- Page header -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded opac-archive-header","layout":{"type":"constrained","contentSize":"640px"}} -->
+    <section class="wp-block-group alignwide opac-section-padded opac-archive-header">
+
+        <!-- wp:heading {"level":1,"align":"center","className":"opac-archive-title","fontFamily":"display"} -->
+        <h1 class="wp-block-heading has-text-align-center opac-archive-title has-display-font-family">Ateliers à l'année</h1>
+        <!-- /wp:heading -->
+
+        <!-- wp:paragraph {"align":"center","textColor":"muted","className":"opac-archive-intro"} -->
+        <p class="has-text-align-center opac-archive-intro has-muted-color has-text-color">Ateliers d'expression culturelle rythmés sur le calendrier scolaire, de septembre à juillet. Inscription possible en cours de saison selon les places.</p>
+        <!-- /wp:paragraph -->
+
+        <!-- Info bar adhesion -->
+        <!-- wp:paragraph {"align":"center","className":"opac-info-bar"} -->
+        <p class="has-text-align-center opac-info-bar">Adhésion annuelle : <strong>15 € Plérinais</strong> · <strong>30 € extérieur</strong> · <strong>10 € mineur</strong></p>
+        <!-- /wp:paragraph -->
+
+    </section>
+    <!-- /wp:group -->
+
+    <!-- Grid des ateliers (query loop) -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","layout":{"type":"constrained","contentSize":"1080px"},"style":{"spacing":{"padding":{"top":"0"}}}} -->
+    <section class="wp-block-group alignwide opac-section-padded" style="padding-top:0">
+
+        <!-- wp:query {"queryId":10,"query":{"perPage":12,"pages":0,"offset":0,"postType":"opac_atelier","order":"asc","orderBy":"date","inherit":false}} -->
+        <div class="wp-block-query">
+            <!-- wp:post-template {"className":"opac-ateliers-grid"} -->
+                <!-- wp:group {"className":"opac-card","backgroundColor":"card","layout":{"type":"default"}} -->
+                <div class="wp-block-group opac-card has-card-background-color has-background">
+                    <!-- wp:group {"className":"opac-card-cover"} -->
+                    <div class="wp-block-group opac-card-cover">
+                        <!-- wp:group {"className":"opac-card-cover-fill"} -->
+                        <div class="wp-block-group opac-card-cover-fill"></div>
+                        <!-- /wp:group -->
+                    </div>
+                    <!-- /wp:group -->
+                    <!-- wp:group {"style":{"spacing":{"padding":{"top":"14px","right":"16px","bottom":"10px","left":"16px"}}}} -->
+                    <div class="wp-block-group" style="padding-top:14px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                        <!-- wp:post-title {"level":3,"isLink":true,"className":"opac-card-name"} /-->
+                        <!-- wp:paragraph {"className":"opac-card-desc","textColor":"muted","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_description_courte"}}}}} -->
+                        <p class="opac-card-desc has-muted-color has-text-color">Description</p>
+                        <!-- /wp:paragraph -->
+                        <!-- wp:paragraph {"className":"opac-card-animator","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_animator"}}}}} -->
+                        <p class="opac-card-animator">Animateur</p>
+                        <!-- /wp:paragraph -->
+                        <!-- wp:opac/places-tag /-->
+                    </div>
+                    <!-- /wp:group -->
+                    <!-- wp:group {"className":"opac-card-footer","style":{"spacing":{"padding":{"top":"10px","right":"16px","bottom":"10px","left":"16px"}},"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+                    <div class="wp-block-group opac-card-footer" style="border-top-color:#e8e5e0;border-top-width:1px;padding-top:10px;padding-right:16px;padding-bottom:10px;padding-left:16px">
+                        <!-- wp:paragraph {"className":"opac-card-price","metadata":{"bindings":{"content":{"source":"opac/atelier-meta","args":{"key":"opac_tarif_annuel"}}}}} -->
+                        <p class="opac-card-price">335 € / an</p>
+                        <!-- /wp:paragraph -->
+                        <!-- wp:read-more {"content":"Détails →","className":"opac-card-link"} /-->
+                    </div>
+                    <!-- /wp:group -->
+                </div>
+                <!-- /wp:group -->
+            <!-- /wp:post-template -->
+
+            <!-- wp:query-no-results -->
+                <!-- wp:paragraph {"textColor":"muted"} -->
+                <p class="has-muted-color has-text-color">Aucun atelier publié pour le moment.</p>
+                <!-- /wp:paragraph -->
+            <!-- /wp:query-no-results -->
+        </div>
+        <!-- /wp:query -->
+
+    </section>
+    <!-- /wp:group -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

@@ -73,6 +73,14 @@ class OPAC_Bindings {
                 ];
                 return isset( $labels[ $value ] ) ? $labels[ $value ] : '';
 
+            // Champs ajoutes en M3 : descriptifs longs pour la page single.
+            // Pas de transformation, le rendu (line-breaks pour creneaux)
+            // est gere cote CSS via white-space: pre-line.
+            case 'opac_tagline':
+            case 'opac_creneaux_text':
+            case 'opac_notice':
+                return is_scalar( $value ) ? (string) $value : '';
+
             default:
                 return is_scalar( $value ) ? (string) $value : '';
         }

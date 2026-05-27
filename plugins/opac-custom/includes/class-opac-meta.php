@@ -75,6 +75,9 @@ class OPAC_Meta {
         ] );
 
         register_post_meta( 'opac_atelier', 'opac_card_color', self::args_string() );
+        register_post_meta( 'opac_atelier', 'opac_tagline', self::args_string() );
+        register_post_meta( 'opac_atelier', 'opac_creneaux_text', self::args_string() );
+        register_post_meta( 'opac_atelier', 'opac_notice', self::args_string() );
 
         register_post_meta( 'opac_atelier', 'opac_gallery_ids', [
             'type' => 'array',
