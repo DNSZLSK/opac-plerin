@@ -41,6 +41,16 @@ Thumbs.db
 *.swo
 *~
 
+# AI coding assistants (état local, ne jamais committer)
+.claude/
+**/.claude/
+.cursor/
+.continue/
+.aider*
+.copilot/
+.codeium/
+.github-copilot/
+
 # Local config overrides
 *.local.php
 local-config.php
