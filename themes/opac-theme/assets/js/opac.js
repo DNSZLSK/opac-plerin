@@ -88,9 +88,63 @@
         });
     }
 
+    /**
+     * Tabs de filtrage de l'agenda par categorie (archive opac_event).
+     * Show/hide cards a.opac-event par classe opac-cat-<slug>, puis
+     * cache les .opac-month-label devenus orphelins (aucun event visible
+     * dans leur segment jusqu'au prochain month-label).
+     */
+    function initEventTabs() {
+        var tabs = document.querySelectorAll('.opac-event-tabs [data-cat]');
+        if (!tabs.length) {
+            return;
+        }
+        var agenda = document.querySelector('.opac-agenda');
+        if (!agenda) {
+            return;
+        }
+
+        function applyFilter(cat) {
+            var children = agenda.children;
+            var currentLabel = null;
+            var labelHasVisible = false;
+
+            function commit() {
+                if (currentLabel) {
+                    currentLabel.style.display = labelHasVisible ? '' : 'none';
+                }
+            }
+
+            for (var i = 0; i < children.length; i++) {
+                var el = children[i];
+                if (el.classList.contains('opac-month-label')) {
+                    commit();
+                    currentLabel = el;
+                    labelHasVisible = false;
+                } else if (el.classList.contains('opac-event')) {
+                    var match = cat === 'all' || el.classList.contains('opac-cat-' + cat);
+                    el.style.display = match ? '' : 'none';
+                    if (match) {
+                        labelHasVisible = true;
+                    }
+                }
+            }
+            commit();
+        }
+
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                tabs.forEach(function (t) { t.classList.remove('is-active'); });
+                tab.classList.add('is-active');
+                applyFilter(tab.getAttribute('data-cat'));
+            });
+        });
+    }
+
     function initAll() {
         initCtaDropdown();
         initStageTabs();
+        initEventTabs();
     }
 
     if (document.readyState === 'loading') {

@@ -1,0 +1,45 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+
+    <!-- Page header -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded opac-archive-header","layout":{"type":"constrained","contentSize":"640px"}} -->
+    <section class="wp-block-group alignwide opac-section-padded opac-archive-header">
+
+        <!-- wp:heading {"level":1,"align":"center","className":"opac-archive-title","fontFamily":"display"} -->
+        <h1 class="wp-block-heading has-text-align-center opac-archive-title has-display-font-family">Agenda</h1>
+        <!-- /wp:heading -->
+
+        <!-- wp:paragraph {"align":"center","textColor":"muted","className":"opac-archive-intro"} -->
+        <p class="has-text-align-center opac-archive-intro has-muted-color has-text-color">Sorties, expositions, événements d'association et partenariats. Programmation actualisée par l'équipe de l'OPAC.</p>
+        <!-- /wp:paragraph -->
+
+    </section>
+    <!-- /wp:group -->
+
+    <!-- Tabs filtres par categorie (JS client-side) -->
+    <!-- wp:group {"align":"wide","className":"opac-event-tabs","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"center"}} -->
+    <div class="wp-block-group alignwide opac-event-tabs">
+        <!-- wp:html -->
+        <button type="button" class="opac-tab is-active" data-cat="all">Tous</button>
+        <button type="button" class="opac-tab" data-cat="sortie">Sorties</button>
+        <button type="button" class="opac-tab" data-cat="expo">Expositions</button>
+        <button type="button" class="opac-tab" data-cat="association">Association</button>
+        <button type="button" class="opac-tab" data-cat="ephemere">Éphémères</button>
+        <button type="button" class="opac-tab" data-cat="partenaire">Partenaires</button>
+        <!-- /wp:html -->
+    </div>
+    <!-- /wp:group -->
+
+    <!-- Liste agenda (bloc serveur opac/agenda-list : query + group by mois server-side) -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","layout":{"type":"constrained","contentSize":"1080px"},"style":{"spacing":{"padding":{"top":"0"}}}} -->
+    <section class="wp-block-group alignwide opac-section-padded" style="padding-top:0">
+        <!-- wp:opac/agenda-list /-->
+    </section>
+    <!-- /wp:group -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

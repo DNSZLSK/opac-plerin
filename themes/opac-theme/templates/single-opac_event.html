@@ -1,0 +1,58 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+
+    <!-- Breadcrumb -->
+    <!-- wp:group {"align":"wide","className":"opac-breadcrumb-wrap","style":{"spacing":{"padding":{"top":"16px","right":"32px","bottom":"0","left":"32px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <div class="wp-block-group alignwide opac-breadcrumb-wrap" style="padding-top:16px;padding-right:32px;padding-bottom:0;padding-left:32px">
+        <!-- wp:opac/breadcrumb /-->
+    </div>
+    <!-- /wp:group -->
+
+    <!-- Detail event -->
+    <!-- wp:group {"align":"wide","className":"opac-event-detail","style":{"spacing":{"padding":{"top":"24px","right":"32px","bottom":"40px","left":"32px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <div class="wp-block-group alignwide opac-event-detail" style="padding-top:24px;padding-right:32px;padding-bottom:40px;padding-left:32px">
+
+        <!-- wp:post-title {"level":1,"className":"opac-detail-title","fontFamily":"display"} /-->
+
+        <!-- Info-grid : date + lieu -->
+        <!-- wp:group {"className":"opac-info-grid","layout":{"type":"default"}} -->
+        <div class="wp-block-group opac-info-grid">
+
+            <!-- wp:group {"className":"opac-info-item","backgroundColor":"card"} -->
+            <div class="wp-block-group opac-info-item has-card-background-color has-background">
+                <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
+                <p class="opac-info-label has-muted-color has-text-color">Date</p>
+                <!-- /wp:paragraph -->
+                <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"opac/event-meta","args":{"key":"opac_date_event","part":"full"}}}}} -->
+                <p class="opac-info-value">15 juin 2026</p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+
+            <!-- wp:group {"className":"opac-info-item","backgroundColor":"card"} -->
+            <div class="wp-block-group opac-info-item has-card-background-color has-background">
+                <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
+                <p class="opac-info-label has-muted-color has-text-color">Lieu</p>
+                <!-- /wp:paragraph -->
+                <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_lieu"}}}}} -->
+                <p class="opac-info-value">Plérin-sur-Mer</p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+
+        </div>
+        <!-- /wp:group -->
+
+        <!-- Contenu (post_content) : descriptif complet edite via Gutenberg.
+             opac_description_courte sert uniquement aux cards d'archive. -->
+        <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
+
+    </div>
+    <!-- /wp:group -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

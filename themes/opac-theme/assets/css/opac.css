@@ -1204,3 +1204,169 @@ a.opac-card-link:hover,
 .opac-ateliers-grid .opac-card > .wp-block-group:not(.opac-card-cover):not(.opac-card-footer) {
     flex: 1 1 auto !important;
 }
+
+/* ========================================================================
+   M5 : Agenda (archive groupee par mois + tabs categorie + single event)
+   ======================================================================== */
+
+/* Tabs categories : reutilise les styles .opac-stage-tabs (M4).
+   Alias visuel : on duplique le wrapper, .opac-tab/.is-active sont partages. */
+.opac-event-tabs {
+    gap: 8px !important;
+    padding: 0 32px 24px !important;
+    max-width: 1080px;
+    margin: 0 auto !important;
+}
+
+.opac-event-tabs > * {
+    margin: 0 !important;
+}
+
+/* Conteneur agenda */
+.opac-agenda {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px 40px;
+}
+
+/* Empty state */
+.opac-empty {
+    text-align: center;
+    color: var(--opac-muted);
+    font-style: italic;
+    padding: 40px 0;
+}
+
+/* Separateur mois */
+.opac-month-label {
+    font-family: var(--wp--preset--font-family--display, Georgia, serif);
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--opac-muted);
+    margin: 32px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--opac-border);
+}
+
+.opac-month-label:first-child {
+    margin-top: 0;
+}
+
+/* Card event : <a> entierement cliquable */
+.opac-event {
+    display: flex;
+    background: var(--opac-card);
+    border: 1px solid var(--opac-border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow var(--opac-transition), border-color var(--opac-transition);
+}
+
+.opac-event:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-color: var(--opac-muted);
+    text-decoration: none;
+}
+
+.opac-event-stripe {
+    width: 4px;
+    flex-shrink: 0;
+    align-self: stretch;
+    background: var(--opac-muted);
+}
+
+.opac-event-body {
+    flex: 1;
+    padding: 16px 20px;
+    min-width: 0;
+}
+
+.opac-event-top {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.opac-event-date {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--opac-muted);
+    font-weight: 500;
+}
+
+.opac-event-cat {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+    background: var(--opac-bg);
+    color: var(--opac-muted);
+}
+
+.opac-event-name {
+    font-family: var(--wp--preset--font-family--display, Georgia, serif);
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--opac-ink);
+    margin: 0 0 4px;
+    line-height: 1.35;
+}
+
+.opac-event-desc {
+    font-size: 13px;
+    color: var(--opac-muted);
+    line-height: 1.5;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: calc(13px * 1.5 * 2);
+}
+
+/* Couleurs par categorie : stripe + badge en couple */
+.opac-cat-sortie .opac-event-stripe { background: var(--wp--preset--color--teal); }
+.opac-cat-sortie .opac-event-cat {
+    background: var(--wp--preset--color--teal-light);
+    color: var(--wp--preset--color--teal);
+}
+
+.opac-cat-expo .opac-event-stripe { background: var(--wp--preset--color--mauve); }
+.opac-cat-expo .opac-event-cat {
+    background: var(--wp--preset--color--mauve-light);
+    color: var(--wp--preset--color--mauve);
+}
+
+.opac-cat-association .opac-event-stripe { background: var(--wp--preset--color--accent); }
+.opac-cat-association .opac-event-cat {
+    background: var(--wp--preset--color--accent-light);
+    color: var(--wp--preset--color--accent);
+}
+
+.opac-cat-ephemere .opac-event-stripe { background: var(--wp--preset--color--gold); }
+.opac-cat-ephemere .opac-event-cat {
+    background: var(--wp--preset--color--gold-light);
+    color: var(--wp--preset--color--gold);
+}
+
+.opac-cat-partenaire .opac-event-stripe { background: var(--opac-muted); }
+.opac-cat-partenaire .opac-event-cat {
+    background: var(--opac-bg);
+    color: var(--opac-muted);
+}
+
+/* Single event : reutilise .opac-detail-* mais avec layout 1-col (pas de photo gauche).
+   .opac-event-detail bypass le grid 2-col de .opac-detail. */
+.opac-event-detail .opac-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0 20px;
+}
