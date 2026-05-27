@@ -15,7 +15,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'OPAC_THEME_VERSION' ) ) {
-    define( 'OPAC_THEME_VERSION', '0.1.0' );
+    define( 'OPAC_THEME_VERSION', '0.2.0' );
+}
+
+/**
+ * Renvoie la version pour cache-busting d'un asset du thème.
+ * Utilise filemtime() quand le fichier existe (cache busté à chaque
+ * save). Retombe sur OPAC_THEME_VERSION si le fichier est introuvable.
+ * Fonctionne en dev comme en prod : pas de cache obsolète possible.
+ */
+function opac_asset_version( $relative_path ) {
+    $abs = get_template_directory() . '/' . ltrim( $relative_path, '/' );
+    if ( file_exists( $abs ) ) {
+        return (string) filemtime( $abs );
+    }
+    return OPAC_THEME_VERSION;
 }
 
 add_action( 'after_setup_theme', static function () {
@@ -51,14 +65,14 @@ add_action( 'wp_enqueue_scripts', static function () {
         'opac-main',
         get_template_directory_uri() . '/assets/css/opac.css',
         [ 'opac-fonts' ],
-        OPAC_THEME_VERSION
+        opac_asset_version( 'assets/css/opac.css' )
     );
 
     wp_enqueue_script(
         'opac-main',
         get_template_directory_uri() . '/assets/js/opac.js',
         [],
-        OPAC_THEME_VERSION,
+        opac_asset_version( 'assets/js/opac.js' ),
         true
     );
 } );
@@ -88,6 +102,26 @@ add_action( 'init', static function () {
             [ 'label' => __( 'OPAC Plérin', 'opac' ) ]
         );
     }
+} );
+
+// Block styles custom pour les boutons (apparaissent dans le sélecteur
+// "Styles" du bloc Bouton dans l'éditeur). CSS dans assets/css/opac.css.
+add_action( 'init', static function () {
+    if ( ! function_exists( 'register_block_style' ) ) {
+        return;
+    }
+    register_block_style( 'core/button', [
+        'name'  => 'opac-primary',
+        'label' => __( 'OPAC Primaire', 'opac' ),
+    ] );
+    register_block_style( 'core/button', [
+        'name'  => 'opac-ghost',
+        'label' => __( 'OPAC Ghost (sur fond sombre)', 'opac' ),
+    ] );
+    register_block_style( 'core/button', [
+        'name'  => 'opac-on-teal',
+        'label' => __( 'OPAC Sur fond teal', 'opac' ),
+    ] );
 } );
 
 // Shortcode utilitaire pour l'année courante (footer dynamique).
