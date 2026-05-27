@@ -305,6 +305,21 @@
     font-weight: 500;
     font-size: 14px;
     margin: 0 0 4px;
+    line-height: 1.3;
+}
+
+/* Le titre de l'atelier rendu via core/post-title isLink:true devient un
+   <a>. Sans override, WP applique la couleur accent globale aux liens et
+   le titre apparait en terracotta au lieu d'ink. On force la couleur du
+   texte parent (le h3) et retire le decoration sauf au hover. */
+.opac-card-name a,
+.opac-stage-name a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.opac-card-name a:hover {
+    text-decoration: underline;
 }
 
 /* Description courte de l'atelier : tronquee a 2 lignes max + min-height
@@ -667,7 +682,35 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
+
+.opac-stages-list > * {
+    margin: 0 !important;
+}
+
+/* Rotation 2 couleurs sur le badge date des stages (accent / teal alternes).
+   Avec query loop on perd l'inline color individuelle, on bascule sur
+   nth-child. */
+.opac-stages-list > *:nth-child(odd) .opac-stage-date {
+    background-color: var(--opac-accent) !important;
+}
+.opac-stages-list > *:nth-child(even) .opac-stage-date {
+    background-color: var(--opac-teal) !important;
+}
+
+/* Rotation 6 couleurs sur le fill placeholder des cards atelier.
+   En attendant M3 ou Laurence uploadera les vraies photos via
+   post-featured-image, on garde les 6 teintes du mockup ai1-ai6
+   en rotation. */
+.opac-ateliers-grid > *:nth-child(6n+1) .opac-card-cover-fill { background-color: #f0e6dc; }
+.opac-ateliers-grid > *:nth-child(6n+2) .opac-card-cover-fill { background-color: #e0e8e6; }
+.opac-ateliers-grid > *:nth-child(6n+3) .opac-card-cover-fill { background-color: #e6e0ee; }
+.opac-ateliers-grid > *:nth-child(6n+4) .opac-card-cover-fill { background-color: #f5e6e0; }
+.opac-ateliers-grid > *:nth-child(6n+5) .opac-card-cover-fill { background-color: #dce8f0; }
+.opac-ateliers-grid > *:nth-child(6n+6) .opac-card-cover-fill { background-color: #f0ece0; }
 
 /* ----------------------------------------------------------------
  * Image frames (règle GLOBALE pour toutes les zones d'image)
@@ -786,40 +829,50 @@
     flex-shrink: 0;
 }
 
+/*
+ * Grid responsive des ateliers. Avec Query Loop (M2), le DOM rendu
+ * intercale un <li class="wp-block-post"> entre la grid et chaque
+ * .opac-card. Donc les selecteurs ciblent les descendants directs
+ * ou indirects, pas des "direct child" stricts.
+ */
 .opac-ateliers-grid {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 16px !important;
     padding: 0 !important;
+    margin: 0 !important;
     align-items: stretch !important;
+    list-style: none;
 }
 
-/*
- * Reset crucial : WP applique `:where(.is-layout-flow) > * {
- * margin-block-start: 24px }` à tous les enfants d'un container flow
- * sauf le premier. Sur une grille (où on utilise `gap` pour le
- * spacing), ce margin crée une asymétrie : la première card reste
- * en haut de sa cellule, les autres sont décalées de 24px vers le
- * bas et stretchées en moins. Résultat : la card de gauche apparait
- * plus haute que les autres. On reset uniquement les enfants de la
- * grille (ne touche pas le contenu interne des cards).
- */
+/* Reset des marges WP is-layout-flow sur tous les enfants de la grille
+   (li.wp-block-post auto-genere par WP, ou .opac-card en markup statique
+   ante-M2). Annule margin-block-start: 24px de WP qui creait des
+   asymetries entre la 1ere card et les suivantes. */
 .opac-ateliers-grid > * {
     margin: 0 !important;
 }
 
-/*
- * Cards d'ateliers (grille uniquement) : flexbox vertical pour que
- * le footer colle en bas même si le body est court. Garantit un
- * alignement parfait du tarif/lien "Détails" en pied de toutes les
- * cards de la rangée. Limité à .opac-ateliers-grid pour ne pas
- * affecter les actu cards et autres usages de .opac-card.
- */
-.opac-ateliers-grid > .opac-card {
-    display: flex !important;
-    flex-direction: column !important;
+/* Le wrapper li.wp-block-post auto-genere doit s'etirer en hauteur de
+   sa cellule grid (sinon les cards plus courtes laissent un trou) et
+   se comporter en flex column pour pousser le footer en bas. */
+.opac-ateliers-grid > li,
+.opac-ateliers-grid > .wp-block-post {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 0 !important;
 }
 
-.opac-ateliers-grid > .opac-card > .wp-block-group:not(.opac-card-cover):not(.opac-card-footer) {
+/* Card atelier : flex column interne pour aligner les footers en bas */
+.opac-ateliers-grid .opac-card {
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100%;
+}
+
+/* Le body (group entre cover et footer) etire pour pousser le footer en bas */
+.opac-ateliers-grid .opac-card > .wp-block-group:not(.opac-card-cover):not(.opac-card-footer) {
     flex: 1 1 auto !important;
 }
