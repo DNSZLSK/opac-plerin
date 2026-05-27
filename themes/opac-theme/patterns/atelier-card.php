@@ -24,8 +24,11 @@
         <!-- wp:paragraph {"className":"opac-card-name"} -->
         <p class="opac-card-name">Céramique</p>
         <!-- /wp:paragraph -->
-        <!-- wp:paragraph {"className":"opac-card-meta","textColor":"muted"} -->
-        <p class="opac-card-meta has-muted-color has-text-color">7 créneaux par semaine · Anne Lemogne</p>
+        <!-- wp:paragraph {"className":"opac-card-desc","textColor":"muted"} -->
+        <p class="opac-card-desc has-muted-color has-text-color">7 créneaux par semaine</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:paragraph {"className":"opac-card-animator"} -->
+        <p class="opac-card-animator">Anne Lemogne</p>
         <!-- /wp:paragraph -->
         <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} -->
         <p class="opac-tag opac-tag-ok">Places disponibles</p>
