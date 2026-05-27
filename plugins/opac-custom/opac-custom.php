@@ -54,3 +54,23 @@ register_deactivation_hook( __FILE__, static function () {
 add_action( 'plugins_loaded', static function () {
     load_plugin_textdomain( 'opac-custom', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 } );
+
+/**
+ * Ajoute la classe `opac-period-<slug>` au wrapper post WP rendu par
+ * Query Loop / post-template. Permet au JS client-side du template
+ * archive-opac_stage.html de filtrer les cards par tab de periode
+ * sans rechargement, en jouant sur la presence de la classe.
+ */
+add_filter( 'post_class', static function ( $classes, $class, $post_id ) {
+    if ( get_post_type( $post_id ) !== 'opac_stage' ) {
+        return $classes;
+    }
+    $terms = wp_get_post_terms( $post_id, 'opac_period', [ 'fields' => 'slugs' ] );
+    if ( is_wp_error( $terms ) ) {
+        return $classes;
+    }
+    foreach ( (array) $terms as $slug ) {
+        $classes[] = 'opac-period-' . sanitize_html_class( $slug );
+    }
+    return $classes;
+}, 10, 3 );

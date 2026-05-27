@@ -102,6 +102,8 @@ class OPAC_Meta {
         register_post_meta( 'opac_stage', 'opac_lieu', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_description_courte', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_card_color', self::args_string() );
+        register_post_meta( 'opac_stage', 'opac_tagline', self::args_string() );
+        register_post_meta( 'opac_stage', 'opac_notice', self::args_string() );
     }
 
     private static function register_event_meta() {
