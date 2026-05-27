@@ -274,11 +274,28 @@
     border: 1px solid var(--opac-border);
     overflow: hidden;
     transition: transform var(--opac-transition), box-shadow var(--opac-transition);
+    /* min-width: 0 permet à la card de shrink dans un flex/grid parent
+       (wp:columns, atelier grid). Sans ça, le texte long pousse la card
+       au-delà de sa colonne et déborde à droite. */
+    min-width: 0;
 }
 
 .opac-card:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* Garantir le wrapping du texte dans toutes les cards (titres + paragraphes).
+   Évite le débordement horizontal sur les mots longs (URLs, mots techniques,
+   noms d'animateurs accolés à un descriptif). */
+.opac-card p,
+.opac-card h1,
+.opac-card h2,
+.opac-card h3,
+.opac-card h4 {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    min-width: 0;
 }
 
 /* Image frames - cf. section dédiée plus bas (règle globale).
@@ -347,15 +364,34 @@
  * Stage card (horizontal : date / corps / action)
  * ---------------------------------------------------------------- */
 
+/*
+ * Stage card : layout grid 3 colonnes (date 100px / corps fluide / bouton auto)
+ * comme dans la maquette opac_page_stages.html. Grid est plus fiable que flex
+ * ici parce que :
+ * - WP applique is-layout-flex avec flex-wrap par défaut, ce qui peut faire
+ *   wrapper les enfants à mauvais escient
+ * - Grid garantit les 3 colonnes exactes, peu importe la largeur intrinsèque
+ *   des enfants ou le texte du body
+ * !important pour battre body .is-layout-flex { display: flex } de WP.
+ */
 .opac-stage-card {
+    display: grid !important;
+    grid-template-columns: 100px 1fr auto !important;
+    grid-template-rows: 1fr;
     gap: 0 !important;
-    align-items: stretch;
+    align-items: stretch !important;
+}
+
+/* Reset des marges WP is-layout-flow sur les items du grid (sinon le 2e
+   et le 3e enfant se décalent verticalement et cassent l'alignement) */
+.opac-stage-card > * {
+    margin: 0 !important;
 }
 
 .opac-stage-date {
-    flex: 0 0 100px;
     padding: 16px 12px;
     text-align: center;
+    /* La largeur vient du grid-template-columns (100px), pas besoin de flex */
 }
 
 .opac-stage-day {
@@ -373,7 +409,8 @@
 }
 
 .opac-stage-body {
-    flex: 1 1 auto;
+    min-width: 0;
+    padding: 16px 20px;
 }
 
 .opac-stage-name {
@@ -389,7 +426,9 @@
 }
 
 .opac-stage-action {
-    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    padding: 16px 20px 16px 0;
 }
 
 /* ----------------------------------------------------------------
@@ -651,14 +690,6 @@
     padding: 0 !important;
 }
 
-/* Reset des paddings/margins inline-direction sur les cards et la grille
-   (WP n'en applique pas par défaut, mais ceinture+bretelles pour éviter
-   toute surprise avec des thèmes/plugins additionnels) */
-.opac-card {
-    padding: 0 !important;
-    box-sizing: border-box !important;
-}
-
 .opac-ateliers-grid {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
@@ -674,23 +705,25 @@
  * spacing), ce margin crée une asymétrie : la première card reste
  * en haut de sa cellule, les autres sont décalées de 24px vers le
  * bas et stretchées en moins. Résultat : la card de gauche apparait
- * plus haute que les autres. On reset.
+ * plus haute que les autres. On reset uniquement les enfants de la
+ * grille (ne touche pas le contenu interne des cards).
  */
 .opac-ateliers-grid > * {
     margin: 0 !important;
 }
 
 /*
- * Cards : flexbox vertical pour que le footer colle en bas même si
- * le body est court. Garantit un alignement parfait du tarif/lien
- * "Détails" en pied de toutes les cards de la rangée.
+ * Cards d'ateliers (grille uniquement) : flexbox vertical pour que
+ * le footer colle en bas même si le body est court. Garantit un
+ * alignement parfait du tarif/lien "Détails" en pied de toutes les
+ * cards de la rangée. Limité à .opac-ateliers-grid pour ne pas
+ * affecter les actu cards et autres usages de .opac-card.
  */
-.opac-card {
+.opac-ateliers-grid > .opac-card {
     display: flex !important;
     flex-direction: column !important;
 }
 
-.opac-card-body,
-.opac-card > .wp-block-group:not(.opac-card-cover):not(.opac-card-footer) {
+.opac-ateliers-grid > .opac-card > .wp-block-group:not(.opac-card-cover):not(.opac-card-footer) {
     flex: 1 1 auto !important;
 }
