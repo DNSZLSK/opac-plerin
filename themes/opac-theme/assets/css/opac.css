@@ -1,0 +1,126 @@
+/* OPAC Plérin - utility & component styles
+ *
+ * Styles non couvrables par theme.json : composants custom (dropdown CTA,
+ * logo circle), transitions hover, focus A11y. Les tokens (couleurs, typo,
+ * espacements) sont déclarés dans theme.json et exposés en custom properties
+ * WordPress (`--wp--preset--color--accent`, etc.). On les redéclare ici sous
+ * un alias `--opac-*` pour la lisibilité des règles CSS custom.
+ */
+
+:root {
+    --opac-ink: var(--wp--preset--color--ink, #1a1a1a);
+    --opac-muted: var(--wp--preset--color--muted, #6b6b6b);
+    --opac-bg: var(--wp--preset--color--bg, #faf9f6);
+    --opac-card: var(--wp--preset--color--card, #ffffff);
+    --opac-accent: var(--wp--preset--color--accent, #c0583a);
+    --opac-accent-light: var(--wp--preset--color--accent-light, #f3ebe7);
+    --opac-teal: var(--wp--preset--color--teal, #2a7a6e);
+    --opac-teal-light: var(--wp--preset--color--teal-light, #e4f0ee);
+    --opac-border: var(--wp--preset--color--border, #e8e5e0);
+    --opac-hero: var(--wp--preset--color--hero, #2c2926);
+    --opac-amber-light: var(--wp--preset--color--amber-light, #fef4e6);
+    --opac-amber: var(--wp--preset--color--amber, #9a6b1e);
+    --opac-radius: 10px;
+    --opac-radius-pill: 20px;
+    --opac-transition: 150ms ease-out;
+}
+
+/* A11y - focus visible cohérent sur toute l'interface */
+*:focus-visible {
+    outline: 2px solid var(--opac-accent);
+    outline-offset: 2px;
+}
+
+/* Skip link (sera ajouté en M9 - A11y/sécurité) */
+.skip-link.screen-reader-text:focus {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 100000;
+    padding: 8px 16px;
+    background: var(--opac-accent);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+/* Logo circle dans le header (cercle terracotta avec O) */
+.opac-nav-logo-circle {
+    width: 36px;
+    height: 36px;
+    background: var(--opac-accent);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 15px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+/* CTA dropdown - "S'inscrire ▾" dans le header */
+.opac-cta {
+    position: relative;
+    display: inline-block;
+}
+
+.opac-cta-btn {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 18px;
+    background: var(--opac-accent);
+    color: #fff;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: background var(--opac-transition);
+}
+
+.opac-cta-btn:hover,
+.opac-cta-btn:focus-visible {
+    background: #a64a30;
+}
+
+.opac-cta-dd {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 220px;
+    padding: 8px 0;
+    background: #fff;
+    border: 0.5px solid var(--opac-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    display: none;
+}
+
+.opac-cta[data-open="true"] .opac-cta-dd {
+    display: block;
+}
+
+.opac-cta-dd a {
+    display: block;
+    padding: 8px 16px 2px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--opac-ink);
+    text-decoration: none;
+}
+
+.opac-cta-dd a:hover,
+.opac-cta-dd a:focus-visible {
+    background: var(--opac-bg);
+    text-decoration: none;
+}
+
+.opac-cta-dd-sub {
+    display: block;
+    padding: 0 16px 8px;
+    font-size: 11px;
+    color: var(--opac-muted);
+    line-height: 1.4;
+}

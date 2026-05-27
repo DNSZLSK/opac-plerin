@@ -1,0 +1,15 @@
+/*
+Theme Name: OPAC Plérin
+Theme URI: https://opacplerin.fr
+Author: DNSZLSK
+Author URI: https://opacplerin.fr
+Description: Thème FSE custom pour l'Association OPAC (Office Plérinais d'Action Culturelle, asso loi 1901). Conçu pour être maintenu en autonomie complète par l'équipe administrative depuis /wp-admin. Le styling principal vit dans theme.json (design tokens) et assets/css/opac.css (utilitaires non couvrables par theme.json).
+Version: 0.1.0
+Requires at least: 6.5
+Tested up to: 7.0
+Requires PHP: 8.0
+License: GPL v2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: opac
+Tags: full-site-editing, block-patterns, custom-colors, custom-menu, threaded-comments, translation-ready
+*/
