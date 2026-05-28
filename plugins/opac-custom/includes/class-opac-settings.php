@@ -84,6 +84,11 @@ class OPAC_Settings {
 
             // Section 6 : Sujets dropdown contact
             'opac_contact_subjects'      => [ 'type' => 'string', 'default' => "renseignement | Renseignement général\natelier-annee | Inscription atelier à l'année\nephemere | Atelier éphémère\nadhesion | Adhésion\nautre | Autre", 'sanitize' => 'sanitize_textarea_field' ],
+
+            // Section 7 : Période d'inscription (workflow inscription, palier 1)
+            'opac_insc_date_reinscription' => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
+            'opac_insc_date_ouverture'     => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
+            'opac_insc_date_fermeture'     => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
         ];
     }
 
@@ -205,6 +210,18 @@ class OPAC_Settings {
                     ?>
                 </table>
 
+                <h2><?php esc_html_e( 'Période d\'inscription', 'opac-custom' ); ?></h2>
+                <p class="description">
+                    <?php esc_html_e( 'Dates affichées en information sur le formulaire d\'inscription. Le formulaire reste accessible en permanence : ces dates servent uniquement à indiquer la phase en cours (réinscription prioritaire des adhérents, puis ouverture générale).', 'opac-custom' ); ?>
+                </p>
+                <table class="form-table" role="presentation">
+                    <?php
+                    self::render_input_row( 'opac_insc_date_reinscription', __( 'Début réinscription prioritaire', 'opac-custom' ), __( 'Semaine où les adhérents déjà inscrits peuvent renouveler leur place en priorité.', 'opac-custom' ), 'date' );
+                    self::render_input_row( 'opac_insc_date_ouverture', __( 'Début inscription générale', 'opac-custom' ), __( 'Ouverture des inscriptions à tous (priorité aux Plérinais).', 'opac-custom' ), 'date' );
+                    self::render_input_row( 'opac_insc_date_fermeture', __( 'Fin des inscriptions', 'opac-custom' ), __( 'Optionnel. Laisser vide s\'il n\'y a pas de date de clôture.', 'opac-custom' ), 'date' );
+                    ?>
+                </table>
+
                 <?php submit_button(); ?>
             </form>
         </div>
@@ -321,5 +338,33 @@ class OPAC_Settings {
             ];
         }
         return $out;
+    }
+
+    /**
+     * Phase d'inscription courante, calculee depuis les 3 dates du panel.
+     * Gating souple : sert uniquement a afficher un message, jamais a bloquer.
+     *
+     * @return string 'avant' | 'reinscription' | 'ouverte' | 'fermee'
+     */
+    public static function inscription_phase() {
+        $today = current_time( 'Y-m-d' );
+        $rein  = (string) self::get( 'opac_insc_date_reinscription' );
+        $ouv   = (string) self::get( 'opac_insc_date_ouverture' );
+        $ferm  = (string) self::get( 'opac_insc_date_fermeture' );
+
+        if ( $ferm && $today > $ferm ) {
+            return 'fermee';
+        }
+        if ( $ouv && $today >= $ouv ) {
+            return 'ouverte';
+        }
+        if ( $rein && $today >= $rein ) {
+            return 'reinscription';
+        }
+        if ( $rein || $ouv ) {
+            return 'avant';
+        }
+        // Aucune date configuree : comportement actuel (toujours ouvert).
+        return 'ouverte';
     }
 }
