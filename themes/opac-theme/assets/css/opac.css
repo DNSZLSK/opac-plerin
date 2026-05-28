@@ -1911,3 +1911,76 @@ body {
 .opac-detail-actions {
     align-items: center;
 }
+
+/* ============================================================
+ * feature/cosmetic-photos-links : photos + reseaux sociaux
+ * Bloc ADDITIF. Ne modifie aucune regle existante.
+ * ============================================================ */
+
+/*
+ * Featured image superposee au fill colore. Le fill (.opac-card-cover-fill)
+ * reste TOUJOURS dans le DOM en dessous (fallback couleur valide). Quand le
+ * post n'a pas de thumbnail, wp:post-featured-image rend une chaine vide :
+ * seul le fill colore subsiste, donc rendu identique a avant. Quand une photo
+ * existe, la figure se superpose en absolute et le cadrage object-fit:cover
+ * (deja defini sur .opac-card-cover img) prend le relais.
+ */
+.opac-card-cover .wp-block-post-featured-image,
+.opac-card-cover figure.wp-block-image,
+.opac-detail-photo .wp-block-post-featured-image,
+.opac-detail-photo figure.wp-block-image {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+/* Reseaux sociaux (icones officielles, rendu via le bloc opac/coord-block) */
+.opac-social-links {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.opac-social-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--opac-muted);
+    text-decoration: none;
+    transition: color var(--opac-transition);
+}
+
+.opac-social-link:hover,
+.opac-social-link:focus-visible {
+    color: var(--opac-accent);
+}
+
+.opac-social-icon {
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.opac-footer-social {
+    margin-top: 10px;
+}
+
+/* Footer : icone seule (le label reste accessible aux lecteurs d'ecran) */
+.opac-footer-social .opac-social-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/*
+ * Hero converti en wp:cover : on neutralise la min-height par defaut du
+ * bloc cover pour garder la hauteur pilotee par le contenu + le padding
+ * .opac-hero (rendu identique a la version groupe d'origine, avec image).
+ */
+.opac-hero.wp-block-cover {
+    min-height: 0;
+}
