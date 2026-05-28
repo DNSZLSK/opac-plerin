@@ -105,7 +105,7 @@ class OPAC_Settings {
         $signature = "\n\n--\n{nom_asso}\n{adresse}\nTéléphone : {tel}\nEmail : {email}\n";
         switch ( $type ) {
             case 'validee':
-                return "Bonjour {prenom},\n\nVotre demande d'inscription pour \"{atelier}\" a été validée.\n\nLe règlement (tarif de l'atelier + adhésion annuelle à l'association) s'effectue sur place au secrétariat, en chèque, espèces ou CB :\n{horaires}\n{adresse}\n\nÀ très bientôt !" . $signature;
+                return "Bonjour {prenom},\n\nVotre demande d'inscription pour \"{atelier}\" a été validée.\n\nTarif de l'atelier : {tarif}\nLe règlement (tarif + adhésion annuelle à l'association) s'effectue sur place au secrétariat, en chèque, espèces ou CB :\n{horaires}\n{adresse}\n\nÀ très bientôt !" . $signature;
 
             case 'refusee':
                 return "Bonjour {prenom},\n\nNous vous remercions de l'intérêt porté à \"{atelier}\".\n\nAprès examen, nous ne pouvons pas donner suite favorablement à votre demande pour le moment. N'hésitez pas à nous contacter au {tel} pour en discuter ou nous orienter vers un autre atelier susceptible de vous intéresser.\n\nBien cordialement," . $signature;
