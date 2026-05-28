@@ -141,7 +141,7 @@
                 }
             },
             "link": {
-                "color": { "text": "var:preset|color|accent" },
+                "color": { "text": "#a64a30" },
                 "typography": { "textDecoration": "none" },
                 ":hover": {
                     "typography": { "textDecoration": "underline" }
