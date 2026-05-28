@@ -4,8 +4,11 @@
 <main class="wp-block-group">
 
     <!-- Hero -->
-    <!-- wp:group {"tagName":"section","align":"full","className":"opac-hero","backgroundColor":"hero","textColor":"card","layout":{"type":"constrained","contentSize":"720px","justifyContent":"left"}} -->
-    <section class="wp-block-group alignfull opac-hero has-card-color has-hero-background-color has-text-color has-background">
+    <!-- wp:cover {"url":"https://opac-plerin.local/wp-content/uploads/2026/05/2023-07_banner_2023.jpg","id":69,"dimRatio":70,"overlayColor":"hero","isUserOverlayColor":true,"align":"full","className":"opac-hero","textColor":"card","layout":{"type":"constrained","contentSize":"720px","justifyContent":"left"}} -->
+    <div class="wp-block-cover alignfull opac-hero has-card-color has-text-color">
+        <span aria-hidden="true" class="wp-block-cover__background has-hero-background-color has-background-dim-70 has-background-dim"></span>
+        <img class="wp-block-cover__image-background wp-image-69" alt="" src="https://opac-plerin.local/wp-content/uploads/2026/05/2023-07_banner_2023.jpg" data-object-fit="cover"/>
+        <div class="wp-block-cover__inner-container">
 
         <!-- Hero : titres et intro lus depuis OPAC > Réglages > Saison + Page d'accueil -->
         <!-- wp:paragraph {"className":"opac-hero-badge","metadata":{"bindings":{"content":{"source":"opac/site-option","args":{"option":"opac_home_saison_badge"}}}}} -->
@@ -69,8 +72,9 @@
         </div>
         <!-- /wp:group -->
 
-    </section>
-    <!-- /wp:group -->
+        </div>
+    </div>
+    <!-- /wp:cover -->
 
     <!-- Section ateliers à l'année -->
     <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","layout":{"type":"constrained","contentSize":"1080px"}} -->
@@ -97,6 +101,7 @@
                         <!-- wp:group {"className":"opac-card-cover-fill"} -->
                         <div class="wp-block-group opac-card-cover-fill"></div>
                         <!-- /wp:group -->
+                        <!-- wp:post-featured-image {"isLink":true} /-->
                     </div>
                     <!-- /wp:group -->
                     <!-- wp:group {"style":{"spacing":{"padding":{"top":"14px","right":"16px","bottom":"10px","left":"16px"}}}} -->

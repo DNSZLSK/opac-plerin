@@ -689,18 +689,11 @@ class OPAC_Blocks {
         $hours    = OPAC_Settings::get( 'opac_org_hours' );
         $name     = OPAC_Settings::get( 'opac_org_name' );
         $legal    = OPAC_Settings::get( 'opac_org_legal_name' );
-        $fb_url   = OPAC_Settings::get( 'opac_org_facebook_url' );
-        $ig_url   = OPAC_Settings::get( 'opac_org_instagram_url' );
-
-        // Construit le bloc reseaux (avec masquage si vide).
-        $reseaux_links = [];
-        if ( $fb_url ) {
-            $reseaux_links[] = '<a href="' . esc_url( $fb_url ) . '">' . esc_html__( 'Facebook', 'opac-custom' ) . '</a>';
+        // Reseaux sociaux : icones officielles (helper), masquage si vide.
+        $reseaux_html = self::social_links_html();
+        if ( '' === $reseaux_html ) {
+            $reseaux_html = '<span class="opac-empty-inline">' . esc_html__( 'À venir', 'opac-custom' ) . '</span>';
         }
-        if ( $ig_url ) {
-            $reseaux_links[] = '<a href="' . esc_url( $ig_url ) . '">' . esc_html__( 'Instagram', 'opac-custom' ) . '</a>';
-        }
-        $reseaux_html = $reseaux_links ? implode( ' · ', $reseaux_links ) : '<span class="opac-empty-inline">' . esc_html__( 'À venir', 'opac-custom' ) . '</span>';
 
         switch ( $variant ) {
             case 'infos':
@@ -761,17 +754,71 @@ class OPAC_Blocks {
 
             case 'compact':
             default:
-                // Footer brand block : nom + tagline + adresse simple.
+                // Footer brand block : nom + tagline + adresse simple + reseaux.
+                $social = self::social_links_html();
                 return sprintf(
                     '<h3 class="wp-block-heading has-display-font-family" style="font-size:18px;font-weight:500;line-height:1.2">%s</h3>'
-                    . '<p class="has-muted-color has-text-color" style="margin-top:6px;font-size:13px;line-height:1.7">%s<br/>%s, %s %s</p>',
+                    . '<p class="has-muted-color has-text-color" style="margin-top:6px;font-size:13px;line-height:1.7">%s<br/>%s, %s %s</p>'
+                    . '%s',
                     esc_html( $name ),
                     esc_html( $legal ),
                     esc_html( $street ),
                     esc_html( $postal ),
-                    esc_html( $city )
+                    esc_html( $city ),
+                    $social ? '<div class="opac-footer-social">' . $social . '</div>' : ''
                 );
         }
+    }
+
+    /**
+     * Icone SVG officielle d'un reseau social (chemins repris de core/social-link).
+     */
+    private static function social_icon_svg( $network ) {
+        $paths = [
+            'facebook'  => 'M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z',
+            'instagram' => 'M12 4.622c2.403 0 2.688.01 3.637.052.877.04 1.354.187 1.671.31.42.163.72.358 1.035.673.315.315.51.615.673 1.035.123.317.27.794.31 1.671.042.949.052 1.234.052 3.637 0 2.403-.01 2.688-.052 3.637-.04.877-.187 1.354-.31 1.671-.163.42-.358.72-.673 1.035-.315.315-.615.51-1.035.673-.317.123-.794.27-1.671.31-.949.042-1.234.052-3.637.052-2.403 0-2.688-.01-3.637-.052-.877-.04-1.354-.187-1.671-.31-.42-.163-.72-.358-1.035-.673-.315-.315-.51-.615-.673-1.035-.123-.317-.27-.794-.31-1.671-.042-.949-.052-1.234-.052-3.637 0-2.403.01-2.688.052-3.637.04-.877.187-1.354.31-1.671.163-.42.358-.72.673-1.035.315-.315.615-.51 1.035-.673.317-.123.794-.27 1.671-.31.949-.042 1.234-.052 3.637-.052M12 3c-2.444 0-2.751.01-3.711.054-.958.044-1.612.196-2.184.418-.592.23-1.094.538-1.594 1.038-.5.5-.808 1.002-1.038 1.594-.222.572-.374 1.226-.418 2.184C3.01 9.249 3 9.556 3 12s.01 2.751.054 3.711c.044.958.196 1.612.418 2.184.23.592.538 1.094 1.038 1.594.5.5 1.002.808 1.594 1.038.572.222 1.226.374 2.184.418C9.249 20.99 9.556 21 12 21s2.751-.01 3.711-.054c.958-.044 1.612-.196 2.184-.418.592-.23 1.094-.538 1.594-1.038.5-.5.808-1.002 1.038-1.594.222-.572.374-1.226.418-2.184C20.99 14.751 21 14.444 21 12s-.01-2.751-.054-3.711c-.044-.958-.196-1.612-.418-2.184-.23-.592-.538-1.094-1.038-1.594-.5-.5-1.002-.808-1.594-1.038-.572-.222-1.226-.374-2.184-.418C14.751 3.01 14.444 3 12 3zm0 4.378c-2.552 0-4.622 2.069-4.622 4.622 0 2.552 2.069 4.622 4.622 4.622 2.552 0 4.622-2.069 4.622-4.622 0-2.552-2.069-4.622-4.622-4.622zm0 7.629c-1.658 0-3.007-1.343-3.007-3.007 0-1.658 1.343-3.007 3.007-3.007 1.658 0 3.007 1.343 3.007 3.007 0 1.658-1.343 3.007-3.007 3.007zm5.884-7.813c0 .597-.484 1.08-1.08 1.08-.596 0-1.08-.483-1.08-1.08 0-.595.484-1.079 1.08-1.079.595 0 1.079.484 1.079 1.079z',
+        ];
+        if ( empty( $paths[ $network ] ) ) {
+            return '';
+        }
+        return sprintf(
+            '<svg class="opac-social-icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="%s"></path></svg>',
+            $paths[ $network ]
+        );
+    }
+
+    /**
+     * Lien reseau social : icone officielle + label. Le label est masque
+     * visuellement au footer via .opac-footer-social .opac-social-label.
+     */
+    private static function social_link_tag( $network, $url ) {
+        $labels = [ 'facebook' => 'Facebook', 'instagram' => 'Instagram' ];
+        $label  = isset( $labels[ $network ] ) ? $labels[ $network ] : ucfirst( $network );
+        return sprintf(
+            '<a class="opac-social-link" href="%s" target="_blank" rel="noopener noreferrer" aria-label="%s">%s<span class="opac-social-label">%s</span></a>',
+            esc_url( $url ),
+            esc_attr( $label ),
+            self::social_icon_svg( $network ),
+            esc_html( $label )
+        );
+    }
+
+    /**
+     * Bloc reseaux sociaux (FB + IG) lu depuis OPAC_Settings.
+     * Retourne '' si aucune URL renseignee (masquage).
+     */
+    private static function social_links_html() {
+        $networks = [
+            'facebook'  => OPAC_Settings::get( 'opac_org_facebook_url' ),
+            'instagram' => OPAC_Settings::get( 'opac_org_instagram_url' ),
+        ];
+        $links = [];
+        foreach ( $networks as $net => $url ) {
+            if ( $url ) {
+                $links[] = self::social_link_tag( $net, $url );
+            }
+        }
+        return $links ? '<span class="opac-social-links">' . implode( '', $links ) . '</span>' : '';
     }
 
     /**
