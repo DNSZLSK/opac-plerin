@@ -2037,27 +2037,64 @@ button.opac-gallery-item {
     cursor: pointer;
 }
 
-/* Repli : au-dela de 4 vignettes, on masque le surplus tant que
-   "Voir tout" n'a pas ete clique. */
-.opac-gallery-grid.is-collapsed .opac-gallery-item.is-extra {
-    display: none !important;
+/* Carrousel : track scrollable horizontal (scroll-snap), swipe natif.
+   Hauteur de section constante quel que soit le nombre de photos. */
+.opac-gallery-carousel { position: relative; }
+
+.opac-gallery-track {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+}
+.opac-gallery-track::-webkit-scrollbar { display: none; }
+
+/* 4 vignettes visibles desktop (3 gaps de 12px), 2 tablette, 1 mobile.
+   width:auto neutralise le width:100% du systeme opac-img-frame pour que
+   le flex-basis pilote la largeur de la cellule. */
+.opac-gallery-track > .opac-gallery-item {
+    flex: 0 0 calc((100% - 36px) / 4);
+    width: auto !important;
+    min-width: 0;
+    scroll-snap-align: start;
+}
+@media (max-width: 880px) {
+    .opac-gallery-track > .opac-gallery-item { flex-basis: calc((100% - 12px) / 2); }
+}
+@media (max-width: 560px) {
+    .opac-gallery-track > .opac-gallery-item { flex-basis: 100%; }
 }
 
-.opac-gallery-more {
-    margin-top: 14px;
-    background: none;
+/* Fleches : masquees ([hidden]) aux extremites ou si tout tient sans scroll. */
+.opac-gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     border: 1px solid var(--opac-border);
+    background: var(--opac-card);
     color: var(--opac-ink);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 8px 18px;
-    border-radius: 6px;
     cursor: pointer;
-    transition: border-color var(--opac-transition), color var(--opac-transition);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    line-height: 1;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    transition: color var(--opac-transition), border-color var(--opac-transition);
 }
-.opac-gallery-more:hover,
-.opac-gallery-more:focus-visible {
+.opac-gallery-nav[hidden] { display: none; }
+.opac-gallery-prev { left: -8px; }
+.opac-gallery-next { right: -8px; }
+.opac-gallery-nav:hover,
+.opac-gallery-nav:focus-visible {
     border-color: var(--opac-accent-text, #a64a30);
     color: var(--opac-accent-text, #a64a30);
 }
