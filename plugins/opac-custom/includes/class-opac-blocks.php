@@ -104,6 +104,21 @@ class OPAC_Blocks {
             'attributes'      => [],
             'supports'        => [ 'html' => false ],
         ] );
+
+        register_block_type( 'opac/adhesion-line', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_adhesion_line' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+
+        register_block_type( 'opac/gallery-grid', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_gallery_grid' ],
+            'uses_context'    => [ 'postId', 'postType' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
     }
 
     public static function render_statuts_link( $attrs, $content, $block ) {
@@ -115,6 +130,77 @@ class OPAC_Blocks {
             '<p class="has-text-align-center opac-statuts-link" style="margin-top:24px"><a href="%s">%s</a></p>',
             esc_url( $url ),
             esc_html__( 'Télécharger les statuts (PDF) →', 'opac-custom' )
+        );
+    }
+
+    /**
+     * Ligne des tarifs d'adhesion annuelle, lue depuis OPAC > Reglages.
+     * Remplace le texte en dur de l'archive ateliers : si Katell change un
+     * tarif dans le panneau, la ligne suit automatiquement.
+     */
+    public static function render_adhesion_line( $attrs, $content, $block ) {
+        if ( ! class_exists( 'OPAC_Settings' ) ) {
+            return '';
+        }
+        $p = (int) OPAC_Settings::get( 'opac_adhesion_plerinais' );
+        $e = (int) OPAC_Settings::get( 'opac_adhesion_exterieur' );
+        $m = (int) OPAC_Settings::get( 'opac_adhesion_mineur' );
+        return sprintf(
+            '<p class="has-text-align-center opac-info-bar">%s : <strong>%d € %s</strong> · <strong>%d € %s</strong> · <strong>%d € %s</strong></p>',
+            esc_html__( 'Adhésion annuelle', 'opac-custom' ),
+            $p, esc_html__( 'Plérinais', 'opac-custom' ),
+            $e, esc_html__( 'extérieur', 'opac-custom' ),
+            $m, esc_html__( 'mineur', 'opac-custom' )
+        );
+    }
+
+    /**
+     * Grille des realisations (opac_gallery_item) liees a l'atelier courant
+     * via le meta opac_gallery_atelier_id. Rend la section complete (titre +
+     * grille) seulement s'il existe au moins une realisation, sinon '' pour
+     * masquer la section. Reutilise les classes .opac-gallery-grid /
+     * .opac-gallery-item (cadre opac-img-frame) deja stylees.
+     */
+    public static function render_gallery_grid( $attrs, $content, $block ) {
+        $post_id = isset( $block->context['postId'] ) ? (int) $block->context['postId'] : (int) get_the_ID();
+        if ( ! $post_id ) {
+            return '';
+        }
+
+        $items = get_posts( [
+            'post_type'      => 'opac_gallery_item',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'menu_order date',
+            'order'          => 'ASC',
+            'meta_key'       => 'opac_gallery_atelier_id',
+            'meta_value'     => $post_id,
+        ] );
+        if ( empty( $items ) ) {
+            return '';
+        }
+
+        $cards = '';
+        foreach ( $items as $item ) {
+            if ( ! has_post_thumbnail( $item->ID ) ) {
+                continue;
+            }
+            $caption = (string) get_post_meta( $item->ID, 'opac_gallery_caption', true );
+            $alt     = $caption ?: get_the_title( $item->ID );
+            $img     = get_the_post_thumbnail( $item->ID, 'medium_large', [ 'alt' => $alt, 'loading' => 'lazy' ] );
+            $cards  .= '<div class="opac-gallery-item">' . $img . '</div>';
+        }
+        if ( '' === $cards ) {
+            return '';
+        }
+
+        return sprintf(
+            '<section class="wp-block-group alignwide opac-section-padded opac-gallery-section" style="border-top-color:#e8e5e0;border-top-width:1px;border-top-style:solid">'
+                . '<h2 class="wp-block-heading opac-section-title has-display-font-family">%s</h2>'
+                . '<div class="opac-gallery-grid">%s</div>'
+            . '</section>',
+            esc_html__( 'Réalisations', 'opac-custom' ),
+            $cards
         );
     }
 
