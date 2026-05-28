@@ -61,7 +61,12 @@ class OPAC_Inscriptions {
         $email     = isset( $_POST['opac_email'] )     ? sanitize_email( wp_unslash( $_POST['opac_email'] ) )          : '';
         $telephone = isset( $_POST['opac_telephone'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_telephone'] ) ) : '';
         $creneau   = isset( $_POST['opac_creneau'] )   ? sanitize_text_field( wp_unslash( $_POST['opac_creneau'] ) )   : '';
-        $adhesion  = isset( $_POST['opac_adhesion'] )  ? sanitize_key( wp_unslash( $_POST['opac_adhesion'] ) )         : '';
+        $mineur    = ! empty( $_POST['opac_mineur'] );
+        $code_postal = isset( $_POST['opac_code_postal'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_code_postal'] ) ) : '';
+        $commune     = isset( $_POST['opac_commune'] )     ? sanitize_text_field( wp_unslash( $_POST['opac_commune'] ) )     : '';
+        // Adhesion derivee cote serveur (plus de valeur auto-declaree) :
+        // mineur -> 'mineur' ; sinon CP 22190 -> 'plerinais' ; sinon 'exterieur'.
+        $adhesion  = $mineur ? 'mineur' : ( '22190' === $code_postal ? 'plerinais' : 'exterieur' );
         $message   = isset( $_POST['opac_message'] )   ? sanitize_textarea_field( wp_unslash( $_POST['opac_message'] ) ) : '';
         $rgpd      = ! empty( $_POST['opac_rgpd'] );
 
@@ -97,9 +102,15 @@ class OPAC_Inscriptions {
             exit;
         }
 
-        // Rate-limit transient (anti double-submit + flood).
+        // Rate-limit transient : bloque uniquement la soumission strictement
+        // identique (double-clic / refresh). La cle inclut atelier/stage +
+        // creneau + nom + prenom pour qu'un meme parent (meme email + meme IP)
+        // puisse inscrire plusieurs enfants, ou lui-meme, voire des freres au
+        // meme creneau, sans faux "doublon". L'anti-bot reste honeypot + nonce.
         $ip       = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
-        $rl_key   = 'opac_insc_rl_' . md5( $ip . '|' . strtolower( $email ) );
+        $rl_cible = $atelier_id ? ( 'a' . $atelier_id ) : ( 's' . $stage_id );
+        $rl_sig   = strtolower( $ip . '|' . $email . '|' . $rl_cible . '|' . $creneau . '|' . $nom . '|' . $prenom );
+        $rl_key   = 'opac_insc_rl_' . md5( $rl_sig );
         if ( get_transient( $rl_key ) ) {
             wp_safe_redirect( add_query_arg( 'erreur', 'doublon', $back ) );
             exit;
@@ -140,6 +151,14 @@ class OPAC_Inscriptions {
         if ( $adhesion ) {
             update_post_meta( $post_id, 'opac_insc_adhesion', $adhesion );
         }
+        if ( $code_postal ) {
+            update_post_meta( $post_id, 'opac_insc_code_postal', $code_postal );
+        }
+        if ( $commune ) {
+            update_post_meta( $post_id, 'opac_insc_commune', $commune );
+        }
+        // Flag Plerinais (code postal 22190) pour le tri prioritaire en admin.
+        update_post_meta( $post_id, 'opac_insc_plerinais', ( '22190' === $code_postal ) ? 1 : 0 );
 
         wp_set_object_terms( $post_id, [ 'en-attente' ], 'opac_inscription_status', false );
 
@@ -149,6 +168,8 @@ class OPAC_Inscriptions {
             'prenom'      => $prenom,
             'email'       => $email,
             'telephone'   => $telephone,
+            'code_postal' => $code_postal,
+            'commune'     => $commune,
             'cible_titre' => $cible_titre,
             'cible_type'  => $cible_type,
             'creneau'     => $creneau,
@@ -220,13 +241,17 @@ class OPAC_Inscriptions {
             $body .= "Creneau : {$data['creneau']}\n";
         }
         if ( $data['adhesion'] ) {
-            $body .= "Adhesion choisie : {$data['adhesion']}\n";
+            $body .= "Adhesion (estimee) : {$data['adhesion']}\n";
         }
         $body .= "\n";
         $body .= "Nom : {$data['nom']}\n";
         $body .= "Prenom : {$data['prenom']}\n";
         $body .= "Email : {$data['email']}\n";
         $body .= "Telephone : {$data['telephone']}\n";
+        $loc = trim( ( isset( $data['commune'] ) ? $data['commune'] : '' ) . ' ' . ( isset( $data['code_postal'] ) ? $data['code_postal'] : '' ) );
+        if ( $loc ) {
+            $body .= "Commune : {$loc}\n";
+        }
         if ( $data['message'] ) {
             $body .= "\nMessage :\n{$data['message']}\n";
         }

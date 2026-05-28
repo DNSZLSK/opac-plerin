@@ -17,6 +17,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OPAC_Admin {
 
+    /**
+     * Cache (par chargement de page) des emails ayant deja une inscription la
+     * saison precedente. Amorce en une seule requete via prime_returning_cache().
+     * null = non amorce (contexte hors liste admin des inscriptions).
+     *
+     * @var array<string,bool>|null
+     */
+    private static $returning_emails = null;
+
     public static function boot() {
         add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_admin_assets' ] );
         add_filter( 'manage_opac_atelier_posts_columns', [ __CLASS__, 'atelier_columns' ] );
@@ -25,6 +34,9 @@ class OPAC_Admin {
         add_action( 'manage_opac_inscription_posts_custom_column', [ __CLASS__, 'inscription_column_content' ], 10, 2 );
         add_filter( 'post_row_actions', [ __CLASS__, 'inscription_row_actions' ], 10, 2 );
         add_action( 'admin_notices', [ __CLASS__, 'inscription_action_notice' ] );
+        add_action( 'restrict_manage_posts', [ __CLASS__, 'inscription_status_filter' ] );
+        add_filter( 'posts_clauses', [ __CLASS__, 'inscription_priority_clauses' ], 10, 2 );
+        add_filter( 'the_posts', [ __CLASS__, 'prime_returning_cache' ], 10, 2 );
 
         // Galerie : meta box "atelier associe" + colonnes liste.
         add_action( 'add_meta_boxes', [ __CLASS__, 'gallery_meta_box' ] );
@@ -77,6 +89,7 @@ class OPAC_Admin {
             'title' => __( 'Nom', 'opac-custom' ),
             'opac_insc_email' => __( 'Email', 'opac-custom' ),
             'opac_insc_atelier' => __( 'Atelier', 'opac-custom' ),
+            'opac_insc_priorite' => __( 'Priorité', 'opac-custom' ),
             'taxonomy-opac_inscription_status' => __( 'Statut', 'opac-custom' ),
             'date' => $columns['date'] ?? __( 'Date', 'opac-custom' ),
         ];
@@ -103,6 +116,9 @@ class OPAC_Admin {
                 } else {
                     echo '-';
                 }
+                break;
+            case 'opac_insc_priorite':
+                self::render_priorite_cell( $post_id );
                 break;
         }
     }
@@ -338,5 +354,189 @@ class OPAC_Admin {
             $aid = (int) get_post_meta( $post_id, 'opac_gallery_atelier_id', true );
             echo $aid && get_post( $aid ) ? esc_html( get_the_title( $aid ) ) : '—';
         }
+    }
+
+    /**
+     * Cellule "Priorité" de la liste des inscriptions : badge Plérinais /
+     * Extérieur, commune, type d'adhésion, et indicateur informatif
+     * "déjà inscrit l'an dernier" (palier 1 workflow inscription).
+     */
+    private static function render_priorite_cell( $post_id ) {
+        $plerinais   = get_post_meta( $post_id, 'opac_insc_plerinais', true );
+        $code_postal = (string) get_post_meta( $post_id, 'opac_insc_code_postal', true );
+        $commune     = (string) get_post_meta( $post_id, 'opac_insc_commune', true );
+        $adhesion    = (string) get_post_meta( $post_id, 'opac_insc_adhesion', true );
+
+        $is_plerinais = ( '1' === (string) $plerinais || '22190' === $code_postal );
+
+        if ( $is_plerinais ) {
+            echo '<span class="opac-badge opac-badge-plerinais">' . esc_html__( 'Plérinais', 'opac-custom' ) . '</span>';
+        } elseif ( '' !== $code_postal || '' !== $commune ) {
+            echo '<span class="opac-badge opac-badge-exterieur">' . esc_html__( 'Extérieur', 'opac-custom' ) . '</span>';
+        }
+
+        $loc = trim( $commune . ' ' . $code_postal );
+        if ( '' !== $loc ) {
+            echo '<div class="opac-priorite-loc">' . esc_html( $loc ) . '</div>';
+        }
+
+        if ( '' !== $adhesion ) {
+            $adh_labels = [
+                'plerinais' => __( 'Adhésion Plérinais', 'opac-custom' ),
+                'exterieur' => __( 'Adhésion Extérieur', 'opac-custom' ),
+                'mineur'    => __( 'Adhésion Mineur', 'opac-custom' ),
+            ];
+            $label = $adh_labels[ $adhesion ] ?? $adhesion;
+            echo '<div class="opac-priorite-adh">' . esc_html( $label ) . '</div>';
+        }
+
+        if ( self::already_registered_last_season( $post_id ) ) {
+            echo '<div><span class="opac-badge opac-badge-reinscription">' . esc_html__( 'Déjà inscrit l\'an dernier', 'opac-custom' ) . '</span></div>';
+        }
+    }
+
+    /**
+     * Amorce, en UNE seule requete pour toute la page admin, l'ensemble des
+     * emails ayant une inscription la saison precedente. Evite le N+1 (une
+     * requete par ligne) : le cout ne depend ni du nombre de lignes affichees
+     * ni du volume total d'inscriptions, uniquement de la taille de la page.
+     */
+    public static function prime_returning_cache( $posts, $query ) {
+        if ( ! is_admin() || ! $query->is_main_query() ) {
+            return $posts;
+        }
+        if ( 'opac_inscription' !== $query->get( 'post_type' ) ) {
+            return $posts;
+        }
+        self::$returning_emails = [];
+        if ( empty( $posts ) ) {
+            return $posts;
+        }
+
+        // Meta de la page amorcee en une requete, puis lue depuis le cache objet.
+        $ids = wp_list_pluck( $posts, 'ID' );
+        update_postmeta_cache( $ids );
+        $emails = [];
+        foreach ( $ids as $id ) {
+            $e = strtolower( trim( (string) get_post_meta( $id, 'opac_insc_email', true ) ) );
+            if ( '' !== $e ) {
+                $emails[ $e ] = true;
+            }
+        }
+        if ( empty( $emails ) ) {
+            return $posts;
+        }
+
+        list( $start, $end ) = self::previous_season_window();
+        global $wpdb;
+        $email_list   = array_keys( $emails );
+        $placeholders = implode( ',', array_fill( 0, count( $email_list ), '%s' ) );
+        $params       = array_merge( $email_list, [ $start, $end ] );
+        $sql = $wpdb->prepare(
+            "SELECT DISTINCT LOWER(pm_email.meta_value)
+             FROM {$wpdb->postmeta} pm_email
+             INNER JOIN {$wpdb->postmeta} pm_date
+                 ON pm_date.post_id = pm_email.post_id
+                 AND pm_date.meta_key = 'opac_insc_date_submitted'
+             WHERE pm_email.meta_key = 'opac_insc_email'
+               AND LOWER(pm_email.meta_value) IN ($placeholders)
+               AND pm_date.meta_value >= %s
+               AND pm_date.meta_value < %s",
+            $params
+        );
+        $found = $wpdb->get_col( $sql );
+        if ( $found ) {
+            self::$returning_emails = array_fill_keys( array_map( 'strtolower', $found ), true );
+        }
+        return $posts;
+    }
+
+    /**
+     * Vrai si l'email de cette inscription apparait deja la saison precedente.
+     * Lit le cache amorce par prime_returning_cache() : aucune requete par ligne.
+     * Indicateur informatif, vide la premiere saison (pas d'historique en ligne).
+     */
+    private static function already_registered_last_season( $post_id ) {
+        if ( null === self::$returning_emails ) {
+            return false;
+        }
+        $email = strtolower( trim( (string) get_post_meta( $post_id, 'opac_insc_email', true ) ) );
+        if ( '' === $email || ! isset( self::$returning_emails[ $email ] ) ) {
+            return false;
+        }
+        // Ne pas badger une ligne qui est elle-meme de la saison precedente (sa
+        // propre date tombe dans la fenetre) : on cible les demandes recentes.
+        $own_date = (string) get_post_meta( $post_id, 'opac_insc_date_submitted', true );
+        list( $start, $end ) = self::previous_season_window();
+        if ( $own_date >= $start && $own_date < $end ) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Bornes [debut, fin] de la saison precedente au format mysql.
+     * Saison academique : 1er septembre N -> 1er septembre N+1.
+     */
+    private static function previous_season_window() {
+        $now   = current_time( 'timestamp' );
+        $year  = (int) wp_date( 'Y', $now );
+        $month = (int) wp_date( 'n', $now );
+        $season_start = ( $month >= 9 ) ? $year : $year - 1;
+        $current = sprintf( '%04d-09-01 00:00:00', $season_start );
+        $prev    = sprintf( '%04d-09-01 00:00:00', $season_start - 1 );
+        return [ $prev, $current ];
+    }
+
+    /**
+     * Filtre "statut" dans la barre d'outils de la liste des inscriptions.
+     * La taxonomie opac_inscription_status n'etant pas hierarchique, WordPress
+     * n'ajoute pas ce filtre automatiquement : on le rend nous-memes.
+     */
+    public static function inscription_status_filter( $post_type ) {
+        if ( 'opac_inscription' !== $post_type ) {
+            return;
+        }
+        $terms = get_terms( [
+            'taxonomy'   => 'opac_inscription_status',
+            'hide_empty' => false,
+        ] );
+        if ( empty( $terms ) || is_wp_error( $terms ) ) {
+            return;
+        }
+        $current = isset( $_GET['opac_inscription_status'] ) ? sanitize_key( wp_unslash( $_GET['opac_inscription_status'] ) ) : '';
+        echo '<select name="opac_inscription_status">';
+        echo '<option value="">' . esc_html__( 'Tous les statuts', 'opac-custom' ) . '</option>';
+        foreach ( $terms as $term ) {
+            printf(
+                '<option value="%s"%s>%s</option>',
+                esc_attr( $term->slug ),
+                selected( $current, $term->slug, false ),
+                esc_html( $term->name )
+            );
+        }
+        echo '</select>';
+    }
+
+    /**
+     * Tri de la liste d'attente : Plerinais d'abord (flag opac_insc_plerinais),
+     * puis chronologique (premier arrive). LEFT JOIN pour inclure aussi les
+     * inscriptions sans le flag. Applique uniquement quand on filtre sur le
+     * statut "liste-attente".
+     */
+    public static function inscription_priority_clauses( $clauses, $query ) {
+        if ( ! is_admin() || ! $query->is_main_query() ) {
+            return $clauses;
+        }
+        if ( 'opac_inscription' !== $query->get( 'post_type' ) ) {
+            return $clauses;
+        }
+        if ( 'liste-attente' !== $query->get( 'opac_inscription_status' ) ) {
+            return $clauses;
+        }
+        global $wpdb;
+        $clauses['join']   .= " LEFT JOIN {$wpdb->postmeta} AS opac_pri ON ( {$wpdb->posts}.ID = opac_pri.post_id AND opac_pri.meta_key = 'opac_insc_plerinais' ) ";
+        $clauses['orderby'] = " COALESCE(opac_pri.meta_value+0, 0) DESC, {$wpdb->posts}.post_date ASC ";
+        return $clauses;
     }
 }
