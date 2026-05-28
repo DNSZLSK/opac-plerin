@@ -214,20 +214,30 @@
      *   A11y : role=dialog, focus sur Fermer a l'ouverture, focus rendu a l'appel.
      */
     function initGallery() {
-        // "Voir tout" : deplie le surplus.
-        document.querySelectorAll('.opac-gallery-more').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var section = btn.closest('.opac-gallery-section');
-                var grid = section ? section.querySelector('.opac-gallery-grid') : null;
-                if (grid) {
-                    grid.classList.remove('is-collapsed');
-                }
-                btn.setAttribute('aria-expanded', 'true');
-                btn.parentNode.removeChild(btn);
-            });
+        // Carrousel : fleches qui defilent le track (swipe natif via overflow-x).
+        document.querySelectorAll('.opac-gallery-carousel').forEach(function (carousel) {
+            var track = carousel.querySelector('.opac-gallery-track');
+            var prev = carousel.querySelector('.opac-gallery-prev');
+            var next = carousel.querySelector('.opac-gallery-next');
+            if (!track || !prev || !next) {
+                return;
+            }
+            function update() {
+                var noScroll = track.scrollWidth <= track.clientWidth + 1;
+                prev.hidden = noScroll || track.scrollLeft <= 1;
+                next.hidden = noScroll || track.scrollLeft >= (track.scrollWidth - track.clientWidth - 1);
+            }
+            function pageScroll(dir) {
+                track.scrollBy({ left: dir * Math.round(track.clientWidth * 0.9), behavior: 'smooth' });
+            }
+            prev.addEventListener('click', function () { pageScroll(-1); });
+            next.addEventListener('click', function () { pageScroll(1); });
+            track.addEventListener('scroll', update, { passive: true });
+            window.addEventListener('resize', update);
+            update();
         });
 
-        var items = Array.prototype.slice.call(document.querySelectorAll('.opac-gallery-grid .opac-gallery-item'));
+        var items = Array.prototype.slice.call(document.querySelectorAll('.opac-gallery-item'));
         if (!items.length) {
             return;
         }
