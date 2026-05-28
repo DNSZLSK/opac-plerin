@@ -108,41 +108,8 @@
     </div>
     <!-- /wp:group -->
 
-    <!-- Section Realisations (placeholder pour M3, vraie galerie ulterieurement) -->
-    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","style":{"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
-    <section class="wp-block-group alignwide opac-section-padded" style="border-top-color:#e8e5e0;border-top-width:1px">
-
-        <!-- wp:group {"className":"opac-section-header","layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between","verticalAlignment":"bottom"}} -->
-        <div class="wp-block-group opac-section-header">
-            <!-- wp:heading {"level":2,"className":"opac-section-title","fontFamily":"display"} -->
-            <h2 class="wp-block-heading opac-section-title has-display-font-family">Réalisations</h2>
-            <!-- /wp:heading -->
-            <!-- wp:paragraph {"className":"opac-section-link","textColor":"accent"} -->
-            <p class="opac-section-link has-accent-color has-text-color"><a href="#">Voir toute la galerie →</a></p>
-            <!-- /wp:paragraph -->
-        </div>
-        <!-- /wp:group -->
-
-        <!-- Placeholders galerie : 4 colored cards -->
-        <!-- wp:group {"className":"opac-gallery-grid","layout":{"type":"default"}} -->
-        <div class="wp-block-group opac-gallery-grid">
-            <!-- wp:group {"className":"opac-gallery-item","style":{"color":{"background":"#f0e6dc"}}} -->
-            <div class="wp-block-group opac-gallery-item has-background" style="background-color:#f0e6dc"></div>
-            <!-- /wp:group -->
-            <!-- wp:group {"className":"opac-gallery-item","style":{"color":{"background":"#e0e8e6"}}} -->
-            <div class="wp-block-group opac-gallery-item has-background" style="background-color:#e0e8e6"></div>
-            <!-- /wp:group -->
-            <!-- wp:group {"className":"opac-gallery-item","style":{"color":{"background":"#e6e0ee"}}} -->
-            <div class="wp-block-group opac-gallery-item has-background" style="background-color:#e6e0ee"></div>
-            <!-- /wp:group -->
-            <!-- wp:group {"className":"opac-gallery-item","style":{"color":{"background":"#f5e6e0"}}} -->
-            <div class="wp-block-group opac-gallery-item has-background" style="background-color:#f5e6e0"></div>
-            <!-- /wp:group -->
-        </div>
-        <!-- /wp:group -->
-
-    </section>
-    <!-- /wp:group -->
+    <!-- Section Réalisations : grille dynamique des opac_gallery_item liés (masquée si vide) -->
+    <!-- wp:opac/gallery-grid /-->
 
     <!-- Section Animatrice -->
     <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","style":{"border":{"top":{"color":"#e8e5e0","width":"1px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->

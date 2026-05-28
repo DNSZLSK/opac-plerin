@@ -25,6 +25,12 @@ class OPAC_Admin {
         add_action( 'manage_opac_inscription_posts_custom_column', [ __CLASS__, 'inscription_column_content' ], 10, 2 );
         add_filter( 'post_row_actions', [ __CLASS__, 'inscription_row_actions' ], 10, 2 );
         add_action( 'admin_notices', [ __CLASS__, 'inscription_action_notice' ] );
+
+        // Galerie : meta box "atelier associe" + colonnes liste.
+        add_action( 'add_meta_boxes', [ __CLASS__, 'gallery_meta_box' ] );
+        add_action( 'save_post_opac_gallery_item', [ __CLASS__, 'save_gallery_meta' ], 10, 2 );
+        add_filter( 'manage_opac_gallery_item_posts_columns', [ __CLASS__, 'gallery_columns' ] );
+        add_action( 'manage_opac_gallery_item_posts_custom_column', [ __CLASS__, 'gallery_column_content' ], 10, 2 );
     }
 
     public static function enqueue_admin_assets( $hook ) {
@@ -245,5 +251,92 @@ class OPAC_Admin {
             esc_url( $admin_url ),
             esc_html__( 'Voir toutes les inscriptions →', 'opac-custom' )
         );
+    }
+
+    /**
+     * Meta box sur opac_gallery_item : choix de l'atelier associe + legende.
+     * Katell definit la photo via "Image mise en avant" et selectionne ici
+     * l'atelier ou la realisation s'affiche.
+     */
+    public static function gallery_meta_box() {
+        add_meta_box(
+            'opac_gallery_link',
+            __( 'Réalisation OPAC', 'opac-custom' ),
+            [ __CLASS__, 'render_gallery_meta_box' ],
+            'opac_gallery_item',
+            'side',
+            'high'
+        );
+    }
+
+    public static function render_gallery_meta_box( $post ) {
+        wp_nonce_field( 'opac_gallery_meta', 'opac_gallery_meta_nonce' );
+        $current  = (int) get_post_meta( $post->ID, 'opac_gallery_atelier_id', true );
+        $caption  = (string) get_post_meta( $post->ID, 'opac_gallery_caption', true );
+        $ateliers = get_posts( [
+            'post_type'      => 'opac_atelier',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+        ] );
+
+        echo '<p><label for="opac_gallery_atelier_id"><strong>' . esc_html__( 'Atelier associé', 'opac-custom' ) . '</strong></label></p>';
+        echo '<select id="opac_gallery_atelier_id" name="opac_gallery_atelier_id" style="width:100%">';
+        echo '<option value="0">' . esc_html__( '— Aucun —', 'opac-custom' ) . '</option>';
+        foreach ( $ateliers as $a ) {
+            printf(
+                '<option value="%d"%s>%s</option>',
+                (int) $a->ID,
+                selected( $current, $a->ID, false ),
+                esc_html( get_the_title( $a ) )
+            );
+        }
+        echo '</select>';
+
+        echo '<p style="margin-top:12px"><label for="opac_gallery_caption"><strong>' . esc_html__( 'Légende (optionnelle)', 'opac-custom' ) . '</strong></label></p>';
+        printf(
+            '<input type="text" id="opac_gallery_caption" name="opac_gallery_caption" value="%s" style="width:100%%" />',
+            esc_attr( $caption )
+        );
+        echo '<p class="description" style="margin-top:8px">' . esc_html__( 'Définissez la photo via « Image mise en avant », puis choisissez l\'atelier où elle apparaît.', 'opac-custom' ) . '</p>';
+    }
+
+    public static function save_gallery_meta( $post_id, $post ) {
+        if ( ! isset( $_POST['opac_gallery_meta_nonce'] )
+            || ! wp_verify_nonce( wp_unslash( $_POST['opac_gallery_meta_nonce'] ), 'opac_gallery_meta' ) ) {
+            return;
+        }
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+            return;
+        }
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+        update_post_meta( $post_id, 'opac_gallery_atelier_id', isset( $_POST['opac_gallery_atelier_id'] ) ? absint( $_POST['opac_gallery_atelier_id'] ) : 0 );
+        update_post_meta( $post_id, 'opac_gallery_caption', isset( $_POST['opac_gallery_caption'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_gallery_caption'] ) ) : '' );
+    }
+
+    public static function gallery_columns( $columns ) {
+        $new = [];
+        foreach ( $columns as $key => $label ) {
+            if ( 'title' === $key ) {
+                $new['opac_gallery_thumb'] = __( 'Photo', 'opac-custom' );
+            }
+            $new[ $key ] = $label;
+            if ( 'title' === $key ) {
+                $new['opac_gallery_atelier'] = __( 'Atelier', 'opac-custom' );
+            }
+        }
+        return $new;
+    }
+
+    public static function gallery_column_content( $column, $post_id ) {
+        if ( 'opac_gallery_thumb' === $column ) {
+            echo has_post_thumbnail( $post_id ) ? get_the_post_thumbnail( $post_id, [ 48, 48 ] ) : '—';
+        } elseif ( 'opac_gallery_atelier' === $column ) {
+            $aid = (int) get_post_meta( $post_id, 'opac_gallery_atelier_id', true );
+            echo $aid && get_post( $aid ) ? esc_html( get_the_title( $aid ) ) : '—';
+        }
     }
 }
