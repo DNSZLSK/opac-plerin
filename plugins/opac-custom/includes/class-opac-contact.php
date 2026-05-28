@@ -24,8 +24,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OPAC_Contact {
 
-    const ACTION    = 'opac_contact';
-    const PAGE_SLUG = 'contact';
+    const ACTION       = 'opac_contact';
+    const PAGE_SLUG    = 'contact';
+    const RATE_LIMIT_S = 60;
 
     private static function recipient() {
         return class_exists( 'OPAC_Settings' )
@@ -70,6 +71,15 @@ class OPAC_Contact {
             wp_safe_redirect( add_query_arg( 'erreur', 'email', $back ) );
             exit;
         }
+
+        // Rate-limit transient (anti double-soumission), aligne sur l'inscription.
+        $ip     = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+        $rl_key = 'opac_contact_rl_' . md5( $ip . '|' . strtolower( $email ) );
+        if ( get_transient( $rl_key ) ) {
+            wp_safe_redirect( add_query_arg( 'erreur', 'doublon', $back ) );
+            exit;
+        }
+        set_transient( $rl_key, 1, self::RATE_LIMIT_S );
 
         // Resolution label sujet via le panel admin (memes sujets que le form).
         $subjects_labels = class_exists( 'OPAC_Settings' )

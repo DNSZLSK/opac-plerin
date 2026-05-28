@@ -91,6 +91,10 @@ class OPAC_Security {
     }
 
     public static function add_security_headers( $headers ) {
+        // Masque la version PHP exposee par defaut (expose_php). En prod OVH,
+        // doubler avec expose_php = Off dans le php.ini (cf. DEPLOY.md).
+        header_remove( 'X-Powered-By' );
+
         $headers['X-Frame-Options']        = 'SAMEORIGIN';
         $headers['X-Content-Type-Options'] = 'nosniff';
         $headers['Referrer-Policy']        = 'strict-origin-when-cross-origin';
@@ -111,7 +115,7 @@ class OPAC_Security {
             "font-src 'self' https://fonts.gstatic.com data:",
             "img-src 'self' data: https://www.openstreetmap.org https://*.tile.openstreetmap.org",
             "frame-src https://www.openstreetmap.org",
-            "connect-src 'self'",
+            "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
             "form-action 'self'",
             "base-uri 'self'",
             "object-src 'none'",

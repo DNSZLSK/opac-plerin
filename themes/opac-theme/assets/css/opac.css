@@ -1984,3 +1984,42 @@ body {
 .opac-hero.wp-block-cover {
     min-height: 0;
 }
+
+/* ================================================================
+ * Contraste WCAG AA (audit 2026-05) : on assombrit UNIQUEMENT les
+ * usages texte / bouton / badge mesures sous 4.5:1 par axe-core.
+ * Le token de marque --opac-accent (#c0583a) reste inchange pour
+ * les aplats decoratifs (stripes, sections), seul le contenu textuel
+ * passe en terracotta fonce.
+ * ================================================================ */
+:root { --opac-accent-text: #a64a30; }
+
+/* Boutons : blanc sur terracotta (4.46) -> terracotta fonce (5.1:1) */
+.opac-cta-btn { background: var(--opac-accent-text); }
+.opac-cta-btn:hover,
+.opac-cta-btn:focus-visible { background: #8f3f29; }
+.wp-block-button.is-style-opac-primary > .wp-block-button__link { background-color: var(--opac-accent-text); }
+.wp-block-button.is-style-opac-primary > .wp-block-button__link:hover,
+.wp-block-button.is-style-opac-primary > .wp-block-button__link:focus-visible { background-color: #8f3f29; }
+.opac-form-btn { background: var(--opac-accent-text); }
+
+/* Badge date des stages (chiffre + mois blancs) : fond terracotta -> fonce */
+.opac-stages-list > *:nth-child(odd) .opac-stage-date { background-color: var(--opac-accent-text) !important; }
+
+/* Liens / textes accent sur fond clair (4.24) -> terracotta fonce */
+.opac-section-link a,
+.opac-card-link,
+a.opac-card-link,
+.opac-breadcrumb [aria-current="page"] { color: var(--opac-accent-text); }
+
+/* Tags & notices colores sous le seuil */
+.opac-tag-ok,
+.opac-detail-notice { color: #236358; }            /* teal sur teal-clair 4.38 */
+.opac-tag-full { color: #9a4429; }                  /* accent sur accent-clair 3.79 */
+.opac-cat-sortie .opac-event-cat { color: #236358; }      /* teal sur teal-clair 4.38 */
+.opac-cat-expo .opac-event-cat { color: #5a4d8a; }        /* mauve sur mauve-clair 3.86 */
+.opac-cat-association .opac-event-cat { color: #9a4429; } /* accent sur accent-clair 3.79 */
+.opac-cat-ephemere .opac-event-cat { color: #6e4f15; }    /* or sur or-clair 2.31 */
+
+/* Bande CTA teal : texte secondaire (3.64) -> blanc plein (4.56:1) */
+.opac-cta-band-desc { color: #ffffff; }
