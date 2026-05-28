@@ -50,23 +50,20 @@
 }
 
 /* ----------------------------------------------------------------
- * Header components (logo circle + dropdown CTA)
+ * Header components (logo + dropdown CTA)
  * ---------------------------------------------------------------- */
 
-.opac-nav-logo-circle {
-    width: 48px;
-    height: 48px;
-    background: var(--opac-accent);
-    border-radius: 50%;
+.opac-nav-logo {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 19px;
-    font-weight: 500;
     flex-shrink: 0;
-    text-decoration: none;
+    line-height: 0;
+}
+
+.opac-nav-logo img {
+    height: 48px;
+    width: auto;
+    display: block;
 }
 
 .opac-cta {
