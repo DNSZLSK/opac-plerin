@@ -181,6 +181,17 @@ class OPAC_Inscriptions {
             wp_die( esc_html__( 'Inscription introuvable.', 'opac-custom' ) );
         }
 
+        // Idempotence : si l'inscription est deja dans le statut demande, ne rien
+        // refaire (evite le double email sur double-clic ou rejeu du lien row action).
+        $current = wp_get_object_terms( $id, 'opac_inscription_status', [ 'fields' => 'slugs' ] );
+        if ( ! is_wp_error( $current ) && in_array( $status, (array) $current, true ) ) {
+            wp_safe_redirect( add_query_arg(
+                [ 'post_type' => 'opac_inscription', 'opac_insc_done' => 'nochange' ],
+                admin_url( 'edit.php' )
+            ) );
+            exit;
+        }
+
         wp_set_object_terms( $id, [ $status ], 'opac_inscription_status', false );
 
         self::send_user_notification( $id, $status );

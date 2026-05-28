@@ -166,13 +166,16 @@ class OPAC_Admin {
             'validee'       => __( 'Inscription validée. Un email a été envoyé à l\'inscrit.', 'opac-custom' ),
             'refusee'       => __( 'Inscription refusée. Un email a été envoyé à l\'inscrit.', 'opac-custom' ),
             'liste-attente' => __( 'Inscription placée en liste d\'attente. Un email a été envoyé à l\'inscrit.', 'opac-custom' ),
+            'nochange'      => __( 'Statut déjà appliqué : aucun email renvoyé.', 'opac-custom' ),
         ];
         $msg = $labels[ $status ] ?? '';
         if ( ! $msg ) {
             return;
         }
+        $notice_class = ( 'nochange' === $status ) ? 'notice-info' : 'notice-success';
         printf(
-            '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
+            '<div class="notice %s is-dismissible"><p>%s</p></div>',
+            esc_attr( $notice_class ),
             esc_html( $msg )
         );
     }
