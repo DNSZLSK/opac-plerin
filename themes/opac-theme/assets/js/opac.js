@@ -206,11 +206,96 @@
         }
     }
 
+    /**
+     * Galerie des realisations (fiche atelier) :
+     * - bouton "Voir tout (N)" : deplie les vignettes en surplus (cap 4).
+     * - lightbox maison (sans librairie) : clic sur une vignette = grande image
+     *   en overlay, navigation fleches/Prev/Next, fermeture Echap / clic fond / X.
+     *   A11y : role=dialog, focus sur Fermer a l'ouverture, focus rendu a l'appel.
+     */
+    function initGallery() {
+        // "Voir tout" : deplie le surplus.
+        document.querySelectorAll('.opac-gallery-more').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var section = btn.closest('.opac-gallery-section');
+                var grid = section ? section.querySelector('.opac-gallery-grid') : null;
+                if (grid) {
+                    grid.classList.remove('is-collapsed');
+                }
+                btn.setAttribute('aria-expanded', 'true');
+                btn.parentNode.removeChild(btn);
+            });
+        });
+
+        var items = Array.prototype.slice.call(document.querySelectorAll('.opac-gallery-grid .opac-gallery-item'));
+        if (!items.length) {
+            return;
+        }
+
+        // Construit la lightbox une seule fois.
+        var lb = document.createElement('div');
+        lb.className = 'opac-lightbox';
+        lb.setAttribute('role', 'dialog');
+        lb.setAttribute('aria-modal', 'true');
+        lb.setAttribute('aria-label', 'Galerie des réalisations');
+        lb.innerHTML =
+            '<button type="button" class="opac-lightbox-btn opac-lightbox-close" aria-label="Fermer">×</button>' +
+            '<button type="button" class="opac-lightbox-btn opac-lightbox-prev" aria-label="Photo précédente">‹</button>' +
+            '<figure class="opac-lightbox-fig"><img alt="" /><figcaption class="opac-lightbox-caption"></figcaption></figure>' +
+            '<button type="button" class="opac-lightbox-btn opac-lightbox-next" aria-label="Photo suivante">›</button>';
+        document.body.appendChild(lb);
+
+        var lbImg = lb.querySelector('img');
+        var lbCap = lb.querySelector('.opac-lightbox-caption');
+        var current = 0;
+        var lastFocus = null;
+
+        function show(i) {
+            current = (i + items.length) % items.length;
+            var el = items[current];
+            lbImg.setAttribute('src', el.getAttribute('data-full') || '');
+            var cap = el.getAttribute('data-caption') || '';
+            lbImg.setAttribute('alt', cap);
+            lbCap.textContent = cap;
+            lbCap.style.display = cap ? '' : 'none';
+        }
+        function open(i) {
+            lastFocus = document.activeElement;
+            show(i);
+            lb.classList.add('is-open');
+            lb.querySelector('.opac-lightbox-close').focus();
+        }
+        function close() {
+            lb.classList.remove('is-open');
+            lbImg.setAttribute('src', '');
+            if (lastFocus && lastFocus.focus) {
+                lastFocus.focus();
+            }
+        }
+
+        items.forEach(function (el, i) {
+            el.addEventListener('click', function () { open(i); });
+        });
+        lb.querySelector('.opac-lightbox-close').addEventListener('click', close);
+        lb.querySelector('.opac-lightbox-prev').addEventListener('click', function () { show(current - 1); });
+        lb.querySelector('.opac-lightbox-next').addEventListener('click', function () { show(current + 1); });
+        lb.addEventListener('click', function (e) { if (e.target === lb) { close(); } });
+        document.addEventListener('keydown', function (e) {
+            if (!lb.classList.contains('is-open')) {
+                return;
+            }
+            if (e.key === 'Escape') { close(); }
+            else if (e.key === 'ArrowLeft') { show(current - 1); }
+            else if (e.key === 'ArrowRight') { show(current + 1); }
+        });
+    }
+
     function initAll() {
         initStickyHeader();
         initCtaDropdown();
         initStageTabs();
         initEventTabs();
+        initGallery();
     }
 
     if (document.readyState === 'loading') {
