@@ -2023,3 +2023,142 @@ a.opac-card-link,
 
 /* Bande CTA teal : texte secondaire (3.64) -> blanc plein (4.56:1) */
 .opac-cta-band-desc { color: #ffffff; }
+
+/* ================================================================
+ * Galerie realisations : vignettes cliquables (cap 4 + "Voir tout")
+ * et lightbox maison. Les vignettes reutilisent le cadre
+ * .opac-gallery-item (opac-img-frame) ; on neutralise juste le
+ * style bouton par defaut.
+ * ================================================================ */
+button.opac-gallery-item {
+    border: 0;
+    padding: 0 !important;
+    background: none;
+    cursor: pointer;
+}
+
+/* Carrousel : track scrollable horizontal (scroll-snap), swipe natif.
+   Hauteur de section constante quel que soit le nombre de photos. */
+.opac-gallery-carousel { position: relative; }
+
+.opac-gallery-track {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+}
+.opac-gallery-track::-webkit-scrollbar { display: none; }
+
+/* 4 vignettes visibles desktop (3 gaps de 12px), 2 tablette, 1 mobile.
+   width:auto neutralise le width:100% du systeme opac-img-frame pour que
+   le flex-basis pilote la largeur de la cellule. */
+.opac-gallery-track > .opac-gallery-item {
+    flex: 0 0 calc((100% - 36px) / 4);
+    width: auto !important;
+    min-width: 0;
+    scroll-snap-align: start;
+}
+@media (max-width: 880px) {
+    .opac-gallery-track > .opac-gallery-item { flex-basis: calc((100% - 12px) / 2); }
+}
+@media (max-width: 560px) {
+    .opac-gallery-track > .opac-gallery-item { flex-basis: 100%; }
+}
+
+/* Fleches : masquees ([hidden]) aux extremites ou si tout tient sans scroll. */
+.opac-gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--opac-border);
+    background: var(--opac-card);
+    color: var(--opac-ink);
+    cursor: pointer;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    line-height: 1;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    transition: color var(--opac-transition), border-color var(--opac-transition);
+}
+.opac-gallery-nav[hidden] { display: none; }
+.opac-gallery-prev { left: -8px; }
+.opac-gallery-next { right: -8px; }
+.opac-gallery-nav:hover,
+.opac-gallery-nav:focus-visible {
+    border-color: var(--opac-accent-text, #a64a30);
+    color: var(--opac-accent-text, #a64a30);
+}
+
+/* Lightbox (overlay plein ecran, construit par opac.js) */
+.opac-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(20, 18, 16, 0.9);
+}
+.opac-lightbox.is-open { display: flex; }
+
+.opac-lightbox-fig {
+    margin: 0;
+    max-width: 92vw;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.opac-lightbox-fig img {
+    max-width: 92vw;
+    max-height: 80vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+.opac-lightbox-caption {
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+    margin: 0;
+    max-width: 600px;
+}
+.opac-lightbox-btn {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.opac-lightbox-btn:hover,
+.opac-lightbox-btn:focus-visible { background: rgba(255, 255, 255, 0.28); }
+.opac-lightbox-close { top: 16px; right: 16px; }
+.opac-lightbox-prev { left: 16px; top: 50%; transform: translateY(-50%); }
+.opac-lightbox-next { right: 16px; top: 50%; transform: translateY(-50%); }
+@media (max-width: 580px) {
+    .opac-lightbox-prev { left: 8px; }
+    .opac-lightbox-next { right: 8px; }
+}
