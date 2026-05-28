@@ -180,27 +180,53 @@ class OPAC_Blocks {
             return '';
         }
 
-        $cards = '';
+        // Cap d'affichage : 4 vignettes visibles, le reste dépliable via "Voir tout".
+        // Chaque vignette est un <button> portant data-full (grande image) pour
+        // la lightbox JS (cf. opac.js initGallery).
+        $cards    = '';
+        $rendered = 0;
         foreach ( $items as $item ) {
             if ( ! has_post_thumbnail( $item->ID ) ) {
                 continue;
             }
-            $caption = (string) get_post_meta( $item->ID, 'opac_gallery_caption', true );
-            $alt     = $caption ?: get_the_title( $item->ID );
-            $img     = get_the_post_thumbnail( $item->ID, 'medium_large', [ 'alt' => $alt, 'loading' => 'lazy' ] );
-            $cards  .= '<div class="opac-gallery-item">' . $img . '</div>';
+            $caption  = (string) get_post_meta( $item->ID, 'opac_gallery_caption', true );
+            $alt      = $caption ?: get_the_title( $item->ID );
+            $thumb_id = get_post_thumbnail_id( $item->ID );
+            $full     = (string) wp_get_attachment_image_url( $thumb_id, 'large' );
+            $img      = get_the_post_thumbnail( $item->ID, 'medium_large', [ 'alt' => $alt, 'loading' => 'lazy' ] );
+            $extra    = $rendered >= 4 ? ' is-extra' : '';
+            $cards   .= sprintf(
+                '<button type="button" class="opac-gallery-item%s" data-full="%s" data-caption="%s" aria-label="%s">%s</button>',
+                $extra,
+                esc_url( $full ),
+                esc_attr( $caption ),
+                esc_attr( sprintf( __( 'Agrandir la photo : %s', 'opac-custom' ), $alt ) ),
+                $img
+            );
+            $rendered++;
         }
-        if ( '' === $cards ) {
+        if ( 0 === $rendered ) {
             return '';
         }
+
+        $grid_class = 'opac-gallery-grid' . ( $rendered > 4 ? ' is-collapsed' : '' );
+        $more       = $rendered > 4
+            ? sprintf(
+                '<button type="button" class="opac-gallery-more" aria-expanded="false">%s</button>',
+                sprintf( esc_html__( 'Voir tout (%d)', 'opac-custom' ), $rendered )
+            )
+            : '';
 
         return sprintf(
             '<section class="wp-block-group alignwide opac-section-padded opac-gallery-section" style="border-top-color:#e8e5e0;border-top-width:1px;border-top-style:solid">'
                 . '<h2 class="wp-block-heading opac-section-title has-display-font-family">%s</h2>'
-                . '<div class="opac-gallery-grid">%s</div>'
+                . '<div class="%s">%s</div>'
+                . '%s'
             . '</section>',
             esc_html__( 'Réalisations', 'opac-custom' ),
-            $cards
+            esc_attr( $grid_class ),
+            $cards,
+            $more
         );
     }
 
