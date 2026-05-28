@@ -128,6 +128,10 @@ class OPAC_Meta {
         register_post_meta( 'opac_inscription', 'opac_insc_message', self::args_string( false ) );
         register_post_meta( 'opac_inscription', 'opac_insc_date_submitted', self::args_string( false ) );
         register_post_meta( 'opac_inscription', 'opac_insc_source', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_adhesion', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_code_postal', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_commune', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_plerinais', self::args_int( false ) );
     }
 
     private static function register_gallery_meta() {
