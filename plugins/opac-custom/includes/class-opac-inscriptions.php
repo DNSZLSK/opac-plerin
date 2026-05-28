@@ -61,9 +61,12 @@ class OPAC_Inscriptions {
         $email     = isset( $_POST['opac_email'] )     ? sanitize_email( wp_unslash( $_POST['opac_email'] ) )          : '';
         $telephone = isset( $_POST['opac_telephone'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_telephone'] ) ) : '';
         $creneau   = isset( $_POST['opac_creneau'] )   ? sanitize_text_field( wp_unslash( $_POST['opac_creneau'] ) )   : '';
-        $adhesion  = isset( $_POST['opac_adhesion'] )  ? sanitize_key( wp_unslash( $_POST['opac_adhesion'] ) )         : '';
+        $mineur    = ! empty( $_POST['opac_mineur'] );
         $code_postal = isset( $_POST['opac_code_postal'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_code_postal'] ) ) : '';
         $commune     = isset( $_POST['opac_commune'] )     ? sanitize_text_field( wp_unslash( $_POST['opac_commune'] ) )     : '';
+        // Adhesion derivee cote serveur (plus de valeur auto-declaree) :
+        // mineur -> 'mineur' ; sinon CP 22190 -> 'plerinais' ; sinon 'exterieur'.
+        $adhesion  = $mineur ? 'mineur' : ( '22190' === $code_postal ? 'plerinais' : 'exterieur' );
         $message   = isset( $_POST['opac_message'] )   ? sanitize_textarea_field( wp_unslash( $_POST['opac_message'] ) ) : '';
         $rgpd      = ! empty( $_POST['opac_rgpd'] );
 
@@ -232,7 +235,7 @@ class OPAC_Inscriptions {
             $body .= "Creneau : {$data['creneau']}\n";
         }
         if ( $data['adhesion'] ) {
-            $body .= "Adhesion choisie : {$data['adhesion']}\n";
+            $body .= "Adhesion (estimee) : {$data['adhesion']}\n";
         }
         $body .= "\n";
         $body .= "Nom : {$data['nom']}\n";

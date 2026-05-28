@@ -1812,6 +1812,13 @@ body {
     border: 1px solid #cdd9e0;
 }
 
+.opac-adhesion-info {
+    margin: 6px 0 0;
+    font-size: 13px;
+    font-style: italic;
+    color: #5b6670;
+}
+
 .opac-contact-sidebar {
     display: flex;
     flex-direction: column;
