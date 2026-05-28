@@ -24,3 +24,41 @@
 .post-type-opac_inscription .row-actions a:hover {
     text-decoration: underline;
 }
+
+/* Colonne "Priorite" liste inscriptions (palier 1 workflow inscription) */
+.opac-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.7;
+}
+
+.opac-badge-plerinais {
+    background: #e3f1ee;
+    color: #2a7a6e;
+}
+
+.opac-badge-exterieur {
+    background: #f0f0f1;
+    color: #50575e;
+}
+
+.opac-badge-reinscription {
+    display: inline-block;
+    margin-top: 4px;
+    background: #fcf3e3;
+    color: #9a6b1e;
+}
+
+.opac-priorite-loc {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #1d2327;
+}
+
+.opac-priorite-adh {
+    font-size: 11px;
+    color: #646970;
+}
