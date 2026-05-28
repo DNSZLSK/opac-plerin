@@ -469,6 +469,7 @@ class OPAC_Blocks {
                 'email'   => __( 'L\'adresse email saisie n\'est pas valide.', 'opac-custom' ),
                 'envoi'   => __( 'L\'envoi a échoué. Merci de réessayer ou de nous contacter par téléphone.', 'opac-custom' ),
                 'nonce'   => __( 'Session expirée, merci de soumettre à nouveau le formulaire.', 'opac-custom' ),
+                'doublon' => __( 'Un message vient d\'être envoyé. Merci de patienter un instant avant d\'en renvoyer un.', 'opac-custom' ),
             ];
             $msg = $err_labels[ $err ] ?? __( 'Une erreur est survenue.', 'opac-custom' );
             $notice = '<div class="opac-form-notice is-error" role="alert" aria-live="assertive">' . esc_html( $msg ) . '</div>';
