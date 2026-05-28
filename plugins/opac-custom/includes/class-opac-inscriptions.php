@@ -102,9 +102,15 @@ class OPAC_Inscriptions {
             exit;
         }
 
-        // Rate-limit transient (anti double-submit + flood).
+        // Rate-limit transient : bloque uniquement la soumission strictement
+        // identique (double-clic / refresh). La cle inclut atelier/stage +
+        // creneau + nom + prenom pour qu'un meme parent (meme email + meme IP)
+        // puisse inscrire plusieurs enfants, ou lui-meme, voire des freres au
+        // meme creneau, sans faux "doublon". L'anti-bot reste honeypot + nonce.
         $ip       = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
-        $rl_key   = 'opac_insc_rl_' . md5( $ip . '|' . strtolower( $email ) );
+        $rl_cible = $atelier_id ? ( 'a' . $atelier_id ) : ( 's' . $stage_id );
+        $rl_sig   = strtolower( $ip . '|' . $email . '|' . $rl_cible . '|' . $creneau . '|' . $nom . '|' . $prenom );
+        $rl_key   = 'opac_insc_rl_' . md5( $rl_sig );
         if ( get_transient( $rl_key ) ) {
             wp_safe_redirect( add_query_arg( 'erreur', 'doublon', $back ) );
             exit;
