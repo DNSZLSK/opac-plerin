@@ -62,6 +62,8 @@ class OPAC_Inscriptions {
         $telephone = isset( $_POST['opac_telephone'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_telephone'] ) ) : '';
         $creneau   = isset( $_POST['opac_creneau'] )   ? sanitize_text_field( wp_unslash( $_POST['opac_creneau'] ) )   : '';
         $adhesion  = isset( $_POST['opac_adhesion'] )  ? sanitize_key( wp_unslash( $_POST['opac_adhesion'] ) )         : '';
+        $code_postal = isset( $_POST['opac_code_postal'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_code_postal'] ) ) : '';
+        $commune     = isset( $_POST['opac_commune'] )     ? sanitize_text_field( wp_unslash( $_POST['opac_commune'] ) )     : '';
         $message   = isset( $_POST['opac_message'] )   ? sanitize_textarea_field( wp_unslash( $_POST['opac_message'] ) ) : '';
         $rgpd      = ! empty( $_POST['opac_rgpd'] );
 
@@ -140,6 +142,14 @@ class OPAC_Inscriptions {
         if ( $adhesion ) {
             update_post_meta( $post_id, 'opac_insc_adhesion', $adhesion );
         }
+        if ( $code_postal ) {
+            update_post_meta( $post_id, 'opac_insc_code_postal', $code_postal );
+        }
+        if ( $commune ) {
+            update_post_meta( $post_id, 'opac_insc_commune', $commune );
+        }
+        // Flag Plerinais (code postal 22190) pour le tri prioritaire en admin.
+        update_post_meta( $post_id, 'opac_insc_plerinais', ( '22190' === $code_postal ) ? 1 : 0 );
 
         wp_set_object_terms( $post_id, [ 'en-attente' ], 'opac_inscription_status', false );
 
@@ -149,6 +159,8 @@ class OPAC_Inscriptions {
             'prenom'      => $prenom,
             'email'       => $email,
             'telephone'   => $telephone,
+            'code_postal' => $code_postal,
+            'commune'     => $commune,
             'cible_titre' => $cible_titre,
             'cible_type'  => $cible_type,
             'creneau'     => $creneau,
@@ -227,6 +239,10 @@ class OPAC_Inscriptions {
         $body .= "Prenom : {$data['prenom']}\n";
         $body .= "Email : {$data['email']}\n";
         $body .= "Telephone : {$data['telephone']}\n";
+        $loc = trim( ( isset( $data['commune'] ) ? $data['commune'] : '' ) . ' ' . ( isset( $data['code_postal'] ) ? $data['code_postal'] : '' ) );
+        if ( $loc ) {
+            $body .= "Commune : {$loc}\n";
+        }
         if ( $data['message'] ) {
             $body .= "\nMessage :\n{$data['message']}\n";
         }
