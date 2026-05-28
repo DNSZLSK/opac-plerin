@@ -55,14 +55,14 @@ class OPAC_CPTs {
     private static function register_stage() {
         register_post_type( 'opac_stage', [
             'labels' => [
-                'name' => __( 'Stages éphémères', 'opac-custom' ),
-                'singular_name' => __( 'Stage éphémère', 'opac-custom' ),
+                'name' => __( 'Ateliers éphémères', 'opac-custom' ),
+                'singular_name' => __( 'Atelier éphémère', 'opac-custom' ),
                 'add_new' => __( 'Ajouter', 'opac-custom' ),
-                'add_new_item' => __( 'Ajouter un stage', 'opac-custom' ),
-                'edit_item' => __( 'Modifier le stage', 'opac-custom' ),
-                'new_item' => __( 'Nouveau stage', 'opac-custom' ),
-                'all_items' => __( 'Tous les stages', 'opac-custom' ),
-                'menu_name' => __( 'Stages', 'opac-custom' ),
+                'add_new_item' => __( 'Ajouter un atelier éphémère', 'opac-custom' ),
+                'edit_item' => __( 'Modifier l\'atelier éphémère', 'opac-custom' ),
+                'new_item' => __( 'Nouvel atelier éphémère', 'opac-custom' ),
+                'all_items' => __( 'Tous les ateliers éphémères', 'opac-custom' ),
+                'menu_name' => __( 'Ateliers éphémères', 'opac-custom' ),
             ],
             'description' => __( 'Activités ponctuelles (vacances scolaires + hors vacances). Tarif à la séance.', 'opac-custom' ),
             'public' => true,
