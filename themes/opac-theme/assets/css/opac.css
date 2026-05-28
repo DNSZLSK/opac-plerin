@@ -61,7 +61,7 @@
 }
 
 .opac-nav-logo img {
-    height: 48px;
+    height: 56px;
     width: auto;
     display: block;
 }
@@ -975,7 +975,10 @@ a.opac-card-link:hover,
    par JS initStickyHeader(). Fallback 80px = hauteur typique (16+48+16). */
 .wp-site-blocks > main,
 .wp-site-blocks > .wp-block-group > main {
-    padding-top: var(--opac-header-h, 80px);
+    padding-top: var(--opac-header-h, 88px);
+    /* annule le block-gap racine WP (24px) : sinon bande de fond visible
+       entre le header fixed et le hero */
+    margin-block-start: 0;
 }
 
 .opac-header-wrapper {
