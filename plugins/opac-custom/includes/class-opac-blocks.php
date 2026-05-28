@@ -668,7 +668,34 @@ class OPAC_Blocks {
         $action_url = esc_url( admin_url( 'admin-post.php' ) );
         $nonce      = wp_nonce_field( 'opac_inscription_submit', 'opac_inscription_nonce', true, false );
 
-        $out  = $notice;
+        // Notice de phase (gating souple : informatif, ne bloque jamais le formulaire).
+        $phase_notice = '';
+        if ( class_exists( 'OPAC_Settings' ) ) {
+            $phase  = OPAC_Settings::inscription_phase();
+            $d_rein = (string) OPAC_Settings::get( 'opac_insc_date_reinscription' );
+            $d_ouv  = (string) OPAC_Settings::get( 'opac_insc_date_ouverture' );
+            $fmt    = static function ( $d ) {
+                $ts = $d ? strtotime( $d ) : false;
+                return $ts ? wp_date( 'j F Y', $ts ) : '';
+            };
+            $phase_msg = '';
+            if ( 'avant' === $phase ) {
+                $phase_msg = $d_rein
+                    ? sprintf( __( 'Les inscriptions ouvriront le %s. Vous pouvez déjà préparer votre demande.', 'opac-custom' ), $fmt( $d_rein ) )
+                    : __( 'Les inscriptions ouvriront prochainement.', 'opac-custom' );
+            } elseif ( 'reinscription' === $phase ) {
+                $phase_msg = $d_ouv
+                    ? sprintf( __( 'Réinscriptions prioritaires en cours pour les adhérents déjà inscrits. Les nouvelles inscriptions ouvrent le %s.', 'opac-custom' ), $fmt( $d_ouv ) )
+                    : __( 'Réinscriptions prioritaires en cours pour les adhérents déjà inscrits.', 'opac-custom' );
+            } elseif ( 'fermee' === $phase ) {
+                $phase_msg = __( 'Les inscriptions de la saison sont closes. Vous pouvez tout de même envoyer une demande : nous vous recontacterons.', 'opac-custom' );
+            }
+            if ( $phase_msg ) {
+                $phase_notice = '<div class="opac-form-notice is-info" role="status">' . esc_html( $phase_msg ) . '</div>';
+            }
+        }
+
+        $out  = $notice . $phase_notice;
         $out .= '<form class="opac-form-card opac-inscription-form" method="post" action="' . $action_url . '">';
         $out .= '<input type="hidden" name="action" value="opac_inscription" />';
         $out .= $nonce;
@@ -739,6 +766,14 @@ class OPAC_Blocks {
             . '<input class="opac-form-input" type="email" id="opac-email" name="opac_email" required /></div>';
         $out .= '<div class="opac-form-row"><label for="opac-tel">' . esc_html__( 'Téléphone', 'opac-custom' ) . '</label>'
             . '<input class="opac-form-input" type="tel" id="opac-tel" name="opac_telephone" /></div>';
+        $out .= '</div>';
+
+        // Code postal + commune (sert a la priorite Plerinais en admin).
+        $out .= '<div class="opac-form-row-2">';
+        $out .= '<div class="opac-form-row"><label for="opac-cp">' . esc_html__( 'Code postal', 'opac-custom' ) . ' *</label>'
+            . '<input class="opac-form-input" type="text" id="opac-cp" name="opac_code_postal" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" required /></div>';
+        $out .= '<div class="opac-form-row"><label for="opac-commune">' . esc_html__( 'Commune', 'opac-custom' ) . '</label>'
+            . '<input class="opac-form-input" type="text" id="opac-commune" name="opac_commune" /></div>';
         $out .= '</div>';
 
         // Type d'adhesion (info pratique pour rappel montant).
