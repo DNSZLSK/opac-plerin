@@ -62,3 +62,19 @@
     font-size: 11px;
     color: #646970;
 }
+
+/* Editeur de creneaux sur l'atelier (palier 2) */
+.opac-creneaux-editor select,
+.opac-creneaux-editor input[type="time"],
+.opac-creneaux-editor input[type="text"] {
+    width: 100%;
+}
+.opac-creneaux-editor td {
+    vertical-align: middle;
+}
+.opac-creneaux-editor .opac-creneau-del {
+    color: #b32d2e;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}

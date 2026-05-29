@@ -61,6 +61,7 @@ class OPAC_Inscriptions {
         $email     = isset( $_POST['opac_email'] )     ? sanitize_email( wp_unslash( $_POST['opac_email'] ) )          : '';
         $telephone = isset( $_POST['opac_telephone'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_telephone'] ) ) : '';
         $creneau   = isset( $_POST['opac_creneau'] )   ? sanitize_text_field( wp_unslash( $_POST['opac_creneau'] ) )   : '';
+        $creneau_id = isset( $_POST['opac_creneau_id'] ) ? sanitize_key( wp_unslash( $_POST['opac_creneau_id'] ) )      : '';
         $mineur    = ! empty( $_POST['opac_mineur'] );
         $code_postal = isset( $_POST['opac_code_postal'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_code_postal'] ) ) : '';
         $commune     = isset( $_POST['opac_commune'] )     ? sanitize_text_field( wp_unslash( $_POST['opac_commune'] ) )     : '';
@@ -109,7 +110,7 @@ class OPAC_Inscriptions {
         // meme creneau, sans faux "doublon". L'anti-bot reste honeypot + nonce.
         $ip       = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
         $rl_cible = $atelier_id ? ( 'a' . $atelier_id ) : ( 's' . $stage_id );
-        $rl_sig   = strtolower( $ip . '|' . $email . '|' . $rl_cible . '|' . $creneau . '|' . $nom . '|' . $prenom );
+        $rl_sig   = strtolower( $ip . '|' . $email . '|' . $rl_cible . '|' . $creneau . '|' . $creneau_id . '|' . $nom . '|' . $prenom );
         $rl_key   = 'opac_insc_rl_' . md5( $rl_sig );
         if ( get_transient( $rl_key ) ) {
             wp_safe_redirect( add_query_arg( 'erreur', 'doublon', $back ) );
@@ -126,6 +127,30 @@ class OPAC_Inscriptions {
             exit;
         }
         $cible_titre = get_the_title( $cible_post );
+
+        // Resolution du creneau structure (palier 2) : si un id de creneau est
+        // soumis et que l'atelier le possede, on enregistre l'id + le tarif du
+        // creneau et un libelle lisible. Sinon on garde le creneau texte.
+        $creneau_tarif = 0;
+        $auto_waitlist = false;
+        if ( 'opac_atelier' === $cible_type && '' !== $creneau_id ) {
+            $struct = get_post_meta( $cible_id, 'opac_creneaux', true );
+            if ( is_array( $struct ) ) {
+                $jours = [
+                    'lundi' => 'Lundi', 'mardi' => 'Mardi', 'mercredi' => 'Mercredi', 'jeudi' => 'Jeudi',
+                    'vendredi' => 'Vendredi', 'samedi' => 'Samedi', 'dimanche' => 'Dimanche',
+                ];
+                foreach ( $struct as $c ) {
+                    if ( is_array( $c ) && isset( $c['id'] ) && (string) $c['id'] === $creneau_id ) {
+                        $jlabel        = isset( $jours[ $c['jour'] ?? '' ] ) ? $jours[ $c['jour'] ] : '';
+                        $creneau       = trim( $jlabel . ' ' . ( $c['debut'] ?? '' ) . ' - ' . ( $c['fin'] ?? '' ) );
+                        $creneau_tarif = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
+                        $auto_waitlist = self::creneau_is_full( $cible_id, $c );
+                        break;
+                    }
+                }
+            }
+        }
 
         // Cree le post opac_inscription.
         $insc_title = sprintf( '[%s] %s %s', $cible_titre, $prenom, $nom );
@@ -159,8 +184,16 @@ class OPAC_Inscriptions {
         }
         // Flag Plerinais (code postal 22190) pour le tri prioritaire en admin.
         update_post_meta( $post_id, 'opac_insc_plerinais', ( '22190' === $code_postal ) ? 1 : 0 );
+        if ( '' !== $creneau_id ) {
+            update_post_meta( $post_id, 'opac_insc_creneau_id', $creneau_id );
+        }
+        if ( $creneau_tarif > 0 ) {
+            update_post_meta( $post_id, 'opac_insc_tarif', $creneau_tarif );
+        }
 
-        wp_set_object_terms( $post_id, [ 'en-attente' ], 'opac_inscription_status', false );
+        // Creneau complet -> liste d'attente automatique (palier 3), sinon en-attente.
+        $statut_initial = $auto_waitlist ? 'liste-attente' : 'en-attente';
+        wp_set_object_terms( $post_id, [ $statut_initial ], 'opac_inscription_status', false );
 
         // Notification Katell.
         self::send_admin_notification( $post_id, [
@@ -177,7 +210,16 @@ class OPAC_Inscriptions {
             'message'     => $message,
         ] );
 
-        wp_safe_redirect( add_query_arg( 'envoye', '1', $back ) );
+        // Bascule auto en liste d'attente : prevenir l'inscrit immediatement.
+        if ( $auto_waitlist ) {
+            self::send_user_notification( $post_id, 'liste-attente' );
+        }
+
+        $args = [ 'envoye' => '1' ];
+        if ( $auto_waitlist ) {
+            $args['attente'] = '1';
+        }
+        wp_safe_redirect( add_query_arg( $args, $back ) );
         exit;
     }
 
@@ -216,6 +258,17 @@ class OPAC_Inscriptions {
         wp_set_object_terms( $id, [ $status ], 'opac_inscription_status', false );
 
         self::send_user_notification( $id, $status );
+
+        // Desistement : si on retire une inscription deja validee, une place se
+        // libere sur son creneau -> promouvoir le 1er en liste d'attente.
+        $was_validee = ! is_wp_error( $current ) && in_array( 'validee', (array) $current, true );
+        if ( $was_validee && 'validee' !== $status ) {
+            $a_id = (int) get_post_meta( $id, 'opac_insc_atelier_id', true );
+            $c_id = (string) get_post_meta( $id, 'opac_insc_creneau_id', true );
+            if ( $a_id && '' !== $c_id ) {
+                self::promote_waitlist( $a_id, $c_id );
+            }
+        }
 
         $redirect = add_query_arg(
             [
@@ -289,15 +342,17 @@ class OPAC_Inscriptions {
             return;
         }
 
-        // Resolution du tarif selon le type cible (atelier annuel ou stage).
+        // Resolution du tarif : tarif du creneau choisi (palier 2, stocke sur
+        // l'inscription) si present, sinon tarif de l'atelier annuel ou du stage.
         $tarif = '';
+        $insc_tarif = (int) get_post_meta( $post_id, 'opac_insc_tarif', true );
         if ( $cible_id ) {
             if ( get_post_type( $cible_id ) === 'opac_atelier' ) {
-                $tarif = (int) get_post_meta( $cible_id, 'opac_tarif_annuel', true );
-                $tarif = $tarif > 0 ? $tarif . ' € / an' : '';
+                $montant = $insc_tarif > 0 ? $insc_tarif : (int) get_post_meta( $cible_id, 'opac_tarif_annuel', true );
+                $tarif = $montant > 0 ? $montant . ' € / an' : '';
             } elseif ( get_post_type( $cible_id ) === 'opac_stage' ) {
-                $tarif = (int) get_post_meta( $cible_id, 'opac_tarif_seance', true );
-                $tarif = $tarif > 0 ? $tarif . ' €' : '';
+                $montant = $insc_tarif > 0 ? $insc_tarif : (int) get_post_meta( $cible_id, 'opac_tarif_seance', true );
+                $tarif = $montant > 0 ? $montant . ' €' : '';
             }
         }
 
@@ -321,6 +376,7 @@ class OPAC_Inscriptions {
             'validee'       => sprintf( '[OPAC] Votre inscription à %s est validée', $cible_titre ),
             'refusee'       => sprintf( '[OPAC] Concernant votre demande pour %s', $cible_titre ),
             'liste-attente' => sprintf( '[OPAC] Votre inscription à %s : liste d\'attente', $cible_titre ),
+            'place-liberee' => sprintf( '[OPAC] Une place s\'est libérée pour %s', $cible_titre ),
         ];
         $subject = $subjects_map[ $status ] ?? '[OPAC] Votre inscription';
 
@@ -337,5 +393,103 @@ class OPAC_Inscriptions {
             return get_permalink( $page );
         }
         return home_url( '/inscription/' );
+    }
+
+    /**
+     * Nombre d'inscriptions VALIDEES pour un creneau donne (palier 3).
+     * Determine si un creneau est complet. Cache par requete.
+     */
+    public static function count_validees( $atelier_id, $creneau_id ) {
+        $atelier_id = (int) $atelier_id;
+        $creneau_id = (string) $creneau_id;
+        if ( ! $atelier_id || '' === $creneau_id ) {
+            return 0;
+        }
+        static $cache = [];
+        $key = $atelier_id . '|' . $creneau_id;
+        if ( isset( $cache[ $key ] ) ) {
+            return $cache[ $key ];
+        }
+        $q = new WP_Query( [
+            'post_type'      => 'opac_inscription',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+            'tax_query'      => [
+                [
+                    'taxonomy' => 'opac_inscription_status',
+                    'field'    => 'slug',
+                    'terms'    => 'validee',
+                ],
+            ],
+            'meta_query'     => [
+                'relation' => 'AND',
+                [ 'key' => 'opac_insc_atelier_id', 'value' => $atelier_id ],
+                [ 'key' => 'opac_insc_creneau_id', 'value' => $creneau_id ],
+            ],
+        ] );
+        $cache[ $key ] = count( $q->posts );
+        return $cache[ $key ];
+    }
+
+    /**
+     * Vrai si le creneau a atteint sa capacite (capacite 0 = pas de limite).
+     * $creneau = tableau structure (id, capacite, ...).
+     */
+    public static function creneau_is_full( $atelier_id, $creneau ) {
+        if ( ! is_array( $creneau ) ) {
+            return false;
+        }
+        $cap = isset( $creneau['capacite'] ) ? (int) $creneau['capacite'] : 0;
+        $id  = isset( $creneau['id'] ) ? (string) $creneau['id'] : '';
+        if ( $cap <= 0 || '' === $id ) {
+            return false;
+        }
+        return self::count_validees( $atelier_id, $id ) >= $cap;
+    }
+
+    /**
+     * Promotion au desistement : place le 1er de la liste d'attente du creneau
+     * (Plerinais d'abord, puis chronologique) en "en-attente" et l'informe par
+     * email qu'une place s'est liberee (paiement au prorata, cf. template).
+     */
+    private static function promote_waitlist( $atelier_id, $creneau_id ) {
+        $ids = get_posts( [
+            'post_type'      => 'opac_inscription',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+            'tax_query'      => [
+                [
+                    'taxonomy' => 'opac_inscription_status',
+                    'field'    => 'slug',
+                    'terms'    => 'liste-attente',
+                ],
+            ],
+            'meta_query'     => [
+                'relation' => 'AND',
+                [ 'key' => 'opac_insc_atelier_id', 'value' => (int) $atelier_id ],
+                [ 'key' => 'opac_insc_creneau_id', 'value' => (string) $creneau_id ],
+            ],
+        ] );
+        if ( empty( $ids ) ) {
+            return;
+        }
+        // Plerinais d'abord, puis premier arrive (date de soumission croissante).
+        usort( $ids, static function ( $a, $b ) {
+            $pa = (int) get_post_meta( $a, 'opac_insc_plerinais', true );
+            $pb = (int) get_post_meta( $b, 'opac_insc_plerinais', true );
+            if ( $pa !== $pb ) {
+                return $pb - $pa;
+            }
+            $da = (string) get_post_meta( $a, 'opac_insc_date_submitted', true );
+            $db = (string) get_post_meta( $b, 'opac_insc_date_submitted', true );
+            return strcmp( $da, $db );
+        } );
+        $promu = (int) $ids[0];
+        wp_set_object_terms( $promu, [ 'en-attente' ], 'opac_inscription_status', false );
+        self::send_user_notification( $promu, 'place-liberee' );
     }
 }

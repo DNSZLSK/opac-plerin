@@ -119,6 +119,14 @@ class OPAC_Blocks {
             'attributes'      => [],
             'supports'        => [ 'html' => false ],
         ] );
+
+        register_block_type( 'opac/creneaux-list', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_creneaux_list' ],
+            'uses_context'    => [ 'postId', 'postType' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
     }
 
     public static function render_statuts_link( $attrs, $content, $block ) {
@@ -258,6 +266,101 @@ class OPAC_Blocks {
             esc_attr( $map[ $slug ]['class'] ),
             esc_html( $map[ $slug ]['label'] )
         );
+    }
+
+    /**
+     * Liste des creneaux d'un atelier (palier 2). Lit le meta structure
+     * opac_creneaux (jour/debut/fin/tarif/capacite). Fallback sur l'ancien
+     * champ texte opac_creneaux_text si aucun creneau structure.
+     */
+    public static function render_creneaux_list( $attrs, $content, $block ) {
+        $post_id = isset( $block->context['postId'] ) ? (int) $block->context['postId'] : (int) get_the_ID();
+        if ( ! $post_id ) {
+            return '';
+        }
+
+        $creneaux = get_post_meta( $post_id, 'opac_creneaux', true );
+        if ( is_array( $creneaux ) && ! empty( $creneaux ) ) {
+            $jours = self::jours_labels();
+            $items = '';
+            foreach ( $creneaux as $c ) {
+                if ( ! is_array( $c ) ) {
+                    continue;
+                }
+                $jour    = isset( $c['jour'] ) ? (string) $c['jour'] : '';
+                $label   = isset( $jours[ $jour ] ) ? $jours[ $jour ] : ucfirst( $jour );
+                $horaire = self::format_horaire( $c['debut'] ?? '', $c['fin'] ?? '' );
+                $line    = trim( $label . ' ' . $horaire );
+                if ( '' === $line ) {
+                    continue;
+                }
+                $tarif = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
+                $tarif_html = $tarif > 0
+                    ? ' <span class="opac-creneau-tarif">' . esc_html( number_format_i18n( $tarif, 0 ) . ' €' ) . '</span>'
+                    : '';
+                $note = ( isset( $c['note'] ) && '' !== $c['note'] )
+                    ? ' <span class="opac-creneau-note">' . esc_html( (string) $c['note'] ) . '</span>'
+                    : '';
+                $state_html = '';
+                $cap = isset( $c['capacite'] ) ? (int) $c['capacite'] : 0;
+                if ( $cap > 0 && ! empty( $c['id'] ) && class_exists( 'OPAC_Inscriptions' ) ) {
+                    $left = $cap - OPAC_Inscriptions::count_validees( $post_id, (string) $c['id'] );
+                    if ( $left <= 0 ) {
+                        $state_html = ' <span class="opac-creneau-state is-full">' . esc_html__( 'Complet', 'opac-custom' ) . '</span>';
+                    } elseif ( $left <= 2 ) {
+                        $state_html = ' <span class="opac-creneau-state is-few">' . esc_html__( 'Dernières places', 'opac-custom' ) . '</span>';
+                    }
+                }
+                $items .= '<li><span class="opac-creneau-when">' . esc_html( $line ) . '</span>' . $tarif_html . $state_html . $note . '</li>';
+            }
+            if ( '' !== $items ) {
+                return '<ul class="opac-creneaux-items">' . $items . '</ul>';
+            }
+        }
+
+        // Fallback : ancien champ texte libre (white-space: pre-line via CSS).
+        $text = (string) get_post_meta( $post_id, 'opac_creneaux_text', true );
+        if ( '' === trim( $text ) ) {
+            return '';
+        }
+        return '<p class="opac-creneaux-list">' . esc_html( $text ) . '</p>';
+    }
+
+    /**
+     * Libelles FR des jours (slug -> libelle), pour le rendu des creneaux.
+     */
+    private static function jours_labels() {
+        return [
+            'lundi'    => 'Lundi',
+            'mardi'    => 'Mardi',
+            'mercredi' => 'Mercredi',
+            'jeudi'    => 'Jeudi',
+            'vendredi' => 'Vendredi',
+            'samedi'   => 'Samedi',
+            'dimanche' => 'Dimanche',
+        ];
+    }
+
+    /**
+     * Formate "14:30" + "17:30" en "14h30 - 17h30" (et "14:00" en "14h").
+     */
+    private static function format_horaire( $debut, $fin ) {
+        $fmt = static function ( $t ) {
+            $t = trim( (string) $t );
+            if ( '' === $t ) {
+                return '';
+            }
+            $parts = explode( ':', $t );
+            $h = isset( $parts[0] ) ? (int) $parts[0] : 0;
+            $m = isset( $parts[1] ) ? $parts[1] : '00';
+            return ( '00' === $m ) ? ( $h . 'h' ) : ( $h . 'h' . $m );
+        };
+        $d  = $fmt( $debut );
+        $fi = $fmt( $fin );
+        if ( '' !== $d && '' !== $fi ) {
+            return $d . ' - ' . $fi;
+        }
+        return $d . $fi;
     }
 
     /**
@@ -599,9 +702,10 @@ class OPAC_Blocks {
     public static function render_inscription_form( $attrs, $content, $block ) {
         $notice = '';
         if ( isset( $_GET['envoye'] ) && $_GET['envoye'] === '1' ) {
-            $notice = '<div class="opac-form-notice is-success" role="status" aria-live="polite">'
-                . esc_html__( 'Votre demande d\'inscription a bien été enregistrée. Katell ou Laurence vous contactera prochainement pour confirmation.', 'opac-custom' )
-                . '</div>';
+            $msg = ( isset( $_GET['attente'] ) && '1' === $_GET['attente'] )
+                ? __( 'Ce créneau est complet : votre demande a été enregistrée en liste d\'attente. Nous vous recontacterons dès qu\'une place se libère.', 'opac-custom' )
+                : __( 'Votre demande d\'inscription a bien été enregistrée. Katell ou Laurence vous contactera prochainement pour confirmation.', 'opac-custom' );
+            $notice = '<div class="opac-form-notice is-success" role="status" aria-live="polite">' . esc_html( $msg ) . '</div>';
         } elseif ( isset( $_GET['erreur'] ) ) {
             $err = sanitize_key( wp_unslash( $_GET['erreur'] ) );
             $err_labels = [
@@ -624,10 +728,15 @@ class OPAC_Blocks {
         $context_html = '';
         $hidden_inputs = '';
         $creneaux_lines = [];
+        $creneaux_struct = [];
 
         if ( $atelier_id && get_post_type( $atelier_id ) === 'opac_atelier' ) {
             $titre  = get_the_title( $atelier_id );
             $tarif  = (int) get_post_meta( $atelier_id, 'opac_tarif_annuel', true );
+            $struct = get_post_meta( $atelier_id, 'opac_creneaux', true );
+            if ( is_array( $struct ) ) {
+                $creneaux_struct = $struct;
+            }
             $cren   = (string) get_post_meta( $atelier_id, 'opac_creneaux_text', true );
             if ( $cren ) {
                 $lines = preg_split( '/\r?\n/', $cren );
@@ -743,8 +852,32 @@ class OPAC_Blocks {
             $out .= '</select></div>';
         }
 
-        // Creneaux pour atelier a l'annee (si plusieurs disponibles).
-        if ( $atelier_id && count( $creneaux_lines ) > 0 ) {
+        // Creneaux pour atelier a l'annee. Prefere les creneaux structures
+        // (value = id, avec tarif), sinon fallback sur l'ancien champ texte.
+        if ( $atelier_id && count( $creneaux_struct ) > 0 ) {
+            $jours = self::jours_labels();
+            $out .= '<div class="opac-form-row"><label for="opac-creneau">' . esc_html__( 'Créneau choisi', 'opac-custom' ) . ' *</label>';
+            $out .= '<select class="opac-form-input" id="opac-creneau" name="opac_creneau_id" required>';
+            $out .= '<option value="">' . esc_html__( 'Sélectionner un créneau...', 'opac-custom' ) . '</option>';
+            foreach ( $creneaux_struct as $c ) {
+                if ( ! is_array( $c ) || empty( $c['id'] ) ) {
+                    continue;
+                }
+                $jour    = isset( $c['jour'] ) ? (string) $c['jour'] : '';
+                $label   = isset( $jours[ $jour ] ) ? $jours[ $jour ] : ucfirst( $jour );
+                $horaire = self::format_horaire( $c['debut'] ?? '', $c['fin'] ?? '' );
+                $tarif_c = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
+                $opt     = trim( $label . ' ' . $horaire );
+                if ( $tarif_c > 0 ) {
+                    $opt .= ' (' . number_format_i18n( $tarif_c, 0 ) . ' €)';
+                }
+                if ( class_exists( 'OPAC_Inscriptions' ) && OPAC_Inscriptions::creneau_is_full( $atelier_id, $c ) ) {
+                    $opt .= ' - ' . __( 'Complet (liste d\'attente)', 'opac-custom' );
+                }
+                $out .= '<option value="' . esc_attr( (string) $c['id'] ) . '">' . esc_html( $opt ) . '</option>';
+            }
+            $out .= '</select></div>';
+        } elseif ( $atelier_id && count( $creneaux_lines ) > 0 ) {
             $out .= '<div class="opac-form-row"><label for="opac-creneau">' . esc_html__( 'Créneau choisi', 'opac-custom' ) . ' *</label>';
             $out .= '<select class="opac-form-input" id="opac-creneau" name="opac_creneau" required>';
             $out .= '<option value="">' . esc_html__( 'Sélectionner un créneau...', 'opac-custom' ) . '</option>';

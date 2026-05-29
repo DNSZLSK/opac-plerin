@@ -43,6 +43,10 @@ class OPAC_Admin {
         add_action( 'save_post_opac_gallery_item', [ __CLASS__, 'save_gallery_meta' ], 10, 2 );
         add_filter( 'manage_opac_gallery_item_posts_columns', [ __CLASS__, 'gallery_columns' ] );
         add_action( 'manage_opac_gallery_item_posts_custom_column', [ __CLASS__, 'gallery_column_content' ], 10, 2 );
+
+        // Ateliers : meta box d'edition des creneaux structures (palier 2).
+        add_action( 'add_meta_boxes', [ __CLASS__, 'atelier_creneaux_meta_box' ] );
+        add_action( 'save_post_opac_atelier', [ __CLASS__, 'save_atelier_creneaux' ], 10, 2 );
     }
 
     public static function enqueue_admin_assets( $hook ) {
@@ -538,5 +542,176 @@ class OPAC_Admin {
         $clauses['join']   .= " LEFT JOIN {$wpdb->postmeta} AS opac_pri ON ( {$wpdb->posts}.ID = opac_pri.post_id AND opac_pri.meta_key = 'opac_insc_plerinais' ) ";
         $clauses['orderby'] = " COALESCE(opac_pri.meta_value+0, 0) DESC, {$wpdb->posts}.post_date ASC ";
         return $clauses;
+    }
+
+    /**
+     * Meta box d'edition des creneaux structures sur l'atelier (palier 2).
+     * Remplace l'edition via champs personnalises bruts : tableau repetable
+     * jour / debut / fin / tarif / capacite / note, stocke dans opac_creneaux.
+     */
+    public static function atelier_creneaux_meta_box() {
+        add_meta_box(
+            'opac_atelier_creneaux',
+            __( 'Créneaux hebdomadaires', 'opac-custom' ),
+            [ __CLASS__, 'render_atelier_creneaux_box' ],
+            'opac_atelier',
+            'normal',
+            'high'
+        );
+    }
+
+    public static function render_atelier_creneaux_box( $post ) {
+        wp_nonce_field( 'opac_atelier_creneaux', 'opac_atelier_creneaux_nonce' );
+        $creneaux = get_post_meta( $post->ID, 'opac_creneaux', true );
+        if ( ! is_array( $creneaux ) ) {
+            $creneaux = [];
+        }
+        ?>
+        <p class="description">
+            <?php esc_html_e( 'Un créneau par ligne (jour + horaires). Tarif et capacité servent au formulaire d\'inscription et à l\'affichage des places (capacité 0 = pas de limite). Si vide, l\'ancien champ texte « Créneaux » reste utilisé.', 'opac-custom' ); ?>
+        </p>
+        <table class="widefat opac-creneaux-editor">
+            <thead>
+                <tr>
+                    <th><?php esc_html_e( 'Jour', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Début', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Fin', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Tarif (€)', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Capacité', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Note', 'opac-custom' ); ?></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="opac-creneaux-rows">
+                <?php
+                $i = 0;
+                foreach ( $creneaux as $row ) {
+                    echo self::creneau_row_html( (string) $i, is_array( $row ) ? $row : [] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                    $i++;
+                }
+                ?>
+            </tbody>
+        </table>
+        <p><button type="button" class="button" id="opac-creneaux-add"><?php esc_html_e( '+ Ajouter un créneau', 'opac-custom' ); ?></button></p>
+        <script type="text/template" id="opac-creneaux-tpl"><?php echo self::creneau_row_html( '__i__', [] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></script>
+        <script>
+        (function(){
+            var add=document.getElementById('opac-creneaux-add'),
+                rows=document.getElementById('opac-creneaux-rows'),
+                tpl=document.getElementById('opac-creneaux-tpl');
+            if(!add||!rows||!tpl){return;}
+            var n=rows.children.length;
+            add.addEventListener('click',function(){
+                var tmp=document.createElement('tbody');
+                tmp.innerHTML=tpl.innerHTML.replace(/__i__/g,'n'+(n++)).trim();
+                if(tmp.firstElementChild){rows.appendChild(tmp.firstElementChild);}
+            });
+            rows.addEventListener('click',function(e){
+                var b=e.target.closest('.opac-creneau-del');
+                if(b){e.preventDefault();var tr=b.closest('tr');if(tr){tr.parentNode.removeChild(tr);}}
+            });
+        })();
+        </script>
+        <?php
+    }
+
+    /**
+     * Markup d'une ligne de l'editeur de creneaux. Reutilise pour les lignes
+     * existantes (index numerique) et le template JS (index '__i__').
+     */
+    private static function creneau_row_html( $index, $row ) {
+        $jours = [
+            'lundi'    => __( 'Lundi', 'opac-custom' ),
+            'mardi'    => __( 'Mardi', 'opac-custom' ),
+            'mercredi' => __( 'Mercredi', 'opac-custom' ),
+            'jeudi'    => __( 'Jeudi', 'opac-custom' ),
+            'vendredi' => __( 'Vendredi', 'opac-custom' ),
+            'samedi'   => __( 'Samedi', 'opac-custom' ),
+            'dimanche' => __( 'Dimanche', 'opac-custom' ),
+        ];
+        $id       = isset( $row['id'] ) ? (string) $row['id'] : '';
+        $jour     = isset( $row['jour'] ) ? (string) $row['jour'] : '';
+        $debut    = isset( $row['debut'] ) ? (string) $row['debut'] : '';
+        $fin      = isset( $row['fin'] ) ? (string) $row['fin'] : '';
+        $tarif    = isset( $row['tarif'] ) && '' !== $row['tarif'] ? (int) $row['tarif'] : '';
+        $capacite = isset( $row['capacite'] ) && '' !== $row['capacite'] ? (int) $row['capacite'] : '';
+        $note     = isset( $row['note'] ) ? (string) $row['note'] : '';
+        $base     = 'opac_creneaux[' . $index . ']';
+
+        ob_start();
+        ?>
+        <tr>
+            <td>
+                <input type="hidden" name="<?php echo esc_attr( $base ); ?>[id]" value="<?php echo esc_attr( $id ); ?>" />
+                <select name="<?php echo esc_attr( $base ); ?>[jour]">
+                    <?php foreach ( $jours as $val => $lab ) : ?>
+                        <option value="<?php echo esc_attr( $val ); ?>" <?php selected( $jour, $val ); ?>><?php echo esc_html( $lab ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </td>
+            <td><input type="time" name="<?php echo esc_attr( $base ); ?>[debut]" value="<?php echo esc_attr( $debut ); ?>" /></td>
+            <td><input type="time" name="<?php echo esc_attr( $base ); ?>[fin]" value="<?php echo esc_attr( $fin ); ?>" /></td>
+            <td><input type="number" min="0" step="1" class="small-text" name="<?php echo esc_attr( $base ); ?>[tarif]" value="<?php echo esc_attr( $tarif ); ?>" /></td>
+            <td><input type="number" min="0" step="1" class="small-text" name="<?php echo esc_attr( $base ); ?>[capacite]" value="<?php echo esc_attr( $capacite ); ?>" /></td>
+            <td><input type="text" name="<?php echo esc_attr( $base ); ?>[note]" value="<?php echo esc_attr( $note ); ?>" /></td>
+            <td><button type="button" class="button-link opac-creneau-del" aria-label="<?php esc_attr_e( 'Retirer le créneau', 'opac-custom' ); ?>">&times;</button></td>
+        </tr>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Sauvegarde des creneaux structures. Ignore les lignes sans horaire,
+     * attribue un id stable (preserve a l'edition) pour le comptage palier 3.
+     */
+    public static function save_atelier_creneaux( $post_id, $post ) {
+        if ( ! isset( $_POST['opac_atelier_creneaux_nonce'] )
+            || ! wp_verify_nonce( wp_unslash( $_POST['opac_atelier_creneaux_nonce'] ), 'opac_atelier_creneaux' ) ) {
+            return;
+        }
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+            return;
+        }
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        $raw = ( isset( $_POST['opac_creneaux'] ) && is_array( $_POST['opac_creneaux'] ) )
+            ? wp_unslash( $_POST['opac_creneaux'] )
+            : [];
+        $jours_ok = [ 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche' ];
+        $clean = [];
+        foreach ( $raw as $row ) {
+            if ( ! is_array( $row ) ) {
+                continue;
+            }
+            $debut = isset( $row['debut'] ) ? sanitize_text_field( $row['debut'] ) : '';
+            $fin   = isset( $row['fin'] ) ? sanitize_text_field( $row['fin'] ) : '';
+            if ( '' === $debut && '' === $fin ) {
+                continue; // ligne vide, ignoree
+            }
+            $jour = isset( $row['jour'] ) ? sanitize_key( $row['jour'] ) : '';
+            if ( ! in_array( $jour, $jours_ok, true ) ) {
+                $jour = 'lundi';
+            }
+            $id = isset( $row['id'] ) ? sanitize_key( $row['id'] ) : '';
+            if ( '' === $id ) {
+                $id = uniqid( 'c', false );
+            }
+            $clean[] = [
+                'id'       => $id,
+                'jour'     => $jour,
+                'debut'    => $debut,
+                'fin'      => $fin,
+                'tarif'    => isset( $row['tarif'] ) ? absint( $row['tarif'] ) : 0,
+                'capacite' => isset( $row['capacite'] ) ? absint( $row['capacite'] ) : 0,
+                'note'     => isset( $row['note'] ) ? sanitize_text_field( $row['note'] ) : '',
+            ];
+        }
+        if ( empty( $clean ) ) {
+            delete_post_meta( $post_id, 'opac_creneaux' );
+        } else {
+            update_post_meta( $post_id, 'opac_creneaux', $clean );
+        }
     }
 }
