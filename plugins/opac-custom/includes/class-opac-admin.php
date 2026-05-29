@@ -26,6 +26,9 @@ class OPAC_Admin {
      */
     private static $returning_emails = null;
 
+    /** Types geres dans les listes admin (confirms suppression + Quick Edit retire). */
+    const CONFIRM_TYPES = [ 'opac_atelier', 'opac_stage', 'opac_event', 'opac_person', 'opac_inscription' ];
+
     public static function boot() {
         add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_admin_assets' ] );
         add_filter( 'manage_opac_atelier_posts_columns', [ __CLASS__, 'atelier_columns' ] );
@@ -33,6 +36,7 @@ class OPAC_Admin {
         add_filter( 'manage_opac_inscription_posts_columns', [ __CLASS__, 'inscription_columns' ] );
         add_action( 'manage_opac_inscription_posts_custom_column', [ __CLASS__, 'inscription_column_content' ], 10, 2 );
         add_filter( 'post_row_actions', [ __CLASS__, 'inscription_row_actions' ], 10, 2 );
+        add_filter( 'post_row_actions', [ __CLASS__, 'remove_quick_edit' ], 10, 2 );
         add_action( 'admin_notices', [ __CLASS__, 'inscription_action_notice' ] );
         add_action( 'restrict_manage_posts', [ __CLASS__, 'inscription_status_filter' ] );
         add_filter( 'posts_clauses', [ __CLASS__, 'inscription_priority_clauses' ], 10, 2 );
@@ -56,6 +60,41 @@ class OPAC_Admin {
             [],
             OPAC_CUSTOM_VERSION
         );
+
+        // Garde-fous suppression + "modifications non enregistrees" : listes et
+        // editeurs des CPTs geres + inscriptions uniquement.
+        if ( in_array( $hook, [ 'edit.php', 'post.php', 'post-new.php' ], true ) ) {
+            $screen = get_current_screen();
+            if ( $screen && in_array( $screen->post_type, self::CONFIRM_TYPES, true ) ) {
+                wp_enqueue_script(
+                    'opac-admin-confirm',
+                    OPAC_CUSTOM_URL . 'assets/js/admin-confirm.js',
+                    [],
+                    OPAC_CUSTOM_VERSION,
+                    true
+                );
+                wp_localize_script( 'opac-admin-confirm', 'opacConfirm', [
+                    'trash'      => __( 'Êtes-vous sûr de vouloir mettre cet élément à la corbeille ?', 'opac-custom' ),
+                    'del'        => __( 'Supprimer définitivement ? Cette action est irréversible.', 'opac-custom' ),
+                    'emptyTrash' => __( 'Vider la corbeille supprimera définitivement tous les éléments. Continuer ?', 'opac-custom' ),
+                    'bulkTrash'  => __( 'Mettre les éléments sélectionnés à la corbeille ?', 'opac-custom' ),
+                    'bulkDelete' => __( 'Supprimer définitivement les éléments sélectionnés ? Cette action est irréversible.', 'opac-custom' ),
+                    'unsaved'    => __( 'Des modifications ne sont pas enregistrées. Voulez-vous vraiment quitter cette page ?', 'opac-custom' ),
+                ] );
+            }
+        }
+    }
+
+    /**
+     * Retire la "Modification rapide" (Quick Edit) des CPTs geres : elle n'expose
+     * pas les champs metier (tarif, dates, animateur...) edites via le formulaire
+     * fiche, donc elle induit en erreur.
+     */
+    public static function remove_quick_edit( $actions, $post ) {
+        if ( $post && in_array( $post->post_type, self::CONFIRM_TYPES, true ) ) {
+            unset( $actions['inline hide-if-no-js'] );
+        }
+        return $actions;
     }
 
     public static function atelier_columns( $columns ) {
