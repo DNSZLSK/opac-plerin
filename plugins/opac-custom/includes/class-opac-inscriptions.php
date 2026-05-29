@@ -61,6 +61,7 @@ class OPAC_Inscriptions {
         $email     = isset( $_POST['opac_email'] )     ? sanitize_email( wp_unslash( $_POST['opac_email'] ) )          : '';
         $telephone = isset( $_POST['opac_telephone'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_telephone'] ) ) : '';
         $creneau   = isset( $_POST['opac_creneau'] )   ? sanitize_text_field( wp_unslash( $_POST['opac_creneau'] ) )   : '';
+        $creneau_id = isset( $_POST['opac_creneau_id'] ) ? sanitize_key( wp_unslash( $_POST['opac_creneau_id'] ) )      : '';
         $mineur    = ! empty( $_POST['opac_mineur'] );
         $code_postal = isset( $_POST['opac_code_postal'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_code_postal'] ) ) : '';
         $commune     = isset( $_POST['opac_commune'] )     ? sanitize_text_field( wp_unslash( $_POST['opac_commune'] ) )     : '';
@@ -109,7 +110,7 @@ class OPAC_Inscriptions {
         // meme creneau, sans faux "doublon". L'anti-bot reste honeypot + nonce.
         $ip       = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
         $rl_cible = $atelier_id ? ( 'a' . $atelier_id ) : ( 's' . $stage_id );
-        $rl_sig   = strtolower( $ip . '|' . $email . '|' . $rl_cible . '|' . $creneau . '|' . $nom . '|' . $prenom );
+        $rl_sig   = strtolower( $ip . '|' . $email . '|' . $rl_cible . '|' . $creneau . '|' . $creneau_id . '|' . $nom . '|' . $prenom );
         $rl_key   = 'opac_insc_rl_' . md5( $rl_sig );
         if ( get_transient( $rl_key ) ) {
             wp_safe_redirect( add_query_arg( 'erreur', 'doublon', $back ) );
@@ -126,6 +127,28 @@ class OPAC_Inscriptions {
             exit;
         }
         $cible_titre = get_the_title( $cible_post );
+
+        // Resolution du creneau structure (palier 2) : si un id de creneau est
+        // soumis et que l'atelier le possede, on enregistre l'id + le tarif du
+        // creneau et un libelle lisible. Sinon on garde le creneau texte.
+        $creneau_tarif = 0;
+        if ( 'opac_atelier' === $cible_type && '' !== $creneau_id ) {
+            $struct = get_post_meta( $cible_id, 'opac_creneaux', true );
+            if ( is_array( $struct ) ) {
+                $jours = [
+                    'lundi' => 'Lundi', 'mardi' => 'Mardi', 'mercredi' => 'Mercredi', 'jeudi' => 'Jeudi',
+                    'vendredi' => 'Vendredi', 'samedi' => 'Samedi', 'dimanche' => 'Dimanche',
+                ];
+                foreach ( $struct as $c ) {
+                    if ( is_array( $c ) && isset( $c['id'] ) && (string) $c['id'] === $creneau_id ) {
+                        $jlabel        = isset( $jours[ $c['jour'] ?? '' ] ) ? $jours[ $c['jour'] ] : '';
+                        $creneau       = trim( $jlabel . ' ' . ( $c['debut'] ?? '' ) . ' - ' . ( $c['fin'] ?? '' ) );
+                        $creneau_tarif = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
+                        break;
+                    }
+                }
+            }
+        }
 
         // Cree le post opac_inscription.
         $insc_title = sprintf( '[%s] %s %s', $cible_titre, $prenom, $nom );
@@ -159,6 +182,12 @@ class OPAC_Inscriptions {
         }
         // Flag Plerinais (code postal 22190) pour le tri prioritaire en admin.
         update_post_meta( $post_id, 'opac_insc_plerinais', ( '22190' === $code_postal ) ? 1 : 0 );
+        if ( '' !== $creneau_id ) {
+            update_post_meta( $post_id, 'opac_insc_creneau_id', $creneau_id );
+        }
+        if ( $creneau_tarif > 0 ) {
+            update_post_meta( $post_id, 'opac_insc_tarif', $creneau_tarif );
+        }
 
         wp_set_object_terms( $post_id, [ 'en-attente' ], 'opac_inscription_status', false );
 
@@ -289,15 +318,17 @@ class OPAC_Inscriptions {
             return;
         }
 
-        // Resolution du tarif selon le type cible (atelier annuel ou stage).
+        // Resolution du tarif : tarif du creneau choisi (palier 2, stocke sur
+        // l'inscription) si present, sinon tarif de l'atelier annuel ou du stage.
         $tarif = '';
+        $insc_tarif = (int) get_post_meta( $post_id, 'opac_insc_tarif', true );
         if ( $cible_id ) {
             if ( get_post_type( $cible_id ) === 'opac_atelier' ) {
-                $tarif = (int) get_post_meta( $cible_id, 'opac_tarif_annuel', true );
-                $tarif = $tarif > 0 ? $tarif . ' € / an' : '';
+                $montant = $insc_tarif > 0 ? $insc_tarif : (int) get_post_meta( $cible_id, 'opac_tarif_annuel', true );
+                $tarif = $montant > 0 ? $montant . ' € / an' : '';
             } elseif ( get_post_type( $cible_id ) === 'opac_stage' ) {
-                $tarif = (int) get_post_meta( $cible_id, 'opac_tarif_seance', true );
-                $tarif = $tarif > 0 ? $tarif . ' €' : '';
+                $montant = $insc_tarif > 0 ? $insc_tarif : (int) get_post_meta( $cible_id, 'opac_tarif_seance', true );
+                $tarif = $montant > 0 ? $montant . ' €' : '';
             }
         }
 

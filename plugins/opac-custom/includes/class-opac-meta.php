@@ -62,10 +62,12 @@ class OPAC_Meta {
                     'items' => [
                         'type' => 'object',
                         'properties' => [
+                            'id' => [ 'type' => 'string' ],
                             'jour' => [ 'type' => 'string' ],
                             'debut' => [ 'type' => 'string' ],
                             'fin' => [ 'type' => 'string' ],
                             'tarif' => [ 'type' => 'integer' ],
+                            'capacite' => [ 'type' => 'integer' ],
                             'note' => [ 'type' => 'string' ],
                         ],
                     ],
@@ -132,6 +134,8 @@ class OPAC_Meta {
         register_post_meta( 'opac_inscription', 'opac_insc_code_postal', self::args_string( false ) );
         register_post_meta( 'opac_inscription', 'opac_insc_commune', self::args_string( false ) );
         register_post_meta( 'opac_inscription', 'opac_insc_plerinais', self::args_int( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_creneau_id', self::args_string( false ) );
+        register_post_meta( 'opac_inscription', 'opac_insc_tarif', self::args_int( false ) );
     }
 
     private static function register_gallery_meta() {
