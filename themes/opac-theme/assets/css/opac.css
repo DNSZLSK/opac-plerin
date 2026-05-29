@@ -614,6 +614,78 @@ a.opac-card-link:hover,
 }
 
 /* ----------------------------------------------------------------
+ * Encart "Faire un don" (page Association) : QR + fleche manuscrite +
+ * lien cursif. Petit bloc qui flotte dans la gouttiere GAUCHE du hero,
+ * a peu pres au niveau de l'intro (le titre + l'intro restent centres).
+ * Position absolue sur grand ecran (gouttiere dispo), en flux sinon.
+ * Rendu par le bloc serveur opac/soutenir, masque si URL HelloAsso vide.
+ * ---------------------------------------------------------------- */
+.opac-archive-header {
+    position: relative;
+}
+.opac-don-encart {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 28px;
+}
+@media (min-width: 1200px) {
+    .opac-don-encart {
+        position: absolute;
+        left: 0;
+        top: 80px;
+        margin: 0;
+        z-index: 2;
+        transform: rotate(-2deg);
+    }
+}
+
+.opac-don-aside {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.opac-don-link {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1;
+    color: var(--opac-accent);
+    text-decoration: none;
+    transform: rotate(-3deg);
+}
+
+.opac-don-link:hover,
+.opac-don-link:focus-visible {
+    text-decoration: underline;
+}
+
+.opac-don-arrow {
+    color: var(--opac-accent);
+    flex-shrink: 0;
+}
+
+/* QR : carre, jamais rogne (doit rester scannable -> pas de opac-img-frame cover) */
+.opac-don-qr,
+.opac-qr-placeholder {
+    width: 110px;
+    height: 110px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.opac-don-qr {
+    object-fit: contain;
+    background: #fff;
+    border-radius: 4px;
+}
+
+@media (max-width: 600px) {
+    .opac-soutenir { padding: 32px 20px; }
+}
+
+/* ----------------------------------------------------------------
  * Person card (équipe)
  * ---------------------------------------------------------------- */
 
