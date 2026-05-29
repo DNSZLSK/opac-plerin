@@ -45,7 +45,8 @@ class OPAC_CPTs {
             'show_in_rest' => true,
             'has_archive' => 'ateliers',
             'rewrite' => [ 'slug' => 'ateliers', 'with_front' => false ],
-            'supports' => [ 'title', 'editor', 'thumbnail', 'excerpt', 'revisions', 'custom-fields' ],
+            // Sans 'editor' : edition via le formulaire OPAC_Meta_Boxes (pas de Gutenberg).
+            'supports' => [ 'title', 'thumbnail', 'revisions' ],
             'menu_icon' => 'dashicons-art',
             'menu_position' => 21,
             'hierarchical' => false,
@@ -69,7 +70,8 @@ class OPAC_CPTs {
             'show_in_rest' => true,
             'has_archive' => 'ephemeres',
             'rewrite' => [ 'slug' => 'ephemeres', 'with_front' => false ],
-            'supports' => [ 'title', 'editor', 'thumbnail', 'excerpt', 'revisions', 'custom-fields' ],
+            // Sans 'editor' : edition via le formulaire OPAC_Meta_Boxes (pas de Gutenberg).
+            'supports' => [ 'title', 'thumbnail', 'revisions' ],
             'menu_icon' => 'dashicons-calendar-alt',
             'menu_position' => 22,
         ] );
@@ -91,7 +93,8 @@ class OPAC_CPTs {
             'show_in_rest' => true,
             'has_archive' => 'agenda',
             'rewrite' => [ 'slug' => 'agenda', 'with_front' => false ],
-            'supports' => [ 'title', 'editor', 'thumbnail', 'excerpt', 'custom-fields' ],
+            // Sans 'editor' : description complete editee dans le formulaire OPAC_Meta_Boxes.
+            'supports' => [ 'title', 'thumbnail' ],
             'menu_icon' => 'dashicons-calendar',
             'menu_position' => 23,
         ] );
@@ -113,7 +116,8 @@ class OPAC_CPTs {
             'show_in_rest' => true,
             'has_archive' => false,
             'rewrite' => [ 'slug' => 'equipe', 'with_front' => false ],
-            'supports' => [ 'title', 'editor', 'thumbnail', 'custom-fields' ],
+            // Sans 'editor' : edition via le formulaire OPAC_Meta_Boxes (pas de Gutenberg).
+            'supports' => [ 'title', 'thumbnail' ],
             'menu_icon' => 'dashicons-groups',
             'menu_position' => 24,
         ] );
