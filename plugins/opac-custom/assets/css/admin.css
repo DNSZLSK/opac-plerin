@@ -78,3 +78,64 @@
     text-decoration: none;
     cursor: pointer;
 }
+
+/* ===================================================================== *
+ * Formulaire fiche CPT (atelier, ephemere, evenement, personne)
+ * Calque sur la page OPAC Reglages : table form-table + champs etiquetes.
+ * ===================================================================== */
+.opac-fiche.form-table th {
+    width: 200px;
+}
+.opac-fiche.form-table td .description {
+    margin-top: 4px;
+}
+
+/* Selecteur d'image integre (remplace la boite native en sidebar).
+ * L'apercu suit la convention globale opac-img-frame : hauteur fixe +
+ * overflow hidden + object-fit cover (photos d'origines variees). */
+.opac-image-field .opac-image-preview {
+    width: 260px;
+    max-width: 100%;
+    height: 160px;
+    overflow: hidden;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    background: #f6f7f7;
+}
+.opac-image-field .opac-image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.opac-image-field .opac-image-preview.is-empty {
+    background-image: repeating-linear-gradient(
+        45deg,
+        #f0f0f1,
+        #f0f0f1 10px,
+        #f6f7f7 10px,
+        #f6f7f7 20px
+    );
+}
+.opac-image-field .opac-image-actions {
+    margin: 8px 0 0;
+}
+.opac-image-field .opac-image-remove {
+    margin-left: 8px;
+    color: #b32d2e;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Boite Publier allegee sur ces ecrans : on masque visibilite et
+ * planification (deroutantes), on garde statut + bouton Enregistrer. */
+.post-type-opac_atelier .misc-pub-visibility,
+.post-type-opac_atelier .misc-pub-curtime,
+.post-type-opac_stage .misc-pub-visibility,
+.post-type-opac_stage .misc-pub-curtime,
+.post-type-opac_event .misc-pub-visibility,
+.post-type-opac_event .misc-pub-curtime,
+.post-type-opac_person .misc-pub-visibility,
+.post-type-opac_person .misc-pub-curtime {
+    display: none;
+}
