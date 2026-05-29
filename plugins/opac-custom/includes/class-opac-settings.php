@@ -81,6 +81,7 @@ class OPAC_Settings {
             'opac_email_validee'         => [ 'type' => 'string', 'default' => self::default_email( 'validee' ),       'sanitize' => 'wp_kses_post' ],
             'opac_email_refusee'         => [ 'type' => 'string', 'default' => self::default_email( 'refusee' ),       'sanitize' => 'wp_kses_post' ],
             'opac_email_liste_attente'   => [ 'type' => 'string', 'default' => self::default_email( 'liste-attente' ), 'sanitize' => 'wp_kses_post' ],
+            'opac_email_place_liberee'   => [ 'type' => 'string', 'default' => self::default_email( 'place-liberee' ), 'sanitize' => 'wp_kses_post' ],
 
             // Section 6 : Sujets dropdown contact
             'opac_contact_subjects'      => [ 'type' => 'string', 'default' => "renseignement | Renseignement général\natelier-annee | Inscription atelier à l'année\nephemere | Atelier éphémère\nadhesion | Adhésion\nautre | Autre", 'sanitize' => 'sanitize_textarea_field' ],
@@ -117,6 +118,9 @@ class OPAC_Settings {
 
             case 'liste-attente':
                 return "Bonjour {prenom},\n\nL'atelier \"{atelier}\" étant complet à ce jour, votre demande a été enregistrée en liste d'attente.\n\nNous vous recontacterons dès qu'une place se libère. Vous pouvez également nous contacter au {tel} si vous souhaitez vous orienter vers un autre atelier.\n\nBien cordialement," . $signature;
+
+            case 'place-liberee':
+                return "Bonjour {prenom},\n\nBonne nouvelle : une place s'est libérée pour \"{atelier}\" ({tarif}).\n\nVotre demande repasse en cours de traitement. Le règlement se fait sur place au secrétariat ; en cours d'année, le tarif de l'atelier est ajusté au prorata des séances restantes.\n\nMerci de nous confirmer rapidement votre intérêt au {tel} ou par retour d'email.\n\nBien cordialement," . $signature;
         }
         return '';
     }
@@ -197,6 +201,7 @@ class OPAC_Settings {
                     self::render_textarea_row( 'opac_email_validee', __( 'Email validation', 'opac-custom' ), '', 10 );
                     self::render_textarea_row( 'opac_email_refusee', __( 'Email refus', 'opac-custom' ), '', 10 );
                     self::render_textarea_row( 'opac_email_liste_attente', __( 'Email liste d\'attente', 'opac-custom' ), '', 10 );
+                    self::render_textarea_row( 'opac_email_place_liberee', __( 'Email place libérée (désistement)', 'opac-custom' ), '', 10 );
                     ?>
                 </table>
 

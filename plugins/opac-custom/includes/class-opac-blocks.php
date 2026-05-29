@@ -301,7 +301,17 @@ class OPAC_Blocks {
                 $note = ( isset( $c['note'] ) && '' !== $c['note'] )
                     ? ' <span class="opac-creneau-note">' . esc_html( (string) $c['note'] ) . '</span>'
                     : '';
-                $items .= '<li><span class="opac-creneau-when">' . esc_html( $line ) . '</span>' . $tarif_html . $note . '</li>';
+                $state_html = '';
+                $cap = isset( $c['capacite'] ) ? (int) $c['capacite'] : 0;
+                if ( $cap > 0 && ! empty( $c['id'] ) && class_exists( 'OPAC_Inscriptions' ) ) {
+                    $left = $cap - OPAC_Inscriptions::count_validees( $post_id, (string) $c['id'] );
+                    if ( $left <= 0 ) {
+                        $state_html = ' <span class="opac-creneau-state is-full">' . esc_html__( 'Complet', 'opac-custom' ) . '</span>';
+                    } elseif ( $left <= 2 ) {
+                        $state_html = ' <span class="opac-creneau-state is-few">' . esc_html__( 'Dernières places', 'opac-custom' ) . '</span>';
+                    }
+                }
+                $items .= '<li><span class="opac-creneau-when">' . esc_html( $line ) . '</span>' . $tarif_html . $state_html . $note . '</li>';
             }
             if ( '' !== $items ) {
                 return '<ul class="opac-creneaux-items">' . $items . '</ul>';
@@ -692,9 +702,10 @@ class OPAC_Blocks {
     public static function render_inscription_form( $attrs, $content, $block ) {
         $notice = '';
         if ( isset( $_GET['envoye'] ) && $_GET['envoye'] === '1' ) {
-            $notice = '<div class="opac-form-notice is-success" role="status" aria-live="polite">'
-                . esc_html__( 'Votre demande d\'inscription a bien été enregistrée. Katell ou Laurence vous contactera prochainement pour confirmation.', 'opac-custom' )
-                . '</div>';
+            $msg = ( isset( $_GET['attente'] ) && '1' === $_GET['attente'] )
+                ? __( 'Ce créneau est complet : votre demande a été enregistrée en liste d\'attente. Nous vous recontacterons dès qu\'une place se libère.', 'opac-custom' )
+                : __( 'Votre demande d\'inscription a bien été enregistrée. Katell ou Laurence vous contactera prochainement pour confirmation.', 'opac-custom' );
+            $notice = '<div class="opac-form-notice is-success" role="status" aria-live="polite">' . esc_html( $msg ) . '</div>';
         } elseif ( isset( $_GET['erreur'] ) ) {
             $err = sanitize_key( wp_unslash( $_GET['erreur'] ) );
             $err_labels = [
@@ -859,6 +870,9 @@ class OPAC_Blocks {
                 $opt     = trim( $label . ' ' . $horaire );
                 if ( $tarif_c > 0 ) {
                     $opt .= ' (' . number_format_i18n( $tarif_c, 0 ) . ' €)';
+                }
+                if ( class_exists( 'OPAC_Inscriptions' ) && OPAC_Inscriptions::creneau_is_full( $atelier_id, $c ) ) {
+                    $opt .= ' - ' . __( 'Complet (liste d\'attente)', 'opac-custom' );
                 }
                 $out .= '<option value="' . esc_attr( (string) $c['id'] ) . '">' . esc_html( $opt ) . '</option>';
             }

@@ -1100,6 +1100,19 @@ body {
     color: var(--opac-muted, #6b6b6b);
 }
 
+.opac-creneau-state {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.opac-creneau-state.is-full {
+    color: #c0583a;
+}
+
+.opac-creneau-state.is-few {
+    color: #9a6b1e;
+}
+
 .opac-detail-actions {
     margin-top: 4px;
 }
