@@ -493,6 +493,45 @@ a.opac-card-link:hover,
 }
 
 /* ----------------------------------------------------------------
+ * Photo de fond des cards ephemeres (featured image)
+ * Couche absolue derriere le contenu (hors flux du grid). Overlay
+ * adapte au contexte : clair sur l'archive (texte fonce), sombre sur
+ * la front-page (texte blanc). Sans photo, post-featured-image ne rend
+ * rien -> le fond actuel reste (fallback). Le layout ne change pas.
+ * ---------------------------------------------------------------- */
+.opac-stage-card {
+    position: relative;
+}
+.opac-stage-card > .opac-stage-bg {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+.opac-stage-card > .opac-stage-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.opac-stage-card > .opac-stage-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.66); /* archive : overlay clair, texte fonce lisible */
+}
+.opac-eph-section .opac-stage-card > .opac-stage-bg::after {
+    background: rgba(31, 29, 27, 0.58); /* front-page : overlay sombre, texte blanc lisible */
+}
+.opac-stage-card > .opac-stage-date,
+.opac-stage-card > .opac-stage-body,
+.opac-stage-card > .opac-stage-action {
+    position: relative;
+    z-index: 1;
+}
+
+/* ----------------------------------------------------------------
  * Event card (agenda timeline row)
  * ---------------------------------------------------------------- */
 
