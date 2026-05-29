@@ -56,7 +56,7 @@ add_action( 'after_setup_theme', static function () {
 add_action( 'wp_enqueue_scripts', static function () {
     wp_enqueue_style(
         'opac-fonts',
-        'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&display=swap',
+        'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Caveat:wght@600;700&display=swap',
         [],
         null
     );

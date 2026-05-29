@@ -105,6 +105,13 @@ class OPAC_Blocks {
             'supports'        => [ 'html' => false ],
         ] );
 
+        register_block_type( 'opac/soutenir', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_soutenir' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+
         register_block_type( 'opac/adhesion-line', [
             'api_version'     => 3,
             'render_callback' => [ __CLASS__, 'render_adhesion_line' ],
@@ -139,6 +146,84 @@ class OPAC_Blocks {
             esc_url( $url ),
             esc_html__( 'Télécharger les statuts (PDF) →', 'opac-custom' )
         );
+    }
+
+    /**
+     * Encart discret "Faire un don" (dons HelloAsso) en haut de la page
+     * Association : QR + fleche manuscrite + lien cursif. URL editable via
+     * OPAC > Reglages > Coordonnees. Rend '' si l'URL est vide.
+     */
+    public static function render_soutenir( $attrs, $content, $block ) {
+        if ( ! class_exists( 'OPAC_Settings' ) ) {
+            return '';
+        }
+        $url = (string) OPAC_Settings::get( 'opac_org_helloasso_url' );
+        if ( ! $url ) {
+            return '';
+        }
+
+        // QR : vrai QR si l'URL de l'image est renseignee (mediatheque),
+        // sinon placeholder. Un QR ne doit jamais etre rogne.
+        $qr_url = (string) OPAC_Settings::get( 'opac_org_helloasso_qr_url' );
+        if ( $qr_url ) {
+            $qr = sprintf(
+                '<img class="opac-don-qr" src="%s" alt="%s" width="110" height="110" loading="lazy" decoding="async" />',
+                esc_url( $qr_url ),
+                esc_attr__( 'QR code pour faire un don sur HelloAsso', 'opac-custom' )
+            );
+        } else {
+            $qr = self::qr_placeholder_svg();
+        }
+
+        // "Faire un don" (cursive) + petite fleche manuscrite -> QR.
+        return sprintf(
+            '<div class="opac-don-encart">'
+                . '<span class="opac-don-aside">'
+                    . '<a class="opac-don-link" href="%s" target="_blank" rel="noopener noreferrer">%s</a>'
+                    . '%s'
+                . '</span>'
+                . '%s'
+            . '</div>',
+            esc_url( $url ),
+            esc_html__( 'Faire un don', 'opac-custom' ),
+            self::don_arrow_svg(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG statique
+            $qr // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- img (esc_url) / svg statique surs
+        );
+    }
+
+    /**
+     * Petite fleche dessinee a la main (SVG manuscrit) pointant vers le QR.
+     * Decorative, masquee aux lecteurs d'ecran.
+     */
+    private static function don_arrow_svg() {
+        return '<svg class="opac-don-arrow" width="46" height="30" viewBox="0 0 46 30" fill="none" aria-hidden="true" focusable="false">'
+            . '<path d="M2 13 C 15 5, 29 9, 39 16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>'
+            . '<path d="M31 10 L 41 16 L 32 22" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>'
+        . '</svg>';
+    }
+
+    /**
+     * Placeholder QR (SVG inline, sans dependance) pour la bande Soutenir, le
+     * temps que l'OPAC ait son vrai QR HelloAsso. Markup statique : quand le vrai
+     * QR existera, le remplacer ici (ou ajouter un champ URL QR si Katell doit le
+     * gerer elle-meme via la mediatheque). Un QR ne doit jamais etre rogne.
+     */
+    private static function qr_placeholder_svg() {
+        return '<svg class="opac-qr-placeholder" viewBox="0 0 100 100" width="110" height="110" role="img" aria-label="'
+            . esc_attr__( 'Emplacement du QR code, à venir', 'opac-custom' ) . '">'
+            . '<rect x="2" y="2" width="96" height="96" rx="6" fill="#ffffff" stroke="#d8d3cb"></rect>'
+            . '<g fill="none" stroke="#9a958c" stroke-width="4">'
+                . '<rect x="12" y="12" width="22" height="22" rx="2"></rect>'
+                . '<rect x="66" y="12" width="22" height="22" rx="2"></rect>'
+                . '<rect x="12" y="66" width="22" height="22" rx="2"></rect>'
+            . '</g>'
+            . '<g fill="#9a958c">'
+                . '<rect x="19" y="19" width="8" height="8"></rect><rect x="73" y="19" width="8" height="8"></rect><rect x="19" y="73" width="8" height="8"></rect>'
+                . '<rect x="48" y="16" width="5" height="5"></rect><rect x="58" y="26" width="5" height="5"></rect><rect x="44" y="40" width="5" height="5"></rect>'
+                . '<rect x="62" y="46" width="5" height="5"></rect><rect x="50" y="56" width="5" height="5"></rect><rect x="70" y="62" width="5" height="5"></rect>'
+                . '<rect x="56" y="72" width="5" height="5"></rect><rect x="44" y="66" width="5" height="5"></rect>'
+            . '</g>'
+        . '</svg>';
     }
 
     /**
@@ -1061,8 +1146,8 @@ class OPAC_Blocks {
 
             case 'compact':
             default:
-                // Footer brand block : nom + tagline + adresse simple + reseaux.
-                $social = self::social_links_html();
+                // Footer brand block : nom + tagline + adresse simple + reseaux + HelloAsso.
+                $social = self::social_links_html( true );
                 return sprintf(
                     '<h3 class="wp-block-heading has-display-font-family" style="font-size:18px;font-weight:500;line-height:1.2">%s</h3>'
                     . '<p class="has-muted-color has-text-color" style="margin-top:6px;font-size:13px;line-height:1.7">%s<br/>%s, %s %s</p>'
@@ -1084,6 +1169,7 @@ class OPAC_Blocks {
         $paths = [
             'facebook'  => 'M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z',
             'instagram' => 'M12 4.622c2.403 0 2.688.01 3.637.052.877.04 1.354.187 1.671.31.42.163.72.358 1.035.673.315.315.51.615.673 1.035.123.317.27.794.31 1.671.042.949.052 1.234.052 3.637 0 2.403-.01 2.688-.052 3.637-.04.877-.187 1.354-.31 1.671-.163.42-.358.72-.673 1.035-.315.315-.615.51-1.035.673-.317.123-.794.27-1.671.31-.949.042-1.234.052-3.637.052-2.403 0-2.688-.01-3.637-.052-.877-.04-1.354-.187-1.671-.31-.42-.163-.72-.358-1.035-.673-.315-.315-.51-.615-.673-1.035-.123-.317-.27-.794-.31-1.671-.042-.949-.052-1.234-.052-3.637 0-2.403.01-2.688.052-3.637.04-.877.187-1.354.31-1.671.163-.42.358-.72.673-1.035.315-.315.615-.51 1.035-.673.317-.123.794-.27 1.671-.31.949-.042 1.234-.052 3.637-.052M12 3c-2.444 0-2.751.01-3.711.054-.958.044-1.612.196-2.184.418-.592.23-1.094.538-1.594 1.038-.5.5-.808 1.002-1.038 1.594-.222.572-.374 1.226-.418 2.184C3.01 9.249 3 9.556 3 12s.01 2.751.054 3.711c.044.958.196 1.612.418 2.184.23.592.538 1.094 1.038 1.594.5.5 1.002.808 1.594 1.038.572.222 1.226.374 2.184.418C9.249 20.99 9.556 21 12 21s2.751-.01 3.711-.054c.958-.044 1.612-.196 2.184-.418.592-.23 1.094-.538 1.594-1.038.5-.5.808-1.002 1.038-1.594.222-.572.374-1.226.418-2.184C20.99 14.751 21 14.444 21 12s-.01-2.751-.054-3.711c-.044-.958-.196-1.612-.418-2.184-.23-.592-.538-1.094-1.038-1.594-.5-.5-1.002-.808-1.594-1.038-.572-.222-1.226-.374-2.184-.418C14.751 3.01 14.444 3 12 3zm0 4.378c-2.552 0-4.622 2.069-4.622 4.622 0 2.552 2.069 4.622 4.622 4.622 2.552 0 4.622-2.069 4.622-4.622 0-2.552-2.069-4.622-4.622-4.622zm0 7.629c-1.658 0-3.007-1.343-3.007-3.007 0-1.658 1.343-3.007 3.007-3.007 1.658 0 3.007 1.343 3.007 3.007 0 1.658-1.343 3.007-3.007 3.007zm5.884-7.813c0 .597-.484 1.08-1.08 1.08-.596 0-1.08-.483-1.08-1.08 0-.595.484-1.079 1.08-1.079.595 0 1.079.484 1.079 1.079z',
+            'helloasso' => 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
         ];
         if ( empty( $paths[ $network ] ) ) {
             return '';
@@ -1112,9 +1198,10 @@ class OPAC_Blocks {
 
     /**
      * Bloc reseaux sociaux (FB + IG) lu depuis OPAC_Settings.
-     * Retourne '' si aucune URL renseignee (masquage).
+     * Retourne '' si aucune URL renseignee (masquage). Si $include_helloasso,
+     * ajoute le lien dons HelloAsso a la suite (footer uniquement).
      */
-    private static function social_links_html() {
+    private static function social_links_html( $include_helloasso = false ) {
         $networks = [
             'facebook'  => OPAC_Settings::get( 'opac_org_facebook_url' ),
             'instagram' => OPAC_Settings::get( 'opac_org_instagram_url' ),
@@ -1125,7 +1212,34 @@ class OPAC_Blocks {
                 $links[] = self::social_link_tag( $net, $url );
             }
         }
+        if ( $include_helloasso ) {
+            $helloasso = self::helloasso_link_html();
+            if ( '' !== $helloasso ) {
+                $links[] = $helloasso;
+            }
+        }
         return $links ? '<span class="opac-social-links">' . implode( '', $links ) . '</span>' : '';
+    }
+
+    /**
+     * Lien HelloAsso (dons) avec icone coeur, pour le footer (a cote de FB/IG).
+     * Retourne '' si l'URL n'est pas renseignee. Separe de social_links_html :
+     * HelloAsso n'apparait qu'au footer, pas dans la ligne "reseaux" des cartes
+     * Association / Contact (le bloc CTA dedie joue ce role sur Association).
+     */
+    private static function helloasso_link_html() {
+        $url = OPAC_Settings::get( 'opac_org_helloasso_url' );
+        if ( ! $url ) {
+            return '';
+        }
+        $label = __( 'Soutenir l\'OPAC', 'opac-custom' );
+        return sprintf(
+            '<a class="opac-social-link opac-helloasso-link" href="%s" target="_blank" rel="noopener noreferrer" aria-label="%s">%s<span class="opac-social-label">%s</span></a>',
+            esc_url( $url ),
+            esc_attr( $label ),
+            self::social_icon_svg( 'helloasso' ),
+            esc_html( $label )
+        );
     }
 
     /**

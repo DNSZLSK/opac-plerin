@@ -59,6 +59,8 @@ class OPAC_Settings {
             'opac_org_facebook_url'      => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_instagram_url'     => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_statuts_pdf_url'   => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
+            'opac_org_helloasso_url'     => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
+            'opac_org_helloasso_qr_url'  => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
 
             // Section 2 : Tarifs adhesion
             'opac_adhesion_plerinais'    => [ 'type' => 'integer', 'default' => 15, 'sanitize' => 'absint' ],
@@ -156,6 +158,8 @@ class OPAC_Settings {
                     self::render_input_row( 'opac_org_facebook_url', __( 'URL Facebook', 'opac-custom' ), __( 'Laisser vide pour masquer le lien', 'opac-custom' ), 'url' );
                     self::render_input_row( 'opac_org_instagram_url', __( 'URL Instagram', 'opac-custom' ), __( 'Laisser vide pour masquer le lien', 'opac-custom' ), 'url' );
                     self::render_input_row( 'opac_org_statuts_pdf_url', __( 'URL PDF des statuts', 'opac-custom' ), __( 'Lien affiché sur la page Association', 'opac-custom' ), 'url' );
+                    self::render_input_row( 'opac_org_helloasso_url', __( 'URL HelloAsso (dons)', 'opac-custom' ), __( 'Lien vers la page de dons HelloAsso. Laisser vide pour masquer (footer + page Association).', 'opac-custom' ), 'url' );
+                    self::render_input_row( 'opac_org_helloasso_qr_url', __( 'URL image QR HelloAsso', 'opac-custom' ), __( 'Optionnel. Uploadez le QR dans la médiathèque et collez son URL ici. Vide = placeholder dans la bande Soutenir.', 'opac-custom' ), 'url' );
                     ?>
                 </table>
 
