@@ -90,6 +90,7 @@ class OPAC_Settings {
             'opac_insc_date_reinscription' => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
             'opac_insc_date_ouverture'     => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
             'opac_insc_date_fermeture'     => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
+            'opac_insc_date_confirmation'  => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
         ];
     }
 
@@ -224,6 +225,7 @@ class OPAC_Settings {
                     self::render_input_row( 'opac_insc_date_reinscription', __( 'Début réinscription prioritaire', 'opac-custom' ), __( 'Semaine où les adhérents déjà inscrits peuvent renouveler leur place en priorité.', 'opac-custom' ), 'date' );
                     self::render_input_row( 'opac_insc_date_ouverture', __( 'Début inscription générale', 'opac-custom' ), __( 'Ouverture des inscriptions à tous (priorité aux Plérinais).', 'opac-custom' ), 'date' );
                     self::render_input_row( 'opac_insc_date_fermeture', __( 'Fin des inscriptions', 'opac-custom' ), __( 'Optionnel. Laisser vide s\'il n\'y a pas de date de clôture.', 'opac-custom' ), 'date' );
+                    self::render_input_row( 'opac_insc_date_confirmation', __( 'Date de confirmation des nouvelles inscriptions', 'opac-custom' ), __( 'Optionnel. Affichée pendant la phase d\'inscription ouverte : les nouvelles demandes seront confirmées à partir de cette date.', 'opac-custom' ), 'date' );
                     ?>
                 </table>
 

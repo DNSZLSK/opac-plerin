@@ -783,6 +783,7 @@ class OPAC_Blocks {
             $phase  = OPAC_Settings::inscription_phase();
             $d_rein = (string) OPAC_Settings::get( 'opac_insc_date_reinscription' );
             $d_ouv  = (string) OPAC_Settings::get( 'opac_insc_date_ouverture' );
+            $d_conf = (string) OPAC_Settings::get( 'opac_insc_date_confirmation' );
             $fmt    = static function ( $d ) {
                 $ts = $d ? strtotime( $d ) : false;
                 return $ts ? wp_date( 'j F Y', $ts ) : '';
@@ -796,6 +797,12 @@ class OPAC_Blocks {
                 $phase_msg = $d_ouv
                     ? sprintf( __( 'Réinscriptions prioritaires en cours pour les adhérents déjà inscrits. Les nouvelles inscriptions ouvrent le %s.', 'opac-custom' ), $fmt( $d_ouv ) )
                     : __( 'Réinscriptions prioritaires en cours pour les adhérents déjà inscrits.', 'opac-custom' );
+            } elseif ( 'ouverte' === $phase ) {
+                // Confirmation des nouvelles inscriptions : info optionnelle, affichee
+                // seulement si la date est renseignee (sinon formulaire ouvert sans notice).
+                if ( $d_conf ) {
+                    $phase_msg = sprintf( __( 'Inscriptions ouvertes. Les nouvelles inscriptions seront confirmées à partir du %s.', 'opac-custom' ), $fmt( $d_conf ) );
+                }
             } elseif ( 'fermee' === $phase ) {
                 $phase_msg = __( 'Les inscriptions de la saison sont closes. Vous pouvez tout de même envoyer une demande : nous vous recontacterons.', 'opac-custom' );
             }
