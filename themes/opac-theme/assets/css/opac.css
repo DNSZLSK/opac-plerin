@@ -435,6 +435,13 @@ a.opac-card-link:hover,
     align-items: stretch !important;
 }
 
+/* Masquage par les onglets de periode (JS initStageTabs) : doit battre le
+   display:grid !important ci-dessus, donc classe dediee (specificite 0,2,0)
+   plutot qu'un style.display inline qui serait ignore. */
+.opac-stage-card.opac-hidden {
+    display: none !important;
+}
+
 /* Reset des marges WP is-layout-flow sur les items du grid (sinon le 2e
    et le 3e enfant se décalent verticalement et cassent l'alignement) */
 .opac-stage-card > * {

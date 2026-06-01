@@ -113,7 +113,9 @@
                 var period = tab.getAttribute('data-period');
                 cards.forEach(function (card) {
                     var match = period === 'all' || card.classList.contains('opac-period-' + period);
-                    card.style.display = match ? '' : 'none';
+                    // Classe (pas style.display) : .opac-stage-card a display:grid
+                    // !important, qu'un display:none inline ne battrait pas.
+                    card.classList.toggle('opac-hidden', !match);
                 });
             });
         });
