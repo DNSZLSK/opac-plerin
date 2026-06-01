@@ -300,12 +300,44 @@
         });
     }
 
+    /**
+     * Cartes ephemeres entierement cliquables : un clic n'importe ou sur la
+     * carte suit le lien du titre, vers la fiche. Les vrais liens/boutons
+     * internes (titre, "S'inscrire") gardent leur comportement propre, et le
+     * titre reste un <a> natif (navigation clavier / lecteurs d'ecran).
+     */
+    function initCardLinks() {
+        var cards = document.querySelectorAll('.opac-stage-card');
+        if (!cards.length) {
+            return;
+        }
+        cards.forEach(function (card) {
+            var link = card.querySelector('.opac-stage-name a');
+            if (!link) {
+                return;
+            }
+            card.classList.add('is-clickable');
+            card.addEventListener('click', function (e) {
+                // Laisse les liens/boutons internes (titre, S'inscrire) agir seuls.
+                if (e.target.closest('a, button')) {
+                    return;
+                }
+                // Ne navigue pas si l'utilisateur est en train de selectionner du texte.
+                if (window.getSelection && String(window.getSelection())) {
+                    return;
+                }
+                link.click();
+            });
+        });
+    }
+
     function initAll() {
         initStickyHeader();
         initCtaDropdown();
         initStageTabs();
         initEventTabs();
         initGallery();
+        initCardLinks();
     }
 
     if (document.readyState === 'loading') {

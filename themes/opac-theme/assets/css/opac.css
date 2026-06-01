@@ -551,6 +551,14 @@ a.opac-card-link:hover,
 .opac-eph-section .opac-stage-card:has(> .opac-stage-bg) .opac-stage-desc {
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); /* front-page : ombre sombre sous texte blanc */
 }
+/* Carte ephemere entierement cliquable (JS initCardLinks) : affordance souris.
+   Le titre reste un vrai lien pour le clavier et les lecteurs d'ecran. */
+.opac-stage-card.is-clickable {
+    cursor: pointer;
+}
+.opac-stage-card.is-clickable:hover .opac-stage-name a {
+    text-decoration: underline;
+}
 
 /* ----------------------------------------------------------------
  * Event card (agenda timeline row)
