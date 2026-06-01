@@ -105,6 +105,13 @@ class OPAC_Blocks {
             'supports'        => [ 'html' => false ],
         ] );
 
+        register_block_type( 'opac/charte-link', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_charte_link' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+
         register_block_type( 'opac/soutenir', [
             'api_version'     => 3,
             'render_callback' => [ __CLASS__, 'render_soutenir' ],
@@ -134,6 +141,13 @@ class OPAC_Blocks {
             'attributes'      => [],
             'supports'        => [ 'html' => false ],
         ] );
+
+        register_block_type( 'opac/ephemeres-list', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_ephemeres_list' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
     }
 
     public static function render_statuts_link( $attrs, $content, $block ) {
@@ -145,6 +159,23 @@ class OPAC_Blocks {
             '<p class="has-text-align-center opac-statuts-link" style="margin-top:24px"><a href="%s">%s</a></p>',
             esc_url( $url ),
             esc_html__( 'Télécharger les statuts (PDF) →', 'opac-custom' )
+        );
+    }
+
+    /**
+     * Lien vers la charte des ateliers (PDF) dans le footer. URL éditable via
+     * OPAC > Réglages > Coordonnées. Rend '' si aucun PDF n'est défini (le
+     * séparateur « · » fait partie du rendu pour disparaître avec le lien).
+     */
+    public static function render_charte_link( $attrs, $content, $block ) {
+        $url = class_exists( 'OPAC_Settings' ) ? (string) OPAC_Settings::get( 'opac_org_charte_pdf_url' ) : '';
+        if ( ! $url ) {
+            return '';
+        }
+        return sprintf(
+            '<p class="opac-footer-charte">· <a href="%s" target="_blank" rel="noopener">%s</a></p>',
+            esc_url( $url ),
+            esc_html__( 'Charte des ateliers', 'opac-custom' )
         );
     }
 
@@ -318,6 +349,22 @@ class OPAC_Blocks {
     }
 
     /**
+     * Vrai si le post est un atelier ephemere (opac_stage) dont la date de
+     * debut est passee. Centralise la logique "termine" reutilisee par le tag
+     * de statut, le bouton d'inscription et la liste showcase des ephemeres.
+     */
+    public static function stage_is_past( $post_id ) {
+        if ( get_post_type( $post_id ) !== 'opac_stage' ) {
+            return false;
+        }
+        $debut = (string) get_post_meta( $post_id, 'opac_date_debut', true );
+        if ( '' === $debut ) {
+            return false;
+        }
+        return $debut < current_time( 'Y-m-d' );
+    }
+
+    /**
      * Tag de disponibilite : lit opac_places_dispo (slug "ok" | "full" | "few")
      * et rend <p class="opac-tag opac-tag-X">Label</p> avec la bonne classe
      * couleur et le bon libelle FR.
@@ -332,6 +379,12 @@ class OPAC_Blocks {
         $post_id = isset( $block->context['postId'] ) ? (int) $block->context['postId'] : (int) get_the_ID();
         if ( ! $post_id ) {
             return '';
+        }
+
+        // Atelier ephemere passe : statut "Termine" (showcase), quel que soit
+        // le champ Places choisi en admin.
+        if ( self::stage_is_past( $post_id ) ) {
+            return '<p class="opac-tag opac-tag-past">' . esc_html__( 'Terminé', 'opac-custom' ) . '</p>';
         }
 
         $slug = (string) get_post_meta( $post_id, 'opac_places_dispo', true );
@@ -351,6 +404,109 @@ class OPAC_Blocks {
             esc_attr( $map[ $slug ]['class'] ),
             esc_html( $map[ $slug ]['label'] )
         );
+    }
+
+    /**
+     * Liste "vitrine" des ateliers ephemeres pour la page d'archive : tous les
+     * ephemeres, a venir d'abord (du plus proche au plus lointain) puis passes
+     * (du plus recent au plus ancien). Les passes sont attenues (.is-past), avec
+     * le tag "Termine" et sans bouton d'inscription (geres par stage_is_past
+     * dans render_places_tag / render_inscription_button).
+     *
+     * Bloc serveur (et pas Query Loop) car l'ordre "a venir puis passes" et le
+     * traitement par carte ne s'expriment pas avec le bloc Query natif. Calque
+     * render_agenda_list. La classe opac-period-<slug> est posee sur chaque
+     * carte pour le filtrage par onglet (JS initStageTabs).
+     */
+    public static function render_ephemeres_list( $attrs, $content, $block ) {
+        $stages = get_posts( [
+            'post_type'      => 'opac_stage',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'meta_key'       => 'opac_date_debut',
+            'orderby'        => 'meta_value',
+            'order'          => 'ASC',
+        ] );
+
+        if ( empty( $stages ) ) {
+            return '<p class="opac-empty has-text-align-center has-muted-color has-text-color">'
+                . esc_html__( 'Aucun atelier éphémère publié pour le moment.', 'opac-custom' ) . '</p>';
+        }
+
+        // A venir / en cours d'abord (deja triee ASC), puis passes du plus
+        // recent au plus ancien. Un stage sans date est traite comme "a venir".
+        $today    = current_time( 'Y-m-d' );
+        $upcoming = [];
+        $past     = [];
+        foreach ( $stages as $s ) {
+            $d = (string) get_post_meta( $s->ID, 'opac_date_debut', true );
+            if ( '' !== $d && $d < $today ) {
+                $past[] = $s;
+            } else {
+                $upcoming[] = $s;
+            }
+        }
+        $ordered = array_merge( $upcoming, array_reverse( $past ) );
+
+        $months_abbr = [
+            1 => 'Janv.', 2  => 'Févr.', 3  => 'Mars',  4 => 'Avr.',
+            5 => 'Mai',   6  => 'Juin',  7  => 'Juil.', 8 => 'Août',
+            9 => 'Sept.', 10 => 'Oct.',  11 => 'Nov.', 12 => 'Déc.',
+        ];
+
+        $out = '<div class="opac-stages-list">';
+
+        foreach ( $ordered as $s ) {
+            $id      = (int) $s->ID;
+            $is_past = self::stage_is_past( $id );
+            $ctx     = (object) [ 'context' => [ 'postId' => $id ] ];
+
+            $d     = (string) get_post_meta( $id, 'opac_date_debut', true );
+            $ts    = $d ? strtotime( $d ) : false;
+            $month = $ts ? ( $months_abbr[ (int) wp_date( 'n', $ts ) ] ?? '' ) : '';
+            $year  = $ts ? wp_date( 'Y', $ts ) : '';
+
+            $periods      = wp_get_post_terms( $id, 'opac_period', [ 'fields' => 'slugs' ] );
+            $period_class = ( ! is_wp_error( $periods ) && ! empty( $periods ) )
+                ? ' opac-period-' . sanitize_html_class( $periods[0] ) : '';
+
+            $public = (string) get_post_meta( $id, 'opac_public', true );
+            $desc   = (string) get_post_meta( $id, 'opac_description_courte', true );
+
+            // Tag de statut + bouton via les blocs date-aware (contexte postId
+            // simule) : "Termine" + pas de bouton pour un ephemere passe.
+            $status_tag = self::render_places_tag( [], '', $ctx );
+            $button     = self::render_inscription_button( [], '', $ctx );
+
+            $img = has_post_thumbnail( $id )
+                ? '<figure class="wp-block-post-featured-image opac-stage-bg">' . get_the_post_thumbnail( $id, 'large', [ 'alt' => '' ] ) . '</figure>'
+                : '';
+
+            $card_class = 'wp-block-group opac-card opac-stage-card' . $period_class . ( $is_past ? ' is-past' : '' );
+
+            $out .= '<div class="' . esc_attr( $card_class ) . '">'
+                . '<div class="wp-block-group opac-stage-date has-card-color has-text-color">'
+                    . '<p class="opac-stage-day has-text-align-center">' . esc_html( $month ) . '</p>'
+                    . '<p class="opac-stage-month has-text-align-center">' . esc_html( $year ) . '</p>'
+                . '</div>'
+                . '<div class="wp-block-group opac-stage-body" style="padding-top:16px;padding-right:20px;padding-bottom:16px;padding-left:20px">'
+                    . '<h3 class="wp-block-post-title opac-stage-name"><a href="' . esc_url( get_permalink( $id ) ) . '">' . esc_html( get_the_title( $id ) ) . '</a></h3>'
+                    . '<p class="opac-stage-desc">' . esc_html( $desc ) . '</p>'
+                    . '<div class="wp-block-group opac-stage-tags">'
+                        . ( $public ? '<p class="opac-tag opac-tag-neutral">' . esc_html( $public ) . '</p>' : '' )
+                        . $status_tag
+                    . '</div>'
+                . '</div>'
+                . '<div class="wp-block-group opac-stage-action" style="padding-right:20px;padding-left:10px">'
+                    . $button
+                . '</div>'
+                . $img
+            . '</div>';
+        }
+
+        $out .= '</div>';
+
+        return $out;
     }
 
     /**
@@ -752,6 +908,11 @@ class OPAC_Blocks {
             return '';
         }
 
+        // Atelier ephemere passe : plus d'inscription possible (showcase).
+        if ( 'opac_stage' === $post_type && self::stage_is_past( $post_id ) ) {
+            return '';
+        }
+
         $inscription_page = get_page_by_path( 'inscription' );
         $base_url = $inscription_page ? get_permalink( $inscription_page ) : home_url( '/inscription/' );
         $href     = add_query_arg( $param, $post_id, $base_url );
@@ -789,7 +950,7 @@ class OPAC_Blocks {
         if ( isset( $_GET['envoye'] ) && $_GET['envoye'] === '1' ) {
             $msg = ( isset( $_GET['attente'] ) && '1' === $_GET['attente'] )
                 ? __( 'Ce créneau est complet : votre demande a été enregistrée en liste d\'attente. Nous vous recontacterons dès qu\'une place se libère.', 'opac-custom' )
-                : __( 'Votre demande d\'inscription a bien été enregistrée. Katell ou Laurence vous contactera prochainement pour confirmation.', 'opac-custom' );
+                : __( 'Votre demande d\'inscription a bien été enregistrée. Le secrétariat vous contactera prochainement pour confirmation.', 'opac-custom' );
             $notice = '<div class="opac-form-notice is-success" role="status" aria-live="polite">' . esc_html( $msg ) . '</div>';
         } elseif ( isset( $_GET['erreur'] ) ) {
             $err = sanitize_key( wp_unslash( $_GET['erreur'] ) );
@@ -854,7 +1015,7 @@ class OPAC_Blocks {
                 . '</div>',
                 esc_html__( 'Inscription pour atelier éphémère', 'opac-custom' ),
                 esc_html( $titre ),
-                $tarif > 0 ? '<div class="opac-form-context-tarif">' . sprintf( esc_html__( 'Tarif séance : %d € + adhésion', 'opac-custom' ), $tarif ) . '</div>' : ''
+                $tarif > 0 ? '<div class="opac-form-context-tarif">' . sprintf( esc_html__( 'Tarif séance : %d €', 'opac-custom' ), $tarif ) . '</div>' : ''
             );
             $hidden_inputs = '<input type="hidden" name="opac_stage_id" value="' . esc_attr( $stage_id ) . '" />';
         }
@@ -863,8 +1024,10 @@ class OPAC_Blocks {
         $nonce      = wp_nonce_field( 'opac_inscription_submit', 'opac_inscription_nonce', true, false );
 
         // Notice de phase (gating souple : informatif, ne bloque jamais le formulaire).
+        // Uniquement pour les ateliers à l'année : un atelier éphémère n'a pas
+        // de phase de réinscription / ouverture des adhérents.
         $phase_notice = '';
-        if ( class_exists( 'OPAC_Settings' ) ) {
+        if ( ! $stage_id && class_exists( 'OPAC_Settings' ) ) {
             $phase  = OPAC_Settings::inscription_phase();
             $d_rein = (string) OPAC_Settings::get( 'opac_insc_date_reinscription' );
             $d_ouv  = (string) OPAC_Settings::get( 'opac_insc_date_ouverture' );
@@ -1001,48 +1164,53 @@ class OPAC_Blocks {
             . '<input class="opac-form-input" type="text" id="opac-commune" name="opac_commune" /></div>';
         $out .= '</div>';
 
-        // Adhesion : derivee cote serveur (CP + case mineur). Le visiteur ne
-        // choisit plus son type, il coche seulement "mineur". Le montant
-        // affiche est indicatif (la residence est verifiee au secretariat).
-        $tarif_p = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_plerinais' ) : 15;
-        $tarif_e = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_exterieur' ) : 30;
-        $tarif_m = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_mineur' )    : 10;
+        // Adhésion : uniquement pour les ateliers à l'année. Un atelier
+        // éphémère (?stage=ID) ne demande aucune adhésion : on masque la case
+        // mineur, l'estimation par code postal et son script.
+        if ( ! $stage_id ) {
+            // Dérivée côté serveur (CP + case mineur). Le visiteur ne choisit
+            // plus son type, il coche seulement "mineur". Le montant affiché
+            // est indicatif (la résidence est vérifiée au secrétariat).
+            $tarif_p = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_plerinais' ) : 15;
+            $tarif_e = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_exterieur' ) : 30;
+            $tarif_m = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_mineur' )    : 10;
 
-        $out .= '<div class="opac-form-rgpd opac-form-mineur"><label>'
-            . '<input type="checkbox" id="opac-mineur" name="opac_mineur" value="1" /> '
-            . esc_html__( 'La personne inscrite est mineure (moins de 18 ans)', 'opac-custom' )
-            . '</label></div>';
+            $out .= '<div class="opac-form-rgpd opac-form-mineur"><label>'
+                . '<input type="checkbox" id="opac-mineur" name="opac_mineur" value="1" /> '
+                . esc_html__( 'La personne inscrite est mineure (moins de 18 ans)', 'opac-custom' )
+                . '</label></div>';
 
-        $hint = __( 'Renseignez votre code postal pour estimer le montant de l\'adhésion.', 'opac-custom' );
-        $out .= '<p class="opac-adhesion-info" id="opac-adhesion-info" aria-live="polite"'
-            . ' data-plerinais="' . esc_attr( $tarif_p ) . '"'
-            . ' data-exterieur="' . esc_attr( $tarif_e ) . '"'
-            . ' data-mineur="' . esc_attr( $tarif_m ) . '"'
-            . ' data-cp="22190"'
-            . ' data-prefix="' . esc_attr__( 'Adhésion annuelle estimée :', 'opac-custom' ) . '"'
-            . ' data-suffix="' . esc_attr__( 'à confirmer au secrétariat', 'opac-custom' ) . '"'
-            . ' data-lp="' . esc_attr__( 'Plérinais', 'opac-custom' ) . '"'
-            . ' data-le="' . esc_attr__( 'Extérieur', 'opac-custom' ) . '"'
-            . ' data-lm="' . esc_attr__( 'Mineur', 'opac-custom' ) . '"'
-            . ' data-default="' . esc_attr( $hint ) . '">'
-            . esc_html( $hint )
-            . '</p>';
+            $hint = __( 'Renseignez votre code postal pour estimer le montant de l\'adhésion.', 'opac-custom' );
+            $out .= '<p class="opac-adhesion-info" id="opac-adhesion-info" aria-live="polite"'
+                . ' data-plerinais="' . esc_attr( $tarif_p ) . '"'
+                . ' data-exterieur="' . esc_attr( $tarif_e ) . '"'
+                . ' data-mineur="' . esc_attr( $tarif_m ) . '"'
+                . ' data-cp="22190"'
+                . ' data-prefix="' . esc_attr__( 'Adhésion annuelle estimée :', 'opac-custom' ) . '"'
+                . ' data-suffix="' . esc_attr__( 'à confirmer au secrétariat', 'opac-custom' ) . '"'
+                . ' data-lp="' . esc_attr__( 'Plérinais', 'opac-custom' ) . '"'
+                . ' data-le="' . esc_attr__( 'Extérieur', 'opac-custom' ) . '"'
+                . ' data-lm="' . esc_attr__( 'Mineur', 'opac-custom' ) . '"'
+                . ' data-default="' . esc_attr( $hint ) . '">'
+                . esc_html( $hint )
+                . '</p>';
 
-        $out .= '<script>'
-            . '(function(){'
-            . 'var cp=document.getElementById("opac-cp"),mn=document.getElementById("opac-mineur"),el=document.getElementById("opac-adhesion-info");'
-            . 'if(!cp||!el){return;}'
-            . 'function upd(){'
-            . 'var v=(cp.value||"").replace(/\\s/g,""),amt,lab;'
-            . 'if(mn&&mn.checked){amt=el.getAttribute("data-mineur");lab=el.getAttribute("data-lm");}'
-            . 'else if(v===el.getAttribute("data-cp")){amt=el.getAttribute("data-plerinais");lab=el.getAttribute("data-lp");}'
-            . 'else if(v.length===5){amt=el.getAttribute("data-exterieur");lab=el.getAttribute("data-le");}'
-            . 'else{el.textContent=el.getAttribute("data-default");return;}'
-            . 'el.textContent=el.getAttribute("data-prefix")+" "+amt+" \\u20AC ("+lab+") - "+el.getAttribute("data-suffix");'
-            . '}'
-            . 'cp.addEventListener("input",upd);if(mn){mn.addEventListener("change",upd);}upd();'
-            . '})();'
-            . '</script>';
+            $out .= '<script>'
+                . '(function(){'
+                . 'var cp=document.getElementById("opac-cp"),mn=document.getElementById("opac-mineur"),el=document.getElementById("opac-adhesion-info");'
+                . 'if(!cp||!el){return;}'
+                . 'function upd(){'
+                . 'var v=(cp.value||"").replace(/\\s/g,""),amt,lab;'
+                . 'if(mn&&mn.checked){amt=el.getAttribute("data-mineur");lab=el.getAttribute("data-lm");}'
+                . 'else if(v===el.getAttribute("data-cp")){amt=el.getAttribute("data-plerinais");lab=el.getAttribute("data-lp");}'
+                . 'else if(v.length===5){amt=el.getAttribute("data-exterieur");lab=el.getAttribute("data-le");}'
+                . 'else{el.textContent=el.getAttribute("data-default");return;}'
+                . 'el.textContent=el.getAttribute("data-prefix")+" "+amt+" \\u20AC ("+lab+") - "+el.getAttribute("data-suffix");'
+                . '}'
+                . 'cp.addEventListener("input",upd);if(mn){mn.addEventListener("change",upd);}upd();'
+                . '})();'
+                . '</script>';
+        }
 
         $out .= '<div class="opac-form-row"><label for="opac-message">' . esc_html__( 'Message (optionnel)', 'opac-custom' ) . '</label>'
             . '<textarea class="opac-form-input opac-form-textarea" id="opac-message" name="opac_message" rows="4"></textarea></div>';

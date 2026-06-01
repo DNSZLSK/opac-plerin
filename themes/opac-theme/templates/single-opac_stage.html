@@ -42,8 +42,8 @@
                     <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
                     <p class="opac-info-label has-muted-color has-text-color">Date</p>
                     <!-- /wp:paragraph -->
-                    <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"opac/stage-meta","args":{"key":"opac_date_debut","part":"month"}}}}} -->
-                    <p class="opac-info-value">Avr.</p>
+                    <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"opac/stage-meta","args":{"key":"opac_date_range"}}}}} -->
+                    <p class="opac-info-value">Du 15 au 20 juin 2026</p>
                     <!-- /wp:paragraph -->
                 </div>
                 <!-- /wp:group -->
@@ -74,10 +74,8 @@
             </div>
             <!-- /wp:group -->
 
-            <!-- Tag Sur inscription (statique pour les stages) -->
-            <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} -->
-            <p class="opac-tag opac-tag-ok">Sur inscription</p>
-            <!-- /wp:paragraph -->
+            <!-- Tag de disponibilité (dynamique : lit opac_places_dispo de la fiche) -->
+            <!-- wp:opac/places-tag /-->
 
             <!-- Boutons inscription (dynamique via bloc serveur) + contact -->
             <!-- wp:group {"className":"opac-detail-actions","style":{"spacing":{"margin":{"top":"16px"},"blockGap":"8px"}},"layout":{"type":"flex","flexWrap":"wrap"}} -->
@@ -91,11 +89,6 @@
                 </div>
                 <!-- /wp:buttons -->
             </div>
-
-            <!-- Notice adhesion (statique) -->
-            <!-- wp:paragraph {"className":"opac-notice-adhesion","textColor":"muted"} -->
-            <p class="opac-notice-adhesion has-muted-color has-text-color">Adhésion annuelle requise (15 € Plérinais / 30 € extérieur / 10 € mineur), à régler sur place au secrétariat.</p>
-            <!-- /wp:paragraph -->
 
             <!-- Notice speciale (vide par defaut, cachee si meta vide) -->
             <!-- wp:paragraph {"className":"opac-detail-notice","metadata":{"bindings":{"content":{"source":"opac/stage-meta","args":{"key":"opac_notice"}}}}} -->

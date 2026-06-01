@@ -60,11 +60,6 @@
     }
 
     /**
-     * Tabs de filtrage des stages ephemeres par periode (archive page).
-     * Show/hide cards en jouant sur la classe opac-period-<slug> ajoutee
-     * au wrapper post WP par le filter post_class du plugin opac-custom.
-     */
-    /**
      * Helper : navigation clavier au sein d'un tablist (fleches gauche/droite,
      * Home, End) avec rotation + focus auto. Active aussi le tab focuse au
      * passage (auto-activation pattern WAI-ARIA APG).
@@ -91,12 +86,17 @@
         });
     }
 
+    /**
+     * Onglets de filtrage des ephemeres par periode (page archive). Le bloc
+     * serveur opac/ephemeres-list pose la classe opac-period-<slug> sur chaque
+     * carte .opac-stage-card ; on show/hide selon le tab actif.
+     */
     function initStageTabs() {
         var tabs = document.querySelectorAll('.opac-stage-tabs [data-period]');
         if (!tabs.length) {
             return;
         }
-        var cards = document.querySelectorAll('.opac-stages-list > .wp-block-post');
+        var cards = document.querySelectorAll('.opac-stages-list > .opac-stage-card');
         if (!cards.length) {
             return;
         }
@@ -113,7 +113,9 @@
                 var period = tab.getAttribute('data-period');
                 cards.forEach(function (card) {
                     var match = period === 'all' || card.classList.contains('opac-period-' + period);
-                    card.style.display = match ? '' : 'none';
+                    // Classe (pas style.display) : .opac-stage-card a display:grid
+                    // !important, qu'un display:none inline ne battrait pas.
+                    card.classList.toggle('opac-hidden', !match);
                 });
             });
         });
@@ -300,12 +302,44 @@
         });
     }
 
+    /**
+     * Cartes ephemeres entierement cliquables : un clic n'importe ou sur la
+     * carte suit le lien du titre, vers la fiche. Les vrais liens/boutons
+     * internes (titre, "S'inscrire") gardent leur comportement propre, et le
+     * titre reste un <a> natif (navigation clavier / lecteurs d'ecran).
+     */
+    function initCardLinks() {
+        var cards = document.querySelectorAll('.opac-stage-card');
+        if (!cards.length) {
+            return;
+        }
+        cards.forEach(function (card) {
+            var link = card.querySelector('.opac-stage-name a');
+            if (!link) {
+                return;
+            }
+            card.classList.add('is-clickable');
+            card.addEventListener('click', function (e) {
+                // Laisse les liens/boutons internes (titre, S'inscrire) agir seuls.
+                if (e.target.closest('a, button')) {
+                    return;
+                }
+                // Ne navigue pas si l'utilisateur est en train de selectionner du texte.
+                if (window.getSelection && String(window.getSelection())) {
+                    return;
+                }
+                link.click();
+            });
+        });
+    }
+
     function initAll() {
         initStickyHeader();
         initCtaDropdown();
         initStageTabs();
         initEventTabs();
         initGallery();
+        initCardLinks();
     }
 
     if (document.readyState === 'loading') {

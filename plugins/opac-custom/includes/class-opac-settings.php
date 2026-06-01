@@ -25,6 +25,7 @@ class OPAC_Settings {
     public static function register() {
         add_action( 'admin_menu', [ __CLASS__, 'add_menu_page' ] );
         add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
+        add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
     }
 
     public static function add_menu_page() {
@@ -50,7 +51,7 @@ class OPAC_Settings {
             'opac_org_legal_name'        => [ 'type' => 'string',  'default' => 'Association Office Plérinais d\'Action Culturelle', 'sanitize' => 'sanitize_text_field' ],
             'opac_org_address_street'    => [ 'type' => 'string',  'default' => '10A rue fleurie',                              'sanitize' => 'sanitize_text_field' ],
             'opac_org_address_postal'    => [ 'type' => 'string',  'default' => '22190',                                        'sanitize' => 'sanitize_text_field' ],
-            'opac_org_address_city'      => [ 'type' => 'string',  'default' => 'Plérin-sur-Mer',                               'sanitize' => 'sanitize_text_field' ],
+            'opac_org_address_city'      => [ 'type' => 'string',  'default' => 'Plérin',                                       'sanitize' => 'sanitize_text_field' ],
             'opac_org_phone_accueil'     => [ 'type' => 'string',  'default' => '02 96 74 53 08',                               'sanitize' => 'sanitize_text_field' ],
             'opac_org_phone_admin'       => [ 'type' => 'string',  'default' => '06 74 47 98 53',                               'sanitize' => 'sanitize_text_field' ],
             'opac_org_email'             => [ 'type' => 'string',  'default' => 'contact@opacplerin.fr',                        'sanitize' => 'sanitize_email' ],
@@ -59,6 +60,7 @@ class OPAC_Settings {
             'opac_org_facebook_url'      => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_instagram_url'     => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_statuts_pdf_url'   => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
+            'opac_org_charte_pdf_url'    => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_helloasso_url'     => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_helloasso_qr_url'  => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
 
@@ -70,7 +72,7 @@ class OPAC_Settings {
             // Section 3 : Saison + Hero homepage
             'opac_home_saison_badge'     => [ 'type' => 'string', 'default' => 'Saison 2025 / 2026',                                                                    'sanitize' => 'sanitize_text_field' ],
             'opac_home_hero_title'       => [ 'type' => 'string', 'default' => 'La culture au bout des doigts',                                                          'sanitize' => 'sanitize_text_field' ],
-            'opac_home_hero_intro'       => [ 'type' => 'string', 'default' => 'Ateliers d\'expression culturelle, activités éphémères et sorties pour tous les âges. Association OPAC, asso loi 1901 à Plérin-sur-Mer.', 'sanitize' => 'sanitize_textarea_field' ],
+            'opac_home_hero_intro'       => [ 'type' => 'string', 'default' => 'Ateliers d\'expression culturelle, activités éphémères et sorties pour tous les âges. Association OPAC, asso loi 1901 à Plérin.', 'sanitize' => 'sanitize_textarea_field' ],
             'opac_home_cta_band_title'   => [ 'type' => 'string', 'default' => 'Inscription pour la saison 2025 / 2026',                                                  'sanitize' => 'sanitize_text_field' ],
             'opac_home_cta_band_text'    => [ 'type' => 'string', 'default' => 'Inscription en ligne, paiement sur place au secrétariat. Adhésion annuelle requise.',    'sanitize' => 'sanitize_textarea_field' ],
 
@@ -158,6 +160,7 @@ class OPAC_Settings {
                     self::render_input_row( 'opac_org_facebook_url', __( 'URL Facebook', 'opac-custom' ), __( 'Laisser vide pour masquer le lien', 'opac-custom' ), 'url' );
                     self::render_input_row( 'opac_org_instagram_url', __( 'URL Instagram', 'opac-custom' ), __( 'Laisser vide pour masquer le lien', 'opac-custom' ), 'url' );
                     self::render_input_row( 'opac_org_statuts_pdf_url', __( 'URL PDF des statuts', 'opac-custom' ), __( 'Lien affiché sur la page Association', 'opac-custom' ), 'url' );
+                    self::render_media_row( 'opac_org_charte_pdf_url', __( 'Charte des ateliers', 'opac-custom' ), __( 'Affichée en lien dans le footer (PDF ou image). Cliquez sur « Choisir un fichier » pour téléverser ou remplacer le document via la médiathèque. Laisser vide pour masquer le lien.', 'opac-custom' ) );
                     self::render_input_row( 'opac_org_helloasso_url', __( 'URL HelloAsso (dons)', 'opac-custom' ), __( 'Lien vers la page de dons HelloAsso. Laisser vide pour masquer (footer + page Association).', 'opac-custom' ), 'url' );
                     self::render_input_row( 'opac_org_helloasso_qr_url', __( 'URL image QR HelloAsso', 'opac-custom' ), __( 'Optionnel. Uploadez le QR dans la médiathèque et collez son URL ici. Vide = placeholder dans la bande Soutenir.', 'opac-custom' ), 'url' );
                     ?>
@@ -278,6 +281,51 @@ class OPAC_Settings {
             </td>
         </tr>
         <?php
+    }
+
+    /**
+     * Ligne « média » : champ URL alimenté par la médiathèque via un bouton
+     * « Choisir un fichier » (téléversement/remplacement d'un document, ex :
+     * PDF charte), pour éviter le copier-coller d'URL. Le script
+     * admin-settings-media ouvre wp.media et écrit l'URL choisie dans l'input.
+     */
+    private static function render_media_row( $key, $label, $desc = '' ) {
+        $value = get_option( $key, '' );
+        ?>
+        <tr>
+            <th scope="row"><label for="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th>
+            <td>
+                <span class="opac-media-field">
+                    <input type="url" id="<?php echo esc_attr( $key ); ?>" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>" class="regular-text opac-media-url" placeholder="<?php esc_attr_e( 'Aucun fichier sélectionné', 'opac-custom' ); ?>" />
+                    <button type="button" class="button opac-media-choose"><?php esc_html_e( 'Choisir un fichier', 'opac-custom' ); ?></button>
+                    <button type="button" class="button-link opac-media-remove"<?php echo $value ? '' : ' style="display:none"'; ?>><?php esc_html_e( 'Retirer', 'opac-custom' ); ?></button>
+                </span>
+                <?php if ( $desc ) : ?><p class="description"><?php echo esc_html( $desc ); ?></p><?php endif; ?>
+            </td>
+        </tr>
+        <?php
+    }
+
+    /**
+     * Charge la médiathèque + le script d'upload uniquement sur la page
+     * OPAC Réglages (sélecteur de fichier des champs média, ex : charte PDF).
+     */
+    public static function enqueue_assets( $hook ) {
+        if ( 'toplevel_page_' . self::PAGE_SLUG !== $hook ) {
+            return;
+        }
+        wp_enqueue_media();
+        wp_enqueue_script(
+            'opac-settings-media',
+            OPAC_CUSTOM_URL . 'assets/js/admin-settings-media.js',
+            [ 'jquery' ],
+            OPAC_CUSTOM_VERSION,
+            true
+        );
+        wp_localize_script( 'opac-settings-media', 'opacSettingsMedia', [
+            'title'  => __( 'Choisir un fichier', 'opac-custom' ),
+            'button' => __( 'Utiliser ce fichier', 'opac-custom' ),
+        ] );
     }
 
     /**

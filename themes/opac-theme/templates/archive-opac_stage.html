@@ -16,13 +16,13 @@
         <!-- /wp:paragraph -->
 
         <!-- wp:paragraph {"align":"center","className":"opac-info-bar"} -->
-        <p class="has-text-align-center opac-info-bar"><strong>Adhésion requise</strong> · <strong>Paiement sur place</strong></p>
+        <p class="has-text-align-center opac-info-bar"><strong>Sur inscription</strong> · <strong>Paiement sur place</strong></p>
         <!-- /wp:paragraph -->
 
     </section>
     <!-- /wp:group -->
 
-    <!-- Tabs filtres par période (JS client-side, ARIA tablist pour A11y) -->
+    <!-- Onglets de filtre par période (JS client-side, ARIA tablist A11y) -->
     <!-- wp:group {"align":"wide","className":"opac-stage-tabs","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"center"}} -->
     <div class="wp-block-group alignwide opac-stage-tabs" role="tablist" aria-label="Filtrer par période">
         <!-- wp:html -->
@@ -35,61 +35,11 @@
     </div>
     <!-- /wp:group -->
 
-    <!-- Liste des stages (query loop, filtrage JS via post_class opac-period-X) -->
+    <!-- Liste vitrine des éphémères (bloc serveur : à venir d'abord, puis passés ; tri + tags + bouton gérés en PHP) -->
     <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","layout":{"type":"constrained","contentSize":"1080px"},"style":{"spacing":{"padding":{"top":"0"}}}} -->
     <section class="wp-block-group alignwide opac-section-padded" style="padding-top:0">
 
-        <!-- wp:query {"queryId":20,"query":{"perPage":20,"pages":0,"offset":0,"postType":"opac_stage","order":"asc","orderBy":"date","inherit":false}} -->
-        <div class="wp-block-query">
-            <!-- wp:post-template {"className":"opac-stages-list"} -->
-                <!-- wp:group {"className":"opac-card opac-stage-card","layout":{"type":"default"}} -->
-                <div class="wp-block-group opac-card opac-stage-card">
-                    <!-- wp:group {"className":"opac-stage-date","textColor":"card","layout":{"type":"flex","orientation":"vertical","justifyContent":"center"}} -->
-                    <div class="wp-block-group opac-stage-date has-card-color has-text-color">
-                        <!-- wp:paragraph {"className":"opac-stage-day","align":"center","metadata":{"bindings":{"content":{"source":"opac/stage-meta","args":{"key":"opac_date_debut","part":"month"}}}}} -->
-                        <p class="opac-stage-day has-text-align-center">Avr.</p>
-                        <!-- /wp:paragraph -->
-                        <!-- wp:paragraph {"className":"opac-stage-month","align":"center","metadata":{"bindings":{"content":{"source":"opac/stage-meta","args":{"key":"opac_date_debut","part":"year"}}}}} -->
-                        <p class="opac-stage-month has-text-align-center">2026</p>
-                        <!-- /wp:paragraph -->
-                    </div>
-                    <!-- /wp:group -->
-                    <!-- wp:group {"className":"opac-stage-body","layout":{"type":"flex","orientation":"vertical","justifyContent":"center"},"style":{"spacing":{"blockGap":"6px","padding":{"top":"16px","right":"20px","bottom":"16px","left":"20px"}}}} -->
-                    <div class="wp-block-group opac-stage-body" style="padding-top:16px;padding-right:20px;padding-bottom:16px;padding-left:20px">
-                        <!-- wp:post-title {"level":3,"className":"opac-stage-name","isLink":true} /-->
-                        <!-- wp:paragraph {"className":"opac-stage-desc","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_description_courte"}}}}} -->
-                        <p class="opac-stage-desc">Description</p>
-                        <!-- /wp:paragraph -->
-                        <!-- wp:group {"className":"opac-stage-tags","layout":{"type":"flex","flexWrap":"wrap"},"style":{"spacing":{"blockGap":"6px"}}} -->
-                        <div class="wp-block-group opac-stage-tags">
-                            <!-- wp:paragraph {"className":"opac-tag opac-tag-neutral","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_public"}}}}} -->
-                            <p class="opac-tag opac-tag-neutral">Adultes</p>
-                            <!-- /wp:paragraph -->
-                            <!-- wp:paragraph {"className":"opac-tag opac-tag-ok"} -->
-                            <p class="opac-tag opac-tag-ok">Sur inscription</p>
-                            <!-- /wp:paragraph -->
-                        </div>
-                        <!-- /wp:group -->
-                    </div>
-                    <!-- /wp:group -->
-                    <!-- wp:group {"className":"opac-stage-action","layout":{"type":"flex","verticalAlignment":"center"},"style":{"spacing":{"padding":{"right":"20px","left":"10px"}}}} -->
-                    <div class="wp-block-group opac-stage-action" style="padding-right:20px;padding-left:10px">
-                        <!-- wp:opac/inscription-button /-->
-                    </div>
-                    <!-- /wp:group -->
-                    <!-- Photo de fond (featured image) placee derriere le contenu via CSS ; rien si absente (fallback fond actuel) -->
-                    <!-- wp:post-featured-image {"isLink":false,"sizeSlug":"large","className":"opac-stage-bg"} /-->
-                </div>
-                <!-- /wp:group -->
-            <!-- /wp:post-template -->
-
-            <!-- wp:query-no-results -->
-                <!-- wp:paragraph {"textColor":"muted","align":"center"} -->
-                <p class="has-muted-color has-text-color has-text-align-center">Aucun atelier éphémère publié pour le moment.</p>
-                <!-- /wp:paragraph -->
-            <!-- /wp:query-no-results -->
-        </div>
-        <!-- /wp:query -->
+        <!-- wp:opac/ephemeres-list /-->
 
     </section>
     <!-- /wp:group -->

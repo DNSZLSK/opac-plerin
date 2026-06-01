@@ -174,9 +174,69 @@ class OPAC_Bindings {
                 $n = (int) wp_date( 'n', $ts );
                 return isset( $months_fr[ $n ] ) ? $months_fr[ $n ] : '';
 
+            // Plage de dates lisible (début -> fin), affichée sur la fiche
+            // éphémère. Clé virtuelle : ne correspond à aucune meta stockée,
+            // composée à la volée depuis opac_date_debut + opac_date_fin.
+            case 'opac_date_range':
+                return self::format_date_range(
+                    (string) get_post_meta( $post_id, 'opac_date_debut', true ),
+                    (string) get_post_meta( $post_id, 'opac_date_fin', true )
+                );
+
             default:
                 return is_scalar( $value ) ? (string) $value : '';
         }
+    }
+
+    /**
+     * Formatte une plage de dates FR lisible pour un atelier éphémère, à partir
+     * des meta opac_date_debut / opac_date_fin (stockées en "Y-m-d"). Mois en
+     * toutes lettres, locale FR forcée (indépendante de la locale serveur).
+     *
+     *   début + fin même mois   : "Du 15 au 20 juin 2026"
+     *   début + fin mois diff.  : "Du 28 juin au 3 juillet 2026"
+     *   début + fin années diff : "Du 30 décembre 2026 au 2 janvier 2027"
+     *   début seul              : "15 juin 2026"
+     *   rien                    : ""
+     */
+    private static function format_date_range( $debut, $fin ) {
+        $months_fr = [
+            1 => 'janvier',   2  => 'février', 3  => 'mars',     4 => 'avril',
+            5 => 'mai',       6  => 'juin',    7  => 'juillet',  8 => 'août',
+            9 => 'septembre', 10 => 'octobre', 11 => 'novembre', 12 => 'décembre',
+        ];
+        $parse = static function ( $d ) {
+            $ts = $d ? strtotime( $d ) : false;
+            if ( ! $ts ) {
+                return null;
+            }
+            return [
+                'j' => (int) wp_date( 'j', $ts ),
+                'm' => (int) wp_date( 'n', $ts ),
+                'y' => (int) wp_date( 'Y', $ts ),
+            ];
+        };
+
+        $a = $parse( $debut );
+        if ( ! $a ) {
+            return '';
+        }
+        $b = $parse( $fin );
+
+        // Date de début seule.
+        if ( ! $b ) {
+            return sprintf( '%d %s %d', $a['j'], $months_fr[ $a['m'] ], $a['y'] );
+        }
+        // Même mois et même année.
+        if ( $a['m'] === $b['m'] && $a['y'] === $b['y'] ) {
+            return sprintf( 'Du %d au %d %s %d', $a['j'], $b['j'], $months_fr[ $b['m'] ], $b['y'] );
+        }
+        // Même année, mois différents.
+        if ( $a['y'] === $b['y'] ) {
+            return sprintf( 'Du %d %s au %d %s %d', $a['j'], $months_fr[ $a['m'] ], $b['j'], $months_fr[ $b['m'] ], $b['y'] );
+        }
+        // Années différentes.
+        return sprintf( 'Du %d %s %d au %d %s %d', $a['j'], $months_fr[ $a['m'] ], $a['y'], $b['j'], $months_fr[ $b['m'] ], $b['y'] );
     }
 
     /**

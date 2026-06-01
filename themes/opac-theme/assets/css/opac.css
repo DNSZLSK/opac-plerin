@@ -404,6 +404,7 @@ a.opac-card-link:hover,
 .opac-tag-full     { background: var(--opac-accent-light); color: var(--opac-accent); }
 .opac-tag-few      { background: var(--opac-amber-light);  color: var(--opac-amber); }
 .opac-tag-neutral  { background: #eee;                     color: #666; }
+.opac-tag-past     { background: #ece9e4;                  color: #8c877e; }
 
 /* Tags d'événements agenda (catégories) */
 .opac-tag-sortie     { background: var(--opac-teal-light);   color: var(--opac-teal); text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
@@ -432,6 +433,13 @@ a.opac-card-link:hover,
     grid-template-rows: 1fr;
     gap: 0 !important;
     align-items: stretch !important;
+}
+
+/* Masquage par les onglets de periode (JS initStageTabs) : doit battre le
+   display:grid !important ci-dessus, donc classe dediee (specificite 0,2,0)
+   plutot qu'un style.display inline qui serait ignore. */
+.opac-stage-card.opac-hidden {
+    display: none !important;
 }
 
 /* Reset des marges WP is-layout-flow sur les items du grid (sinon le 2e
@@ -550,6 +558,24 @@ a.opac-card-link:hover,
 .opac-eph-section .opac-stage-card:has(> .opac-stage-bg) .opac-stage-name,
 .opac-eph-section .opac-stage-card:has(> .opac-stage-bg) .opac-stage-desc {
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); /* front-page : ombre sombre sous texte blanc */
+}
+/* Carte ephemere entierement cliquable (JS initCardLinks) : affordance souris.
+   Le titre reste un vrai lien pour le clavier et les lecteurs d'ecran. */
+.opac-stage-card.is-clickable {
+    cursor: pointer;
+}
+.opac-stage-card.is-clickable:hover .opac-stage-name a {
+    text-decoration: underline;
+}
+
+/* Ephemere passe (showcase) : carte attenuee. Reste cliquable vers la fiche,
+   mais sans bouton S'inscrire et avec le tag "Termine" (geres cote PHP par
+   stage_is_past). */
+.opac-stage-card.is-past {
+    opacity: 0.62;
+}
+.opac-stage-card.is-past:hover {
+    opacity: 0.82;
 }
 
 /* ----------------------------------------------------------------

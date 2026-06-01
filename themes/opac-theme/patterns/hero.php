@@ -21,7 +21,7 @@
     <!-- /wp:heading -->
 
     <!-- wp:paragraph {"className":"opac-hero-intro"} -->
-    <p class="opac-hero-intro">Ateliers d'expression culturelle, activités éphémères et sorties pour tous les âges. Association OPAC, asso loi 1901 à Plérin-sur-Mer.</p>
+    <p class="opac-hero-intro">Ateliers d'expression culturelle, activités éphémères et sorties pour tous les âges. Association OPAC, asso loi 1901 à Plérin.</p>
     <!-- /wp:paragraph -->
 
     <!-- wp:buttons {"className":"opac-hero-actions","layout":{"type":"flex","flexWrap":"wrap"}} -->
