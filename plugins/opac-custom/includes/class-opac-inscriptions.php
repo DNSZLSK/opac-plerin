@@ -128,6 +128,12 @@ class OPAC_Inscriptions {
         }
         $cible_titre = get_the_title( $cible_post );
 
+        // Pas d'adhésion pour les ateliers éphémères : on n'enregistre ni
+        // n'affiche d'estimation d'adhésion pour une cible opac_stage.
+        if ( 'opac_atelier' !== $cible_type ) {
+            $adhesion = '';
+        }
+
         // Resolution du creneau structure (palier 2) : si un id de creneau est
         // soumis et que l'atelier le possede, on enregistre l'id + le tarif du
         // creneau et un libelle lisible. Sinon on garde le creneau texte.

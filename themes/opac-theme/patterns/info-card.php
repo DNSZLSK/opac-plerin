@@ -16,7 +16,7 @@
     <!-- /wp:heading -->
 
     <!-- wp:paragraph {"className":"opac-info-card-content","textColor":"muted"} -->
-    <p class="opac-info-card-content has-muted-color has-text-color">10A rue fleurie<br>22190 Plérin-sur-Mer</p>
+    <p class="opac-info-card-content has-muted-color has-text-color">10A rue fleurie<br>22190 Plérin</p>
     <!-- /wp:paragraph -->
 
 </div>

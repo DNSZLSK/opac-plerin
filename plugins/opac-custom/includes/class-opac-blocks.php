@@ -105,6 +105,13 @@ class OPAC_Blocks {
             'supports'        => [ 'html' => false ],
         ] );
 
+        register_block_type( 'opac/charte-link', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_charte_link' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+
         register_block_type( 'opac/soutenir', [
             'api_version'     => 3,
             'render_callback' => [ __CLASS__, 'render_soutenir' ],
@@ -145,6 +152,23 @@ class OPAC_Blocks {
             '<p class="has-text-align-center opac-statuts-link" style="margin-top:24px"><a href="%s">%s</a></p>',
             esc_url( $url ),
             esc_html__( 'Télécharger les statuts (PDF) →', 'opac-custom' )
+        );
+    }
+
+    /**
+     * Lien vers la charte des ateliers (PDF) dans le footer. URL éditable via
+     * OPAC > Réglages > Coordonnées. Rend '' si aucun PDF n'est défini (le
+     * séparateur « · » fait partie du rendu pour disparaître avec le lien).
+     */
+    public static function render_charte_link( $attrs, $content, $block ) {
+        $url = class_exists( 'OPAC_Settings' ) ? (string) OPAC_Settings::get( 'opac_org_charte_pdf_url' ) : '';
+        if ( ! $url ) {
+            return '';
+        }
+        return sprintf(
+            '<p class="opac-footer-charte">· <a href="%s" target="_blank" rel="noopener">%s</a></p>',
+            esc_url( $url ),
+            esc_html__( 'Charte des ateliers', 'opac-custom' )
         );
     }
 
@@ -789,7 +813,7 @@ class OPAC_Blocks {
         if ( isset( $_GET['envoye'] ) && $_GET['envoye'] === '1' ) {
             $msg = ( isset( $_GET['attente'] ) && '1' === $_GET['attente'] )
                 ? __( 'Ce créneau est complet : votre demande a été enregistrée en liste d\'attente. Nous vous recontacterons dès qu\'une place se libère.', 'opac-custom' )
-                : __( 'Votre demande d\'inscription a bien été enregistrée. Katell ou Laurence vous contactera prochainement pour confirmation.', 'opac-custom' );
+                : __( 'Votre demande d\'inscription a bien été enregistrée. Le secrétariat vous contactera prochainement pour confirmation.', 'opac-custom' );
             $notice = '<div class="opac-form-notice is-success" role="status" aria-live="polite">' . esc_html( $msg ) . '</div>';
         } elseif ( isset( $_GET['erreur'] ) ) {
             $err = sanitize_key( wp_unslash( $_GET['erreur'] ) );
@@ -854,7 +878,7 @@ class OPAC_Blocks {
                 . '</div>',
                 esc_html__( 'Inscription pour atelier éphémère', 'opac-custom' ),
                 esc_html( $titre ),
-                $tarif > 0 ? '<div class="opac-form-context-tarif">' . sprintf( esc_html__( 'Tarif séance : %d € + adhésion', 'opac-custom' ), $tarif ) . '</div>' : ''
+                $tarif > 0 ? '<div class="opac-form-context-tarif">' . sprintf( esc_html__( 'Tarif séance : %d €', 'opac-custom' ), $tarif ) . '</div>' : ''
             );
             $hidden_inputs = '<input type="hidden" name="opac_stage_id" value="' . esc_attr( $stage_id ) . '" />';
         }
@@ -863,8 +887,10 @@ class OPAC_Blocks {
         $nonce      = wp_nonce_field( 'opac_inscription_submit', 'opac_inscription_nonce', true, false );
 
         // Notice de phase (gating souple : informatif, ne bloque jamais le formulaire).
+        // Uniquement pour les ateliers à l'année : un atelier éphémère n'a pas
+        // de phase de réinscription / ouverture des adhérents.
         $phase_notice = '';
-        if ( class_exists( 'OPAC_Settings' ) ) {
+        if ( ! $stage_id && class_exists( 'OPAC_Settings' ) ) {
             $phase  = OPAC_Settings::inscription_phase();
             $d_rein = (string) OPAC_Settings::get( 'opac_insc_date_reinscription' );
             $d_ouv  = (string) OPAC_Settings::get( 'opac_insc_date_ouverture' );
@@ -1001,48 +1027,53 @@ class OPAC_Blocks {
             . '<input class="opac-form-input" type="text" id="opac-commune" name="opac_commune" /></div>';
         $out .= '</div>';
 
-        // Adhesion : derivee cote serveur (CP + case mineur). Le visiteur ne
-        // choisit plus son type, il coche seulement "mineur". Le montant
-        // affiche est indicatif (la residence est verifiee au secretariat).
-        $tarif_p = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_plerinais' ) : 15;
-        $tarif_e = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_exterieur' ) : 30;
-        $tarif_m = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_mineur' )    : 10;
+        // Adhésion : uniquement pour les ateliers à l'année. Un atelier
+        // éphémère (?stage=ID) ne demande aucune adhésion : on masque la case
+        // mineur, l'estimation par code postal et son script.
+        if ( ! $stage_id ) {
+            // Dérivée côté serveur (CP + case mineur). Le visiteur ne choisit
+            // plus son type, il coche seulement "mineur". Le montant affiché
+            // est indicatif (la résidence est vérifiée au secrétariat).
+            $tarif_p = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_plerinais' ) : 15;
+            $tarif_e = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_exterieur' ) : 30;
+            $tarif_m = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_mineur' )    : 10;
 
-        $out .= '<div class="opac-form-rgpd opac-form-mineur"><label>'
-            . '<input type="checkbox" id="opac-mineur" name="opac_mineur" value="1" /> '
-            . esc_html__( 'La personne inscrite est mineure (moins de 18 ans)', 'opac-custom' )
-            . '</label></div>';
+            $out .= '<div class="opac-form-rgpd opac-form-mineur"><label>'
+                . '<input type="checkbox" id="opac-mineur" name="opac_mineur" value="1" /> '
+                . esc_html__( 'La personne inscrite est mineure (moins de 18 ans)', 'opac-custom' )
+                . '</label></div>';
 
-        $hint = __( 'Renseignez votre code postal pour estimer le montant de l\'adhésion.', 'opac-custom' );
-        $out .= '<p class="opac-adhesion-info" id="opac-adhesion-info" aria-live="polite"'
-            . ' data-plerinais="' . esc_attr( $tarif_p ) . '"'
-            . ' data-exterieur="' . esc_attr( $tarif_e ) . '"'
-            . ' data-mineur="' . esc_attr( $tarif_m ) . '"'
-            . ' data-cp="22190"'
-            . ' data-prefix="' . esc_attr__( 'Adhésion annuelle estimée :', 'opac-custom' ) . '"'
-            . ' data-suffix="' . esc_attr__( 'à confirmer au secrétariat', 'opac-custom' ) . '"'
-            . ' data-lp="' . esc_attr__( 'Plérinais', 'opac-custom' ) . '"'
-            . ' data-le="' . esc_attr__( 'Extérieur', 'opac-custom' ) . '"'
-            . ' data-lm="' . esc_attr__( 'Mineur', 'opac-custom' ) . '"'
-            . ' data-default="' . esc_attr( $hint ) . '">'
-            . esc_html( $hint )
-            . '</p>';
+            $hint = __( 'Renseignez votre code postal pour estimer le montant de l\'adhésion.', 'opac-custom' );
+            $out .= '<p class="opac-adhesion-info" id="opac-adhesion-info" aria-live="polite"'
+                . ' data-plerinais="' . esc_attr( $tarif_p ) . '"'
+                . ' data-exterieur="' . esc_attr( $tarif_e ) . '"'
+                . ' data-mineur="' . esc_attr( $tarif_m ) . '"'
+                . ' data-cp="22190"'
+                . ' data-prefix="' . esc_attr__( 'Adhésion annuelle estimée :', 'opac-custom' ) . '"'
+                . ' data-suffix="' . esc_attr__( 'à confirmer au secrétariat', 'opac-custom' ) . '"'
+                . ' data-lp="' . esc_attr__( 'Plérinais', 'opac-custom' ) . '"'
+                . ' data-le="' . esc_attr__( 'Extérieur', 'opac-custom' ) . '"'
+                . ' data-lm="' . esc_attr__( 'Mineur', 'opac-custom' ) . '"'
+                . ' data-default="' . esc_attr( $hint ) . '">'
+                . esc_html( $hint )
+                . '</p>';
 
-        $out .= '<script>'
-            . '(function(){'
-            . 'var cp=document.getElementById("opac-cp"),mn=document.getElementById("opac-mineur"),el=document.getElementById("opac-adhesion-info");'
-            . 'if(!cp||!el){return;}'
-            . 'function upd(){'
-            . 'var v=(cp.value||"").replace(/\\s/g,""),amt,lab;'
-            . 'if(mn&&mn.checked){amt=el.getAttribute("data-mineur");lab=el.getAttribute("data-lm");}'
-            . 'else if(v===el.getAttribute("data-cp")){amt=el.getAttribute("data-plerinais");lab=el.getAttribute("data-lp");}'
-            . 'else if(v.length===5){amt=el.getAttribute("data-exterieur");lab=el.getAttribute("data-le");}'
-            . 'else{el.textContent=el.getAttribute("data-default");return;}'
-            . 'el.textContent=el.getAttribute("data-prefix")+" "+amt+" \\u20AC ("+lab+") - "+el.getAttribute("data-suffix");'
-            . '}'
-            . 'cp.addEventListener("input",upd);if(mn){mn.addEventListener("change",upd);}upd();'
-            . '})();'
-            . '</script>';
+            $out .= '<script>'
+                . '(function(){'
+                . 'var cp=document.getElementById("opac-cp"),mn=document.getElementById("opac-mineur"),el=document.getElementById("opac-adhesion-info");'
+                . 'if(!cp||!el){return;}'
+                . 'function upd(){'
+                . 'var v=(cp.value||"").replace(/\\s/g,""),amt,lab;'
+                . 'if(mn&&mn.checked){amt=el.getAttribute("data-mineur");lab=el.getAttribute("data-lm");}'
+                . 'else if(v===el.getAttribute("data-cp")){amt=el.getAttribute("data-plerinais");lab=el.getAttribute("data-lp");}'
+                . 'else if(v.length===5){amt=el.getAttribute("data-exterieur");lab=el.getAttribute("data-le");}'
+                . 'else{el.textContent=el.getAttribute("data-default");return;}'
+                . 'el.textContent=el.getAttribute("data-prefix")+" "+amt+" \\u20AC ("+lab+") - "+el.getAttribute("data-suffix");'
+                . '}'
+                . 'cp.addEventListener("input",upd);if(mn){mn.addEventListener("change",upd);}upd();'
+                . '})();'
+                . '</script>';
+        }
 
         $out .= '<div class="opac-form-row"><label for="opac-message">' . esc_html__( 'Message (optionnel)', 'opac-custom' ) . '</label>'
             . '<textarea class="opac-form-input opac-form-textarea" id="opac-message" name="opac_message" rows="4"></textarea></div>';

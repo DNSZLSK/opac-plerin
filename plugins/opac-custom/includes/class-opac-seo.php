@@ -123,7 +123,7 @@ class OPAC_SEO {
         if ( is_front_page() || is_home() ) {
             return [
                 'title'       => get_bloginfo( 'name' ) . ' - ' . get_bloginfo( 'description' ),
-                'description' => 'Association culturelle de Plérin-sur-Mer fondée en 1980. Ateliers d\'expression artistique, sorties, expositions et événements ouverts à tous.',
+                'description' => 'Association culturelle de Plérin fondée en 1980. Ateliers d\'expression artistique, sorties, expositions et événements ouverts à tous.',
                 'url'         => $url,
                 'og_type'     => 'website',
             ];
@@ -256,10 +256,10 @@ class OPAC_SEO {
                 '@type'           => 'PostalAddress',
                 'streetAddress'   => $has_settings ? OPAC_Settings::get( 'opac_org_address_street' ) : '10A rue fleurie',
                 'postalCode'      => $has_settings ? OPAC_Settings::get( 'opac_org_address_postal' ) : '22190',
-                'addressLocality' => $has_settings ? OPAC_Settings::get( 'opac_org_address_city' )   : 'Plérin-sur-Mer',
+                'addressLocality' => $has_settings ? OPAC_Settings::get( 'opac_org_address_city' )   : 'Plérin',
                 'addressCountry'  => 'FR',
             ],
-            'areaServed'    => $has_settings ? OPAC_Settings::get( 'opac_org_address_city' ) : 'Plérin-sur-Mer',
+            'areaServed'    => $has_settings ? OPAC_Settings::get( 'opac_org_address_city' ) : 'Plérin',
         ];
     }
 
@@ -313,7 +313,7 @@ class OPAC_SEO {
                     '@type'           => 'PostalAddress',
                     'streetAddress'   => '10A rue fleurie',
                     'postalCode'      => '22190',
-                    'addressLocality' => 'Plérin-sur-Mer',
+                    'addressLocality' => 'Plérin',
                     'addressCountry'  => 'FR',
                 ],
             ],
@@ -369,7 +369,7 @@ class OPAC_SEO {
                 'name'  => $lieu,
                 'address' => [
                     '@type'           => 'PostalAddress',
-                    'addressLocality' => 'Plérin-sur-Mer',
+                    'addressLocality' => 'Plérin',
                     'addressCountry'  => 'FR',
                 ],
             ];
@@ -382,7 +382,7 @@ class OPAC_SEO {
                     '@type'           => 'PostalAddress',
                     'streetAddress'   => '10A rue fleurie',
                     'postalCode'      => '22190',
-                    'addressLocality' => 'Plérin-sur-Mer',
+                    'addressLocality' => 'Plérin',
                     'addressCountry'  => 'FR',
                 ],
             ];
