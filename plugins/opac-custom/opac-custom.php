@@ -68,21 +68,39 @@ add_action( 'plugins_loaded', static function () {
 } );
 
 /**
- * Ajoute la classe `opac-period-<slug>` au wrapper post WP rendu par
- * Query Loop / post-template. Permet au JS client-side du template
- * archive-opac_stage.html de filtrer les cards par tab de periode
- * sans rechargement, en jouant sur la presence de la classe.
+ * Ordonne les listes (Query Loop blocks) des CPT metier, que le bloc Query
+ * natif ne sait pas trier par meta :
+ * - ateliers ephemeres (opac_stage) : par date d'activite (opac_date_debut),
+ *   du plus proche au plus lointain, et les passes masques ;
+ * - ateliers a l'annee (opac_atelier) : ordre alphabetique stable (vs ordre
+ *   de creation des fiches).
+ *
+ * query_loop_block_query_vars filtre les args WP_Query de chaque Query Loop,
+ * ce qui couvre d'un coup l'archive et les apercus d'accueil sans toucher au
+ * markup des templates.
  */
-add_filter( 'post_class', static function ( $classes, $class, $post_id ) {
-    if ( get_post_type( $post_id ) !== 'opac_stage' ) {
-        return $classes;
+add_filter( 'query_loop_block_query_vars', static function ( $query ) {
+    $post_type = isset( $query['post_type'] ) ? $query['post_type'] : '';
+
+    if ( 'opac_stage' === $post_type ) {
+        // A venir / en cours uniquement (date de debut >= aujourd'hui), tries
+        // du plus proche au plus lointain. La clause nommee sert a la fois au
+        // filtre et au tri (un seul JOIN sur la meta).
+        $today      = current_time( 'Y-m-d' );
+        $meta_query = ( isset( $query['meta_query'] ) && is_array( $query['meta_query'] ) ) ? $query['meta_query'] : [];
+        $meta_query['opac_debut'] = [
+            'key'     => 'opac_date_debut',
+            'value'   => $today,
+            'compare' => '>=',
+            'type'    => 'DATE',
+        ];
+        $query['meta_query'] = $meta_query;
+        $query['orderby']    = [ 'opac_debut' => 'ASC' ];
+    } elseif ( 'opac_atelier' === $post_type ) {
+        // Pas de date d'activite : ordre alphabetique stable.
+        $query['orderby'] = 'title';
+        $query['order']   = 'ASC';
     }
-    $terms = wp_get_post_terms( $post_id, 'opac_period', [ 'fields' => 'slugs' ] );
-    if ( is_wp_error( $terms ) ) {
-        return $classes;
-    }
-    foreach ( (array) $terms as $slug ) {
-        $classes[] = 'opac-period-' . sanitize_html_class( $slug );
-    }
-    return $classes;
-}, 10, 3 );
+
+    return $query;
+}, 10, 1 );

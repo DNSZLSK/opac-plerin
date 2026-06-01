@@ -22,20 +22,7 @@
     </section>
     <!-- /wp:group -->
 
-    <!-- Tabs filtres par période (JS client-side, ARIA tablist pour A11y) -->
-    <!-- wp:group {"align":"wide","className":"opac-stage-tabs","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"center"}} -->
-    <div class="wp-block-group alignwide opac-stage-tabs" role="tablist" aria-label="Filtrer par période">
-        <!-- wp:html -->
-        <button type="button" class="opac-tab is-active" data-period="all" role="tab" aria-selected="true">Tous</button>
-        <button type="button" class="opac-tab" data-period="automne" role="tab" aria-selected="false">Automne</button>
-        <button type="button" class="opac-tab" data-period="hiver" role="tab" aria-selected="false">Hiver</button>
-        <button type="button" class="opac-tab" data-period="printemps" role="tab" aria-selected="false">Printemps</button>
-        <button type="button" class="opac-tab" data-period="ete" role="tab" aria-selected="false">Été</button>
-        <!-- /wp:html -->
-    </div>
-    <!-- /wp:group -->
-
-    <!-- Liste des stages (query loop, filtrage JS via post_class opac-period-X) -->
+    <!-- Liste des stages (query loop, triée chronologiquement + passés masqués via query_loop_block_query_vars) -->
     <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded","layout":{"type":"constrained","contentSize":"1080px"},"style":{"spacing":{"padding":{"top":"0"}}}} -->
     <section class="wp-block-group alignwide opac-section-padded" style="padding-top:0">
 

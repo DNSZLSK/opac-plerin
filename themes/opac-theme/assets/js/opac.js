@@ -60,11 +60,6 @@
     }
 
     /**
-     * Tabs de filtrage des stages ephemeres par periode (archive page).
-     * Show/hide cards en jouant sur la classe opac-period-<slug> ajoutee
-     * au wrapper post WP par le filter post_class du plugin opac-custom.
-     */
-    /**
      * Helper : navigation clavier au sein d'un tablist (fleches gauche/droite,
      * Home, End) avec rotation + focus auto. Active aussi le tab focuse au
      * passage (auto-activation pattern WAI-ARIA APG).
@@ -89,36 +84,6 @@
                 }
             });
         });
-    }
-
-    function initStageTabs() {
-        var tabs = document.querySelectorAll('.opac-stage-tabs [data-period]');
-        if (!tabs.length) {
-            return;
-        }
-        var cards = document.querySelectorAll('.opac-stages-list > .wp-block-post');
-        if (!cards.length) {
-            return;
-        }
-
-        tabs.forEach(function (tab) {
-            tab.addEventListener('click', function () {
-                tabs.forEach(function (t) {
-                    t.classList.remove('is-active');
-                    t.setAttribute('aria-selected', 'false');
-                });
-                tab.classList.add('is-active');
-                tab.setAttribute('aria-selected', 'true');
-
-                var period = tab.getAttribute('data-period');
-                cards.forEach(function (card) {
-                    var match = period === 'all' || card.classList.contains('opac-period-' + period);
-                    card.style.display = match ? '' : 'none';
-                });
-            });
-        });
-
-        bindTablistKeyboard(tabs);
     }
 
     /**
@@ -334,7 +299,6 @@
     function initAll() {
         initStickyHeader();
         initCtaDropdown();
-        initStageTabs();
         initEventTabs();
         initGallery();
         initCardLinks();
