@@ -141,6 +141,13 @@ class OPAC_Blocks {
             'attributes'      => [],
             'supports'        => [ 'html' => false ],
         ] );
+
+        register_block_type( 'opac/ephemeres-list', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_ephemeres_list' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
     }
 
     public static function render_statuts_link( $attrs, $content, $block ) {
@@ -342,6 +349,22 @@ class OPAC_Blocks {
     }
 
     /**
+     * Vrai si le post est un atelier ephemere (opac_stage) dont la date de
+     * debut est passee. Centralise la logique "termine" reutilisee par le tag
+     * de statut, le bouton d'inscription et la liste showcase des ephemeres.
+     */
+    public static function stage_is_past( $post_id ) {
+        if ( get_post_type( $post_id ) !== 'opac_stage' ) {
+            return false;
+        }
+        $debut = (string) get_post_meta( $post_id, 'opac_date_debut', true );
+        if ( '' === $debut ) {
+            return false;
+        }
+        return $debut < current_time( 'Y-m-d' );
+    }
+
+    /**
      * Tag de disponibilite : lit opac_places_dispo (slug "ok" | "full" | "few")
      * et rend <p class="opac-tag opac-tag-X">Label</p> avec la bonne classe
      * couleur et le bon libelle FR.
@@ -356,6 +379,12 @@ class OPAC_Blocks {
         $post_id = isset( $block->context['postId'] ) ? (int) $block->context['postId'] : (int) get_the_ID();
         if ( ! $post_id ) {
             return '';
+        }
+
+        // Atelier ephemere passe : statut "Termine" (showcase), quel que soit
+        // le champ Places choisi en admin.
+        if ( self::stage_is_past( $post_id ) ) {
+            return '<p class="opac-tag opac-tag-past">' . esc_html__( 'Terminé', 'opac-custom' ) . '</p>';
         }
 
         $slug = (string) get_post_meta( $post_id, 'opac_places_dispo', true );
@@ -375,6 +404,109 @@ class OPAC_Blocks {
             esc_attr( $map[ $slug ]['class'] ),
             esc_html( $map[ $slug ]['label'] )
         );
+    }
+
+    /**
+     * Liste "vitrine" des ateliers ephemeres pour la page d'archive : tous les
+     * ephemeres, a venir d'abord (du plus proche au plus lointain) puis passes
+     * (du plus recent au plus ancien). Les passes sont attenues (.is-past), avec
+     * le tag "Termine" et sans bouton d'inscription (geres par stage_is_past
+     * dans render_places_tag / render_inscription_button).
+     *
+     * Bloc serveur (et pas Query Loop) car l'ordre "a venir puis passes" et le
+     * traitement par carte ne s'expriment pas avec le bloc Query natif. Calque
+     * render_agenda_list. La classe opac-period-<slug> est posee sur chaque
+     * carte pour le filtrage par onglet (JS initStageTabs).
+     */
+    public static function render_ephemeres_list( $attrs, $content, $block ) {
+        $stages = get_posts( [
+            'post_type'      => 'opac_stage',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'meta_key'       => 'opac_date_debut',
+            'orderby'        => 'meta_value',
+            'order'          => 'ASC',
+        ] );
+
+        if ( empty( $stages ) ) {
+            return '<p class="opac-empty has-text-align-center has-muted-color has-text-color">'
+                . esc_html__( 'Aucun atelier éphémère publié pour le moment.', 'opac-custom' ) . '</p>';
+        }
+
+        // A venir / en cours d'abord (deja triee ASC), puis passes du plus
+        // recent au plus ancien. Un stage sans date est traite comme "a venir".
+        $today    = current_time( 'Y-m-d' );
+        $upcoming = [];
+        $past     = [];
+        foreach ( $stages as $s ) {
+            $d = (string) get_post_meta( $s->ID, 'opac_date_debut', true );
+            if ( '' !== $d && $d < $today ) {
+                $past[] = $s;
+            } else {
+                $upcoming[] = $s;
+            }
+        }
+        $ordered = array_merge( $upcoming, array_reverse( $past ) );
+
+        $months_abbr = [
+            1 => 'Janv.', 2  => 'Févr.', 3  => 'Mars',  4 => 'Avr.',
+            5 => 'Mai',   6  => 'Juin',  7  => 'Juil.', 8 => 'Août',
+            9 => 'Sept.', 10 => 'Oct.',  11 => 'Nov.', 12 => 'Déc.',
+        ];
+
+        $out = '<div class="opac-stages-list">';
+
+        foreach ( $ordered as $s ) {
+            $id      = (int) $s->ID;
+            $is_past = self::stage_is_past( $id );
+            $ctx     = (object) [ 'context' => [ 'postId' => $id ] ];
+
+            $d     = (string) get_post_meta( $id, 'opac_date_debut', true );
+            $ts    = $d ? strtotime( $d ) : false;
+            $month = $ts ? ( $months_abbr[ (int) wp_date( 'n', $ts ) ] ?? '' ) : '';
+            $year  = $ts ? wp_date( 'Y', $ts ) : '';
+
+            $periods      = wp_get_post_terms( $id, 'opac_period', [ 'fields' => 'slugs' ] );
+            $period_class = ( ! is_wp_error( $periods ) && ! empty( $periods ) )
+                ? ' opac-period-' . sanitize_html_class( $periods[0] ) : '';
+
+            $public = (string) get_post_meta( $id, 'opac_public', true );
+            $desc   = (string) get_post_meta( $id, 'opac_description_courte', true );
+
+            // Tag de statut + bouton via les blocs date-aware (contexte postId
+            // simule) : "Termine" + pas de bouton pour un ephemere passe.
+            $status_tag = self::render_places_tag( [], '', $ctx );
+            $button     = self::render_inscription_button( [], '', $ctx );
+
+            $img = has_post_thumbnail( $id )
+                ? '<figure class="wp-block-post-featured-image opac-stage-bg">' . get_the_post_thumbnail( $id, 'large', [ 'alt' => '' ] ) . '</figure>'
+                : '';
+
+            $card_class = 'wp-block-group opac-card opac-stage-card' . $period_class . ( $is_past ? ' is-past' : '' );
+
+            $out .= '<div class="' . esc_attr( $card_class ) . '">'
+                . '<div class="wp-block-group opac-stage-date has-card-color has-text-color">'
+                    . '<p class="opac-stage-day has-text-align-center">' . esc_html( $month ) . '</p>'
+                    . '<p class="opac-stage-month has-text-align-center">' . esc_html( $year ) . '</p>'
+                . '</div>'
+                . '<div class="wp-block-group opac-stage-body" style="padding-top:16px;padding-right:20px;padding-bottom:16px;padding-left:20px">'
+                    . '<h3 class="wp-block-post-title opac-stage-name"><a href="' . esc_url( get_permalink( $id ) ) . '">' . esc_html( get_the_title( $id ) ) . '</a></h3>'
+                    . '<p class="opac-stage-desc">' . esc_html( $desc ) . '</p>'
+                    . '<div class="wp-block-group opac-stage-tags">'
+                        . ( $public ? '<p class="opac-tag opac-tag-neutral">' . esc_html( $public ) . '</p>' : '' )
+                        . $status_tag
+                    . '</div>'
+                . '</div>'
+                . '<div class="wp-block-group opac-stage-action" style="padding-right:20px;padding-left:10px">'
+                    . $button
+                . '</div>'
+                . $img
+            . '</div>';
+        }
+
+        $out .= '</div>';
+
+        return $out;
     }
 
     /**
@@ -773,6 +905,11 @@ class OPAC_Blocks {
         }
 
         if ( ! $param ) {
+            return '';
+        }
+
+        // Atelier ephemere passe : plus d'inscription possible (showcase).
+        if ( 'opac_stage' === $post_type && self::stage_is_past( $post_id ) ) {
             return '';
         }
 

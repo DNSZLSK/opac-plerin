@@ -87,6 +87,41 @@
     }
 
     /**
+     * Onglets de filtrage des ephemeres par periode (page archive). Le bloc
+     * serveur opac/ephemeres-list pose la classe opac-period-<slug> sur chaque
+     * carte .opac-stage-card ; on show/hide selon le tab actif.
+     */
+    function initStageTabs() {
+        var tabs = document.querySelectorAll('.opac-stage-tabs [data-period]');
+        if (!tabs.length) {
+            return;
+        }
+        var cards = document.querySelectorAll('.opac-stages-list > .opac-stage-card');
+        if (!cards.length) {
+            return;
+        }
+
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                tabs.forEach(function (t) {
+                    t.classList.remove('is-active');
+                    t.setAttribute('aria-selected', 'false');
+                });
+                tab.classList.add('is-active');
+                tab.setAttribute('aria-selected', 'true');
+
+                var period = tab.getAttribute('data-period');
+                cards.forEach(function (card) {
+                    var match = period === 'all' || card.classList.contains('opac-period-' + period);
+                    card.style.display = match ? '' : 'none';
+                });
+            });
+        });
+
+        bindTablistKeyboard(tabs);
+    }
+
+    /**
      * Tabs de filtrage de l'agenda par categorie (archive opac_event).
      * Show/hide cards a.opac-event par classe opac-cat-<slug>, puis
      * cache les .opac-month-label devenus orphelins (aucun event visible
@@ -299,6 +334,7 @@
     function initAll() {
         initStickyHeader();
         initCtaDropdown();
+        initStageTabs();
         initEventTabs();
         initGallery();
         initCardLinks();
