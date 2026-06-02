@@ -569,13 +569,44 @@ a.opac-card-link:hover,
 }
 
 /* Ephemere passe (showcase) : carte attenuee. Reste cliquable vers la fiche,
-   mais sans bouton S'inscrire et avec le tag "Termine" (geres cote PHP par
-   stage_is_past). */
+   mais le bouton S'inscrire est remplace par un label "Termine" (zone CTA),
+   la pastille date passe en gris et la photo est desaturee (geres cote PHP
+   par stage_is_past + render_ephemeres_list). */
 .opac-stage-card.is-past {
-    opacity: 0.62;
+    opacity: 0.8;
 }
 .opac-stage-card.is-past:hover {
-    opacity: 0.82;
+    opacity: 0.95;
+}
+/* Signal "passe" d'un coup d'oeil : pastille date en gris (bat les regles
+   d'alternance terracotta/teal nth-child via specificite 0,4,0) et photo
+   desaturee. La couleur = a venir, le gris = passe. */
+.opac-stages-list > .opac-stage-card.is-past .opac-stage-date {
+    background-color: #b5afa5 !important;
+}
+.opac-stage-card.is-past .opac-stage-bg img {
+    filter: grayscale(0.75);
+}
+/* Label "Termine" sur les ephemeres passes : le HTML est strictement celui du
+   bouton "S'inscrire" (memes divs, memes classes y compris is-style-opac-primary,
+   <span> au lieu de <a>). Geometrie identique sans aucun reglage. La classe
+   opac-stage-ended sur le wrapper ne surcharge QUE la couleur (gris inactif,
+   palette opac-tag-past), hover compris. Selecteur a 4 classes pour battre la
+   regle is-style-opac-primary quel que soit l'ordre source. */
+.wp-block-button.is-style-opac-primary.opac-stage-ended > .wp-block-button__link,
+.wp-block-button.is-style-opac-primary.opac-stage-ended > .wp-block-button__link:hover,
+.wp-block-button.is-style-opac-primary.opac-stage-ended > .wp-block-button__link:focus-visible {
+    background-color: #ece9e4;
+    color: #8c877e;
+}
+
+/* "Termine" cale a la largeur du bouton "S'inscrire" (99.53px releve a
+   l'inspecteur -> 100px), texte centre. Markup identique au bouton, donc le
+   <span> herite du meme display inline-block que le <a> et min-width s'applique
+   sans hack. Cible uniquement "Termine" ; "S'inscrire" garde sa largeur. */
+.opac-stage-ended .wp-block-button__link {
+    min-width: 100px;
+    text-align: center;
 }
 
 /* ----------------------------------------------------------------
@@ -867,6 +898,31 @@ a.opac-card-link:hover,
 }
 .opac-stages-list > *:nth-child(even) .opac-stage-date {
     background-color: var(--opac-teal) !important;
+}
+
+/* Separateur "Ephemeres passes" entre le groupe a-venir et le groupe passe
+   (emis par render_ephemeres_list seulement si les deux groupes existent).
+   Le !important sur la marge bat .opac-stages-list > * { margin:0 !important }.
+   Visibilite reajustee par onglet de periode (JS initStageTabs). */
+.opac-stages-sep {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 6px 4px !important;
+    color: var(--opac-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.opac-stages-sep::before,
+.opac-stages-sep::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e8e5e0;
+}
+.opac-stages-sep.opac-hidden {
+    display: none !important;
 }
 
 /* Rotation 6 couleurs sur le fill placeholder des cards atelier.
