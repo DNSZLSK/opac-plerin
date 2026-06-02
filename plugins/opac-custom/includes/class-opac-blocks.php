@@ -291,6 +291,12 @@ class OPAC_Blocks {
             return '';
         }
 
+        // Case "Afficher les realisations" decochee (atelier) : masquer la
+        // section meme si des items sont lies. Meta vide = affiche (defaut).
+        if ( '0' === (string) get_post_meta( $post_id, 'opac_show_gallery', true ) ) {
+            return '';
+        }
+
         $items = get_posts( [
             'post_type'      => 'opac_gallery_item',
             'post_status'    => 'publish',
@@ -446,7 +452,8 @@ class OPAC_Blocks {
                 $upcoming[] = $s;
             }
         }
-        $ordered = array_merge( $upcoming, array_reverse( $past ) );
+        $ordered  = array_merge( $upcoming, array_reverse( $past ) );
+        $boundary = count( $upcoming ); // index de bascule a-venir -> passes
 
         $months_abbr = [
             1 => 'Janv.', 2  => 'Févr.', 3  => 'Mars',  4 => 'Avr.',
@@ -456,7 +463,16 @@ class OPAC_Blocks {
 
         $out = '<div class="opac-stages-list">';
 
-        foreach ( $ordered as $s ) {
+        foreach ( $ordered as $i => $s ) {
+            // Separateur "Ephemeres passes" a la bascule a-venir -> passes,
+            // seulement si les deux groupes existent. Visibilite reajustee par
+            // onglet de periode cote JS (initStageTabs).
+            if ( $i === $boundary && $boundary > 0 && ! empty( $past ) ) {
+                $out .= '<div class="opac-stages-sep"><span>'
+                    . esc_html__( 'Éphémères passés', 'opac-custom' )
+                    . '</span></div>';
+            }
+
             $id      = (int) $s->ID;
             $is_past = self::stage_is_past( $id );
             $ctx     = (object) [ 'context' => [ 'postId' => $id ] ];
@@ -475,8 +491,17 @@ class OPAC_Blocks {
 
             // Tag de statut + bouton via les blocs date-aware (contexte postId
             // simule) : "Termine" + pas de bouton pour un ephemere passe.
-            $status_tag = self::render_places_tag( [], '', $ctx );
-            $button     = self::render_inscription_button( [], '', $ctx );
+            $status_tag = $is_past ? '' : self::render_places_tag( [], '', $ctx );
+            // Markup identique au bouton "S'inscrire" (render_inscription_button) :
+            // memes divs, memes classes y compris is-style-opac-primary, juste
+            // <span> au lieu de <a> (non cliquable) et le texte. La classe
+            // opac-stage-ended sur le wrapper ne surcharge que la couleur (CSS).
+            $button     = $is_past
+                ? '<div class="wp-block-buttons"><div class="wp-block-button is-style-opac-primary opac-stage-ended">'
+                    . '<span class="wp-block-button__link wp-element-button">'
+                    . esc_html__( 'Terminé', 'opac-custom' ) . '</span>'
+                    . '</div></div>'
+                : self::render_inscription_button( [], '', $ctx );
 
             $img = has_post_thumbnail( $id )
                 ? '<figure class="wp-block-post-featured-image opac-stage-bg">' . get_the_post_thumbnail( $id, 'large', [ 'alt' => '' ] ) . '</figure>'
