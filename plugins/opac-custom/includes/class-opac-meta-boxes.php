@@ -115,6 +115,7 @@ class OPAC_Meta_Boxes {
                     [ 'key' => 'opac_public', 'type' => 'text', 'label' => __( 'Public', 'opac-custom' ), 'desc' => __( 'Ex : Adultes, Enfants 6-10 ans, Tous publics.', 'opac-custom' ) ],
                     [ 'key' => 'opac_places_dispo', 'type' => 'select', 'options' => self::places_options(), 'label' => __( 'Places', 'opac-custom' ) ],
                     [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale', 'opac-custom' ), 'desc' => __( 'Encart optionnel sur la fiche (ex : matériel à prévoir). Laisser vide pour masquer.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_show_gallery', 'type' => 'checkbox', 'label' => __( 'Afficher les réalisations', 'opac-custom' ), 'desc' => __( 'Décochez pour masquer la section Réalisations même si des photos sont liées. La section se masque de toute façon quand aucune photo n\'est liée.', 'opac-custom' ) ],
                 ];
 
             case 'opac_stage':
@@ -260,6 +261,18 @@ class OPAC_Meta_Boxes {
                 echo '</select>';
                 break;
 
+            case 'checkbox':
+                $value   = get_post_meta( $post->ID, $key, true );
+                $checked = ( '0' !== (string) $value ); // defaut coche (meta vide = affiche)
+                printf(
+                    '<label><input type="checkbox" id="%s" name="%s" value="1"%s /> %s</label>',
+                    esc_attr( $key ),
+                    esc_attr( $key ),
+                    checked( true, $checked, false ),
+                    esc_html__( 'Oui', 'opac-custom' )
+                );
+                break;
+
             case 'taxonomy':
                 self::render_taxonomy_select( $post, $field['taxonomy'], $control_id );
                 break;
@@ -400,6 +413,9 @@ class OPAC_Meta_Boxes {
 
             case 'textarea':
                 return sanitize_textarea_field( $raw );
+
+            case 'checkbox':
+                return empty( $raw ) ? 0 : 1;
 
             default:
                 return sanitize_text_field( $raw );
