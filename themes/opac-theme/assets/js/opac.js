@@ -117,6 +117,18 @@
                     // !important, qu'un display:none inline ne battrait pas.
                     card.classList.toggle('opac-hidden', !match);
                 });
+
+                // Separateur "Ephemeres passes" : visible seulement s'il reste
+                // au moins une carte a venir ET une carte passee apres filtrage.
+                var sep = document.querySelector('.opac-stages-list > .opac-stages-sep');
+                if (sep) {
+                    var vUp = false, vPast = false;
+                    cards.forEach(function (card) {
+                        if (card.classList.contains('opac-hidden')) { return; }
+                        if (card.classList.contains('is-past')) { vPast = true; } else { vUp = true; }
+                    });
+                    sep.classList.toggle('opac-hidden', !(vUp && vPast));
+                }
             });
         });
 
