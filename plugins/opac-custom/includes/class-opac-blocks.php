@@ -338,6 +338,11 @@ class OPAC_Blocks {
             return '';
         }
 
+        // Titre contextuel : "Realisations" pour un atelier, "En images" pour un
+        // evenement / une exposition (meme bloc, meme requete keyee sur l'ID courant).
+        $is_event = ( 'opac_event' === get_post_type( $post_id ) );
+        $heading  = $is_event ? __( 'En images', 'opac-custom' ) : __( 'Réalisations', 'opac-custom' );
+
         return sprintf(
             '<section class="wp-block-group alignwide opac-section-padded opac-gallery-section" style="border-top-color:#e8e5e0;border-top-width:1px;border-top-style:solid">'
                 . '<h2 class="wp-block-heading opac-section-title has-display-font-family">%s</h2>'
@@ -347,7 +352,7 @@ class OPAC_Blocks {
                     . '<button type="button" class="opac-gallery-nav opac-gallery-next" aria-label="%s">›</button>'
                 . '</div>'
             . '</section>',
-            esc_html__( 'Réalisations', 'opac-custom' ),
+            esc_html( $heading ),
             esc_attr__( 'Photos précédentes', 'opac-custom' ),
             $cards,
             esc_attr__( 'Photos suivantes', 'opac-custom' )
