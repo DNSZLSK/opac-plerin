@@ -313,9 +313,9 @@ class OPAC_Admin {
     }
 
     /**
-     * Meta box sur opac_gallery_item : choix de l'atelier associe + legende.
-     * Katell definit la photo via "Image mise en avant" et selectionne ici
-     * l'atelier ou la realisation s'affiche.
+     * Meta box sur opac_gallery_item : choix de l'atelier ou de l'evenement
+     * associe + legende. Katell definit la photo via "Image mise en avant" et
+     * selectionne ici l'atelier ou l'evenement ou la photo s'affiche.
      */
     public static function gallery_meta_box() {
         add_meta_box(
@@ -330,26 +330,42 @@ class OPAC_Admin {
 
     public static function render_gallery_meta_box( $post ) {
         wp_nonce_field( 'opac_gallery_meta', 'opac_gallery_meta_nonce' );
-        $current  = (int) get_post_meta( $post->ID, 'opac_gallery_atelier_id', true );
-        $caption  = (string) get_post_meta( $post->ID, 'opac_gallery_caption', true );
-        $ateliers = get_posts( [
-            'post_type'      => 'opac_atelier',
+        $current   = (int) get_post_meta( $post->ID, 'opac_gallery_atelier_id', true );
+        $caption   = (string) get_post_meta( $post->ID, 'opac_gallery_caption', true );
+        $list_args = [
             'post_status'    => 'publish',
             'posts_per_page' => -1,
             'orderby'        => 'title',
             'order'          => 'ASC',
-        ] );
+        ];
+        $ateliers = get_posts( array_merge( $list_args, [ 'post_type' => 'opac_atelier' ] ) );
+        $events   = get_posts( array_merge( $list_args, [ 'post_type' => 'opac_event' ] ) );
 
-        echo '<p><label for="opac_gallery_atelier_id"><strong>' . esc_html__( 'Atelier associé', 'opac-custom' ) . '</strong></label></p>';
+        echo '<p><label for="opac_gallery_atelier_id"><strong>' . esc_html__( 'Atelier ou événement associé', 'opac-custom' ) . '</strong></label></p>';
         echo '<select id="opac_gallery_atelier_id" name="opac_gallery_atelier_id" style="width:100%">';
         echo '<option value="0">' . esc_html__( '— Aucun —', 'opac-custom' ) . '</option>';
-        foreach ( $ateliers as $a ) {
-            printf(
-                '<option value="%d"%s>%s</option>',
-                (int) $a->ID,
-                selected( $current, $a->ID, false ),
-                esc_html( get_the_title( $a ) )
-            );
+
+        // Le meta opac_gallery_atelier_id stocke un ID de post (atelier OU
+        // evenement) : un ID est unique tous types confondus, donc render_gallery_grid
+        // (keye sur l'ID du post courant) affiche les bonnes photos sans distinction.
+        $groups = [
+            __( 'Ateliers', 'opac-custom' )                 => $ateliers,
+            __( 'Expositions / Événements', 'opac-custom' ) => $events,
+        ];
+        foreach ( $groups as $group_label => $group_posts ) {
+            if ( empty( $group_posts ) ) {
+                continue;
+            }
+            printf( '<optgroup label="%s">', esc_attr( $group_label ) );
+            foreach ( $group_posts as $p ) {
+                printf(
+                    '<option value="%d"%s>%s</option>',
+                    (int) $p->ID,
+                    selected( $current, $p->ID, false ),
+                    esc_html( get_the_title( $p ) )
+                );
+            }
+            echo '</optgroup>';
         }
         echo '</select>';
 
@@ -358,7 +374,7 @@ class OPAC_Admin {
             '<input type="text" id="opac_gallery_caption" name="opac_gallery_caption" value="%s" style="width:100%%" />',
             esc_attr( $caption )
         );
-        echo '<p class="description" style="margin-top:8px">' . esc_html__( 'Définissez la photo via « Image mise en avant », puis choisissez l\'atelier où elle apparaît.', 'opac-custom' ) . '</p>';
+        echo '<p class="description" style="margin-top:8px">' . esc_html__( 'Définissez la photo via « Image mise en avant », puis choisissez l\'atelier ou l\'événement où elle apparaît.', 'opac-custom' ) . '</p>';
     }
 
     public static function save_gallery_meta( $post_id, $post ) {
@@ -384,7 +400,7 @@ class OPAC_Admin {
             }
             $new[ $key ] = $label;
             if ( 'title' === $key ) {
-                $new['opac_gallery_atelier'] = __( 'Atelier', 'opac-custom' );
+                $new['opac_gallery_atelier'] = __( 'Associé à', 'opac-custom' );
             }
         }
         return $new;
