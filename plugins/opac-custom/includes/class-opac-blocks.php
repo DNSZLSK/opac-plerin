@@ -252,6 +252,14 @@ class OPAC_Blocks {
             $qr = self::qr_placeholder_svg();
         }
 
+        // QR (image OU placeholder) cliquable vers le don HelloAsso.
+        $qr = sprintf(
+            '<a class="opac-don-qr-link" href="%s" target="_blank" rel="noopener noreferrer" aria-label="%s">%s</a>',
+            esc_url( $url ),
+            esc_attr__( 'Faire un don sur HelloAsso (nouvel onglet)', 'opac-custom' ),
+            $qr
+        );
+
         // "Faire un don" (cursive) + petite fleche manuscrite -> QR.
         return sprintf(
             '<div class="opac-don-encart">'
@@ -390,7 +398,7 @@ class OPAC_Blocks {
         $heading  = $is_event ? __( 'En images', 'opac-custom' ) : __( 'Réalisations', 'opac-custom' );
 
         return sprintf(
-            '<section class="wp-block-group alignwide opac-section-padded opac-gallery-section" style="border-top-color:#e8e5e0;border-top-width:1px;border-top-style:solid">'
+            '<section class="wp-block-group alignwide opac-section-padded opac-gallery-section" style="border-top-color:var(--wp--preset--color--border);border-top-width:1px;border-top-style:solid">'
                 . '<h2 class="wp-block-heading opac-section-title has-display-font-family">%s</h2>'
                 . '<div class="opac-gallery-carousel">'
                     . '<button type="button" class="opac-gallery-nav opac-gallery-prev" aria-label="%s" hidden>‹</button>'
@@ -1590,16 +1598,16 @@ class OPAC_Blocks {
 
             $out .= sprintf(
                 '<div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow">'
-                    . '<div class="wp-block-group opac-card has-bg-background-color has-background" style="border-radius:10px;padding:20px;height:100%%">'
+                    . '<div class="wp-block-group opac-card has-bg-background-color has-background">'
                         . '<p class="opac-event-date has-muted-color has-text-color" style="text-transform:uppercase;letter-spacing:0.06em">%s</p>'
-                        . '<p class="opac-card-name"><a href="%s" style="color:inherit;text-decoration:none">%s</a></p>'
+                        . '<p class="opac-card-name"><a href="%s">%s</a></p>'
                         . '%s'
                     . '</div>'
                 . '</div>',
                 esc_html( strtoupper( $date_lbl ) ),
                 esc_url( get_permalink( $event ) ),
                 esc_html( get_the_title( $event ) ),
-                $desc ? '<p class="opac-actu-excerpt has-muted-color has-text-color" style="font-size:13px;line-height:1.5">' . esc_html( $desc ) . '</p>' : ''
+                $desc ? '<p class="opac-actu-excerpt has-muted-color has-text-color">' . esc_html( $desc ) . '</p>' : ''
             );
         }
         $out .= '</div>';
