@@ -114,7 +114,7 @@ class OPAC_Security {
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com data:",
             "img-src 'self' data: https://www.openstreetmap.org https://*.tile.openstreetmap.org",
-            "frame-src https://www.openstreetmap.org",
+            "frame-src https://maps.google.com https://www.google.com",
             "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
             "form-action 'self'",
             "base-uri 'self'",
