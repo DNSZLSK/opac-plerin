@@ -2054,6 +2054,13 @@ body {
     margin: 0 auto;
     padding: 0 32px 40px;
 }
+/* La grille est un conteneur WP is-layout-constrained : WP ajoute une marge
+   block-gap en haut du 2e enfant (la sidebar), qui la pousse plus bas que le
+   formulaire -> colonnes pas alignees en haut. On reinitialise pour que les deux
+   colonnes demarrent pile au meme niveau (et finissent pareil via align stretch). */
+.opac-contact-grid > * {
+    margin-block: 0 !important;
+}
 
 @media (max-width: 860px) {
     .opac-contact-grid {
@@ -2063,16 +2070,21 @@ body {
 
 .opac-contact-form-col {
     min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .opac-form-card {
     background: var(--opac-card);
     border: 1px solid var(--opac-border);
     border-radius: 10px;
-    padding: 24px;
+    padding: 18px 24px 24px;
     display: flex;
     flex-direction: column;
     gap: 14px;
+    /* Remplit la colonne gauche quand le formulaire est plus court que la
+       sidebar (4 cards + carte) : les bas des deux colonnes s'alignent. */
+    flex: 1 1 auto;
 }
 
 .opac-form-row {
@@ -2181,11 +2193,21 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    justify-content: flex-start;
+}
+/* La sidebar est un conteneur WP is-layout-flow : WP injecte des marges
+   "block-gap" entre les cards, qui s'ajoutent au gap:12px et gonflent
+   l'espacement (cards etalees vs formulaire serre, 1re card poussee plus bas).
+   On reinitialise ces marges pour ne garder que le gap ; la carte OSM (flex:1)
+   remplit le bas. Meme piege de marges WP que .opac-event-bg / .opac-stage-card. */
+.opac-contact-sidebar > * {
+    margin-block: 0 !important;
 }
 
 .opac-osm-map {
     width: 100%;
-    height: 200px;
+    flex: 1 1 auto;
+    min-height: 200px;
     border: 1px solid var(--opac-border);
     border-radius: 10px;
     display: block;
