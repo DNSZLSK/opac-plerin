@@ -241,12 +241,6 @@
     align-items: baseline;
 }
 
-.opac-section-title {
-    font-size: 22px;
-    font-weight: 400;
-    margin: 0;
-}
-
 .opac-section-link {
     font-size: 13px;
     font-weight: 500;
@@ -348,14 +342,6 @@
     margin: 0 0 8px;
 }
 
-/* Legacy : alias pour ne pas casser le markup existant qui utilise
-   encore .opac-card-meta (sera deprecated apres M2). */
-.opac-card-meta {
-    font-size: 12px;
-    line-height: 1.5;
-    margin: 0 0 8px;
-}
-
 .opac-card-price {
     font-weight: 500;
     font-size: 13px;
@@ -428,16 +414,16 @@ a.opac-card-link:hover,
  * !important pour battre body .is-layout-flex { display: flex } de WP.
  */
 .opac-stage-card {
-    display: grid !important;
-    grid-template-columns: 100px 1fr auto !important;
+    display: grid;
+    grid-template-columns: 100px 1fr auto;
     grid-template-rows: 1fr;
-    gap: 0 !important;
-    align-items: stretch !important;
+    gap: 0;
+    align-items: stretch;
 }
 
-/* Masquage par les onglets de periode (JS initStageTabs) : doit battre le
-   display:grid !important ci-dessus, donc classe dediee (specificite 0,2,0)
-   plutot qu'un style.display inline qui serait ignore. */
+/* Masquage par les onglets de periode (JS initStageTabs). Classe dediee
+   (specificite 0,2,0) qui bat .opac-stage-card sans inline. !important conserve :
+   utilitaire de masquage, doit toujours gagner. */
 .opac-stage-card.opac-hidden {
     display: none !important;
 }
@@ -445,7 +431,7 @@ a.opac-card-link:hover,
 /* Reset des marges WP is-layout-flow sur les items du grid (sinon le 2e
    et le 3e enfant se décalent verticalement et cassent l'alignement) */
 .opac-stage-card > * {
-    margin: 0 !important;
+    margin: 0;
 }
 
 .opac-stage-date {
@@ -481,6 +467,7 @@ a.opac-card-link:hover,
 .opac-stage-name {
     font-weight: 500;
     font-size: 15px;
+    line-height: 1.3;
     margin: 0;
 }
 
@@ -500,9 +487,40 @@ a.opac-card-link:hover,
 }
 
 .opac-stage-action {
-    display: flex !important;
+    display: flex;
     align-items: center;
     padding: 16px 20px 16px 0;
+}
+
+/* Mobile : on calque la card ephemere sur le gabarit de l'agenda (.opac-event).
+   Le bouton "S'inscrire" (colonne auto) compressait le corps ; sous 600px on le
+   masque, la card repasse en "100px 1fr" et prend le meme min-height que
+   l'agenda (124px) -> plus de compression, hauteurs egales. La card reste
+   cliquable vers la fiche via initCardLinks (le titre est un vrai lien) ; le
+   bouton "S'inscrire" revient en desktop. Past : le label "Termine" du body
+   (tag opac-tag-past) subsiste, seul le doublon dans la colonne action part. */
+@media (max-width: 600px) {
+    .opac-stage-card {
+        grid-template-columns: 100px 1fr;
+        height: 124px;
+        overflow: hidden;
+    }
+    /* !important requis : sur la HOME, .opac-stage-action est un wp:group
+       (layout flex) processe par WP -> il recoit is-layout-flex + une regle de
+       layout WP generee qui pose display:flex et bat un simple
+       .opac-stage-action { display:none }. Sur l'archive (HTML brut de
+       render_ephemeres_list) pas de is-layout-flex, donc pas de conflit.
+       !important garantit le masquage des DEUX cotes. */
+    .opac-stage-action {
+        display: none !important;
+    }
+    /* Tags masques en mobile : a 124px ils deborderaient. Le tag de statut
+       (Places dispo / Complet) reste visible sur la fiche (un tap). !important
+       pour la meme raison que .opac-stage-action : sur l'accueil .opac-stage-tags
+       est un wp:group flex processe par WP. */
+    .opac-stage-tags {
+        display: none !important;
+    }
 }
 
 /* ----------------------------------------------------------------
@@ -566,7 +584,9 @@ a.opac-card-link:hover,
 }
 /* Carte ephemere entierement cliquable (JS initCardLinks) : affordance souris.
    Le titre reste un vrai lien pour le clavier et les lecteurs d'ecran. */
-.opac-stage-card.is-clickable {
+/* Toutes les cards rendues cliquables par initCardLinks (ateliers, actus,
+   ephemeres) portent .opac-card + .is-clickable. */
+.opac-card.is-clickable {
     cursor: pointer;
 }
 .opac-stage-card.is-clickable:hover .opac-stage-name a {
@@ -615,38 +635,14 @@ a.opac-card-link:hover,
 }
 
 /* ----------------------------------------------------------------
- * Event card (agenda timeline row)
+ * Event (agenda) : .opac-event-date sert AUSSI aux cards Actus de la home
+ * (render_upcoming_events) ou son margin:0 est indispensable (la def du bas,
+ * pour .opac-event, ne pose pas de margin). .opac-event-body/-name/-desc sont
+ * definis pour l'agenda live plus bas (section .opac-event).
  * ---------------------------------------------------------------- */
-
-.opac-event-card {
-    gap: 0 !important;
-    align-items: stretch;
-}
-
-.opac-event-stripe {
-    flex: 0 0 4px;
-    min-height: 100%;
-    align-self: stretch;
-}
-
-.opac-event-body {
-    flex: 1 1 auto;
-}
 
 .opac-event-date {
     font-size: 12px;
-    margin: 0;
-}
-
-.opac-event-name {
-    font-weight: 500;
-    font-size: 14px;
-    margin: 0;
-}
-
-.opac-event-desc {
-    font-size: 12px;
-    line-height: 1.5;
     margin: 0;
 }
 
@@ -682,9 +678,6 @@ a.opac-card-link:hover,
  * Position absolue sur grand ecran (gouttiere dispo), en flux sinon.
  * Rendu par le bloc serveur opac/soutenir, masque si URL HelloAsso vide.
  * ---------------------------------------------------------------- */
-.opac-archive-header {
-    position: relative;
-}
 .opac-don-encart {
     display: flex;
     align-items: center;
@@ -743,67 +736,15 @@ a.opac-card-link:hover,
     border-radius: 4px;
 }
 
+/* Le QR (image ou placeholder) est wrappe dans un <a> cliquable vers HelloAsso :
+   le lien epouse l'image (flex-item de .opac-don-encart, pas de shrink). */
+.opac-don-qr-link {
+    display: block;
+    flex-shrink: 0;
+}
+
 @media (max-width: 600px) {
     .opac-soutenir { padding: 32px 20px; }
-}
-
-/* ----------------------------------------------------------------
- * Person card (équipe)
- * ---------------------------------------------------------------- */
-
-.opac-person-card {
-    text-align: center;
-}
-
-.opac-person-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 13px;
-    font-weight: 500;
-    margin: 0 auto;
-    background: var(--opac-accent-light);
-    color: var(--opac-accent);
-}
-
-.opac-person-avatar-1 { background: #f0e6dc; color: var(--opac-accent); }
-.opac-person-avatar-2 { background: var(--opac-teal-light); color: var(--opac-teal); }
-.opac-person-avatar-3 { background: #eeebf5; color: #5a4d8a; }
-.opac-person-avatar-4 { background: #dce8f0; color: #2a5f8a; }
-.opac-person-avatar-5 { background: var(--opac-amber-light); color: var(--opac-amber); }
-.opac-person-avatar-6 { background: #e0ebe8; color: var(--opac-teal); }
-.opac-person-avatar-7 { background: #f5e6e0; color: var(--opac-accent); }
-.opac-person-avatar-8 { background: #e6e0ee; color: #5a4d8a; }
-
-.opac-person-name {
-    font-weight: 500;
-    font-size: 12px;
-    margin: 0;
-}
-
-.opac-person-role {
-    font-size: 11px;
-    margin: 0;
-}
-
-/* ----------------------------------------------------------------
- * Info card (h3 + paragraphe)
- * ---------------------------------------------------------------- */
-
-.opac-info-card-title {
-    font-weight: 500;
-    font-size: 14px;
-    margin: 0;
-}
-
-.opac-info-card-content {
-    font-size: 13px;
-    line-height: 1.6;
-    margin: 0;
 }
 
 /* ----------------------------------------------------------------
@@ -820,12 +761,15 @@ a.opac-card-link:hover,
 
 .opac-actus-columns > .wp-block-column > .opac-card {
     height: 100%;
+    padding: 20px;
 }
 
 /* Tronque la description a 3 lignes max + reserve l'espace de 3 lignes
    meme si le texte est court. Garantit l'alignement vertical du contenu
    entre les 2 actu cards. 13px * 1.5 * 3 = 58.5px. */
 .opac-actu-excerpt {
+    font-size: 13px;
+    line-height: 1.5;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     line-clamp: 3;
@@ -843,22 +787,7 @@ a.opac-card-link:hover,
     padding: 40px 32px;
 }
 
-.opac-ateliers-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-}
-
-/* M9 : !important sur les media queries pour vaincre la specificite
-   du fix M1 covers edge-to-edge (.opac-ateliers-grid base avec !important
-   ligne 1166+). Sans ces !important, la grille restait en 3 colonnes
-   sur mobile (bug signale par le directeur). */
-@media (max-width: 880px) {
-    .opac-ateliers-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-}
-
-@media (max-width: 580px) {
-    .opac-ateliers-grid { grid-template-columns: 1fr !important; }
+@media (max-width: 600px) {
     .opac-section-padded { padding: 32px 20px; }
     .opac-hero { padding: 40px 24px; }
     .opac-cta-band { padding: 28px 24px; }
@@ -892,7 +821,7 @@ a.opac-card-link:hover,
 }
 
 .opac-stages-list > * {
-    margin: 0 !important;
+    margin: 0;
 }
 
 /* Couleur du pave date des stages PAR SAISON (classe opac-period-<slug> posee
@@ -908,13 +837,13 @@ a.opac-card-link:hover,
 
 /* Separateur "Ephemeres passes" entre le groupe a-venir et le groupe passe
    (emis par render_ephemeres_list seulement si les deux groupes existent).
-   Le !important sur la marge bat .opac-stages-list > * { margin:0 !important }.
-   Visibilite reajustee par onglet de periode (JS initStageTabs). */
+   Vient apres .opac-stages-list > * (meme specificite + source order) donc sa
+   marge gagne. Visibilite reajustee par onglet de periode (JS initStageTabs). */
 .opac-stages-sep {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 6px 4px !important;
+    margin: 6px 4px;
     color: var(--opac-muted);
     font-size: 12px;
     text-transform: uppercase;
@@ -925,7 +854,7 @@ a.opac-card-link:hover,
     content: "";
     flex: 1;
     height: 1px;
-    background: #e8e5e0;
+    background: var(--opac-border);
 }
 .opac-stages-sep.opac-hidden {
     display: none !important;
@@ -955,20 +884,21 @@ a.opac-card-link:hover,
  * ---------------------------------------------------------------- */
 
 .opac-archive-header {
+    position: relative;
     padding-top: 56px;
     padding-bottom: 24px;
 }
 
 /* M4 : Tabs filtres par periode (archive stages) */
 .opac-stage-tabs {
-    gap: 8px !important;
-    padding: 0 32px 24px !important;
+    gap: 8px;
+    padding: 0 32px 24px;
     max-width: 1080px;
-    margin: 0 auto !important;
+    margin: 0 auto;
 }
 
 .opac-stage-tabs > * {
-    margin: 0 !important;
+    margin: 0;
 }
 
 .opac-tab {
@@ -1053,20 +983,20 @@ a.opac-card-link:hover,
 }
 
 .opac-detail {
-    display: grid !important;
-    grid-template-columns: 1.4fr 1fr !important;
-    gap: 32px !important;
-    align-items: start !important;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 32px;
+    align-items: start;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 768px) {
     .opac-detail {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: 1fr;
     }
 }
 
 .opac-detail > * {
-    margin: 0 !important;
+    margin: 0;
 }
 
 .opac-detail-photo {
@@ -1075,13 +1005,13 @@ a.opac-card-link:hover,
 }
 
 .opac-detail-content {
-    display: flex !important;
-    flex-direction: column !important;
+    display: flex;
+    flex-direction: column;
     gap: 14px;
 }
 
 .opac-detail-content > * {
-    margin: 0 !important;
+    margin: 0;
 }
 
 .opac-detail-title {
@@ -1098,15 +1028,15 @@ a.opac-card-link:hover,
 }
 
 .opac-info-grid {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 12px !important;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
 /* M9 : sur mobile etroit, .opac-info-grid (single atelier 2x2 infos)
    passe en 1 colonne pour eviter l'ecrasement des cards Tarif/Public. */
-@media (max-width: 580px) {
-    .opac-info-grid { grid-template-columns: 1fr !important; }
+@media (max-width: 600px) {
+    .opac-info-grid { grid-template-columns: 1fr; }
 }
 
 /* ========================================================================
@@ -1138,7 +1068,7 @@ a.opac-card-link:hover,
 
 /* Force le burger visible en mobile (WP par defaut a un @media min-width:600px
    qui le cache, donc on respecte ce breakpoint en miroir : visible sous 768px). */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
     .wp-block-navigation__responsive-container-open:not(.always-shown) {
         display: flex !important;
     }
@@ -1225,7 +1155,7 @@ body {
 
 /* Card footer atelier sur mobile : eviter overflow "Detail →" hors carte.
    Reduit le padding lateral via container query (sur petits viewports). */
-@media (max-width: 580px) {
+@media (max-width: 600px) {
     .opac-ateliers-grid .opac-card-footer {
         padding-left: 16px !important;
         padding-right: 16px !important;
@@ -1237,11 +1167,11 @@ body {
 }
 
 .opac-info-grid > * {
-    margin: 0 !important;
+    margin: 0;
 }
 
 .opac-info-item {
-    padding: 12px 14px !important;
+    padding: 12px 14px;
     border-radius: 8px;
     border: 1px solid var(--opac-border);
 }
@@ -1260,20 +1190,20 @@ body {
 }
 
 .opac-creneaux {
-    padding: 14px !important;
+    padding: 14px;
     border-radius: 8px;
     border: 1px solid var(--opac-border);
 }
 
 .opac-creneaux > * {
-    margin: 0 !important;
+    margin: 0;
 }
 
 .opac-creneaux-title {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin: 0 0 8px !important;
+    margin: 0 0 8px;
 }
 
 .opac-creneaux-list {
@@ -1333,10 +1263,6 @@ body {
     color: #9a6b1e;
 }
 
-.opac-detail-actions {
-    margin-top: 4px;
-}
-
 .opac-notice-adhesion {
     font-size: 12px;
     font-style: italic;
@@ -1374,23 +1300,7 @@ body {
     background-color: var(--opac-bg);
 }
 
-/* Section gallery (placeholders pour M3) */
-.opac-gallery-grid {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 12px !important;
-}
-
-@media (max-width: 700px) {
-    .opac-gallery-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
-}
-
-.opac-gallery-grid > * {
-    margin: 0 !important;
-}
-
+/* Section gallery : vignettes (cf. .opac-gallery-carousel / .opac-gallery-track plus bas) */
 .opac-gallery-item {
     height: 100px !important;
     border-radius: 8px;
@@ -1398,17 +1308,17 @@ body {
 
 /* Section animateur (card flex) */
 .opac-animateur {
-    display: flex !important;
-    align-items: center !important;
-    gap: 14px !important;
-    padding: 20px !important;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px;
     border-radius: var(--opac-radius);
     border: 1px solid var(--opac-border);
     max-width: 420px;
 }
 
 .opac-animateur > * {
-    margin: 0 !important;
+    margin: 0;
 }
 
 .opac-animateur-avatar {
@@ -1463,9 +1373,7 @@ body {
  */
 .opac-img-frame,
 .opac-card-cover,
-.opac-atelier-hero,
-.opac-gallery-item,
-.opac-stage-cover {
+.opac-gallery-item {
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -1477,8 +1385,6 @@ body {
 }
 
 .opac-card-cover    { height: 200px !important; }
-.opac-stage-cover   { height: 110px !important; }
-.opac-atelier-hero  { height: 280px !important; border-radius: var(--opac-radius); }
 .opac-gallery-item  { height: 100px !important; border-radius: 8px; }
 
 /*
@@ -1489,14 +1395,10 @@ body {
  */
 .opac-img-frame > *,
 .opac-card-cover > *,
-.opac-atelier-hero > *,
 .opac-gallery-item > *,
-.opac-stage-cover > *,
 .opac-img-frame .wp-block-image,
 .opac-card-cover .wp-block-image,
-.opac-atelier-hero .wp-block-image,
-.opac-gallery-item .wp-block-image,
-.opac-stage-cover .wp-block-image {
+.opac-gallery-item .wp-block-image {
     width: 100% !important;
     height: 100% !important;
     margin: 0 !important;
@@ -1511,9 +1413,7 @@ body {
 /* Image : object-fit pour ratios variables */
 .opac-img-frame img,
 .opac-card-cover img,
-.opac-atelier-hero img,
-.opac-gallery-item img,
-.opac-stage-cover img {
+.opac-gallery-item img {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
@@ -1565,23 +1465,22 @@ body {
  * ou indirects, pas des "direct child" stricts.
  */
 .opac-ateliers-grid {
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 16px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    align-items: stretch !important;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    padding: 0;
+    margin: 0;
+    align-items: stretch;
     list-style: none;
 }
 
-/* M9 : media queries DOIVENT venir APRES la declaration base avec !important,
-   sinon la cascade fait gagner la base meme avec !important sur le @media
-   (specificite egale + same source order = derniere gagne). */
+/* Les media queries viennent apres la base : meme specificite + source order
+   plus tardif = elles gagnent (plus besoin de !important). */
 @media (max-width: 880px) {
-    .opac-ateliers-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    .opac-ateliers-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 580px) {
-    .opac-ateliers-grid { grid-template-columns: 1fr !important; }
+@media (max-width: 600px) {
+    .opac-ateliers-grid { grid-template-columns: 1fr; }
 }
 
 /* Reset des marges WP is-layout-flow sur tous les enfants de la grille
@@ -1589,7 +1488,7 @@ body {
    ante-M2). Annule margin-block-start: 24px de WP qui creait des
    asymetries entre la 1ere card et les suivantes. */
 .opac-ateliers-grid > * {
-    margin: 0 !important;
+    margin: 0;
 }
 
 /* Le wrapper li.wp-block-post auto-genere doit s'etirer en hauteur de
@@ -1600,20 +1499,20 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 0 !important;
+    padding: 0;
 }
 
 /* Card atelier : flex column interne pour aligner les footers en bas */
 .opac-ateliers-grid .opac-card {
-    padding: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
     height: 100%;
 }
 
 /* Le body (group entre cover et footer) etire pour pousser le footer en bas */
 .opac-ateliers-grid .opac-card > .wp-block-group:not(.opac-card-cover):not(.opac-card-footer) {
-    flex: 1 1 auto !important;
+    flex: 1 1 auto;
 }
 
 /* ========================================================================
@@ -1623,14 +1522,14 @@ body {
 /* Tabs categories : reutilise les styles .opac-stage-tabs (M4).
    Alias visuel : on duplique le wrapper, .opac-tab/.is-active sont partages. */
 .opac-event-tabs {
-    gap: 8px !important;
-    padding: 0 32px 24px !important;
+    gap: 8px;
+    padding: 0 32px 24px;
     max-width: 1080px;
-    margin: 0 auto !important;
+    margin: 0 auto;
 }
 
 .opac-event-tabs > * {
-    margin: 0 !important;
+    margin: 0;
 }
 
 /* Conteneur agenda */
@@ -1684,26 +1583,37 @@ body {
     margin-bottom: 12px;
     text-decoration: none;
     color: inherit;
-    transition: box-shadow var(--opac-transition), border-color var(--opac-transition);
+    transition: transform var(--opac-transition), box-shadow var(--opac-transition);
 }
 
 .opac-event:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border-color: var(--opac-muted);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     text-decoration: none;
 }
 
-.opac-event-stripe {
-    width: 4px;
-    flex-shrink: 0;
-    align-self: stretch;
-    background: var(--opac-muted);
-}
-
+/* Disposition identique aux ephemeres, DESKTOP ET MOBILE : titre en haut,
+   description au milieu, badge categorie en bas. On reordonne .opac-event-top
+   (le WRAPPER du badge), pas .opac-event-cat directement, car le badge n'est
+   pas enfant flex direct du body. */
 .opac-event-body {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     padding: 16px 20px;
     min-width: 0;
+}
+.opac-event-name { order: 0; }
+.opac-event-desc { order: 1; }
+.opac-event-top  { order: 2; }
+
+/* Mobile uniquement : hauteur FIXE 124px (toutes les lignes agenda identiques),
+   overflow:hidden coupe le surplus eventuel. La desc est deja clampee 2 lignes. */
+@media (max-width: 600px) {
+    .opac-event {
+        height: 124px;
+        overflow: hidden;
+    }
 }
 
 .opac-event-top {
@@ -1712,6 +1622,15 @@ body {
     align-items: center;
     flex-wrap: wrap;
     margin-bottom: 8px;
+}
+
+/* Coherence mobile : aucun badge/tag sur les cards. PLACE APRES la base
+   .opac-event-top ci-dessus -> gagne par source-order (meme specificite),
+   sans !important. Le badge categorie reste visible sur la fiche event. */
+@media (max-width: 600px) {
+    .opac-event-top {
+        display: none;
+    }
 }
 
 .opac-event-date {
@@ -1740,7 +1659,7 @@ body {
 }
 
 .opac-event-desc {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--opac-muted);
     line-height: 1.5;
     margin: 0;
@@ -1749,35 +1668,30 @@ body {
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    min-height: calc(13px * 1.5 * 2);
+    min-height: calc(12px * 1.5 * 2);
 }
 
-/* Couleurs par categorie : stripe + badge en couple */
-.opac-cat-sortie .opac-event-stripe { background: var(--wp--preset--color--teal); }
+/* Couleurs par categorie : badge (pastille) */
 .opac-cat-sortie .opac-event-cat {
     background: var(--wp--preset--color--teal-light);
     color: var(--wp--preset--color--teal);
 }
 
-.opac-cat-expo .opac-event-stripe { background: var(--wp--preset--color--mauve); }
 .opac-cat-expo .opac-event-cat {
     background: var(--wp--preset--color--mauve-light);
     color: var(--wp--preset--color--mauve);
 }
 
-.opac-cat-association .opac-event-stripe { background: var(--wp--preset--color--accent); }
 .opac-cat-association .opac-event-cat {
     background: var(--wp--preset--color--accent-light);
     color: var(--wp--preset--color--accent);
 }
 
-.opac-cat-ephemere .opac-event-stripe { background: var(--wp--preset--color--gold); }
 .opac-cat-ephemere .opac-event-cat {
     background: var(--wp--preset--color--gold-light);
     color: var(--wp--preset--color--gold);
 }
 
-.opac-cat-partenaire .opac-event-stripe { background: var(--opac-muted); }
 .opac-cat-partenaire .opac-event-cat {
     background: var(--opac-bg);
     color: var(--opac-muted);
@@ -1786,8 +1700,7 @@ body {
 /* ----------------------------------------------------------------
  * Agenda : pave date colore + photo de fond degradee. Meme langage
  * visuel que les cards ephemeres (.opac-stage-date / .opac-stage-bg),
- * la couleur du pave suit la categorie. Additif : les regles
- * .opac-event-stripe restent en place (inertes sur l'agenda).
+ * la couleur du pave suit la categorie.
  * ---------------------------------------------------------------- */
 .opac-event-date-box {
     /* Largeur = colonne grid 100px de .opac-event (comme .opac-stage-date dans
@@ -1820,7 +1733,7 @@ body {
 .opac-event { position: relative; overflow: hidden; }
 /* Reset marge UA des enfants (sinon le <figure> a margin:1em 40px par defaut et
    la photo flotte avec du blanc autour). Calque .opac-stage-card > * (l.~889). */
-.opac-event > * { margin: 0 !important; }
+.opac-event > * { margin: 0; }
 .opac-event > .opac-event-bg { position: absolute; inset: 0; margin: 0; z-index: 0; pointer-events: none; }
 .opac-event > .opac-event-bg img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .opac-event > .opac-event-bg::after {
@@ -1832,6 +1745,21 @@ body {
 .opac-event > .opac-event-date-box,
 .opac-event > .opac-event-body { position: relative; z-index: 1; }
 .opac-event:has(> .opac-event-bg) .opac-event-name { text-shadow: 0 1px 2px rgba(255,255,255,0.6); }
+
+/* Mobile : sur les cards a photo de fond (ephemeres + agenda), le texte deborde
+   souvent sur la partie transparente du degrade -> peu lisible. On rend l'overlay
+   nettement plus opaque sous 600px (min ~0.72 au lieu de 0.45/0.42), la photo
+   reste visible mais attenuee cote texte. Place apres les 3 overlays de base
+   pour gagner la cascade (meme specificite, source order plus tardif). */
+@media (max-width: 600px) {
+    .opac-stage-card > .opac-stage-bg::after,
+    .opac-event > .opac-event-bg::after {
+        background: linear-gradient(to right, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0.72) 100%);
+    }
+    .opac-eph-section .opac-stage-card > .opac-stage-bg::after {
+        background: linear-gradient(to right, rgba(31,29,27,0.97) 0%, rgba(31,29,27,0.9) 50%, rgba(31,29,27,0.72) 100%);
+    }
+}
 
 /* Single event : layout 2-col .opac-detail (comme single-opac_stage), avec un
    cover "flyer" portrait scope a l'event via le modifier --event. Atelier et
@@ -1866,7 +1794,7 @@ body {
    enleve le cadre 4/5, et on sort l'image du positionnement absolu de l'img-frame
    pour qu'elle prenne sa hauteur naturelle pleine largeur (sinon le conteneur
    s'effondre, enfants absolus = 0 de hauteur). Le placeholder creme est masque. */
-@media (max-width: 760px) {
+@media (max-width: 768px) {
     .opac-detail--event {
         grid-template-columns: 1fr !important;
     }
@@ -1916,7 +1844,7 @@ body {
 .opac-team-grid.is-cols-3 { grid-template-columns: repeat(3, 1fr); }
 .opac-team-grid.is-cols-5 { grid-template-columns: repeat(5, 1fr); }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
     .opac-team-grid.is-cols-3,
     .opac-team-grid.is-cols-5 {
         grid-template-columns: repeat(2, 1fr);
@@ -1986,7 +1914,7 @@ body {
     margin-bottom: 24px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
     .opac-infos-grid {
         grid-template-columns: 1fr;
     }
@@ -2076,9 +2004,9 @@ body {
 
 /* Contact grid 2-col */
 .opac-contact-grid {
-    display: grid !important;
+    display: grid;
     grid-template-columns: 1.2fr 1fr;
-    gap: 32px !important;
+    gap: 32px;
     max-width: 1080px;
     margin: 0 auto;
     padding: 0 32px 40px;
@@ -2088,10 +2016,10 @@ body {
    formulaire -> colonnes pas alignees en haut. On reinitialise pour que les deux
    colonnes demarrent pile au meme niveau (et finissent pareil via align stretch). */
 .opac-contact-grid > * {
-    margin-block: 0 !important;
+    margin-block: 0;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 880px) {
     .opac-contact-grid {
         grid-template-columns: 1fr;
     }
@@ -2230,7 +2158,7 @@ body {
    On reinitialise ces marges pour ne garder que le gap ; la carte OSM (flex:1)
    remplit le bas. Meme piege de marges WP que .opac-event-bg / .opac-stage-card. */
 .opac-contact-sidebar > * {
-    margin-block: 0 !important;
+    margin-block: 0;
 }
 
 .opac-osm-map {
@@ -2331,6 +2259,7 @@ body {
 /* Heritage : .opac-detail-actions devient un container flex pour
    accommoder inscription-button + bouton "Poser une question" cote a cote */
 .opac-detail-actions {
+    margin-top: 4px;
     align-items: center;
 }
 
@@ -2489,7 +2418,7 @@ button.opac-gallery-item {
 @media (max-width: 880px) {
     .opac-gallery-track > .opac-gallery-item { flex-basis: calc((100% - 12px) / 2); }
 }
-@media (max-width: 560px) {
+@media (max-width: 600px) {
     .opac-gallery-track > .opac-gallery-item { flex-basis: 100%; }
 }
 
@@ -2582,7 +2511,7 @@ button.opac-gallery-item {
 .opac-lightbox-close { top: 16px; right: 16px; }
 .opac-lightbox-prev { left: 16px; top: 50%; transform: translateY(-50%); }
 .opac-lightbox-next { right: 16px; top: 50%; transform: translateY(-50%); }
-@media (max-width: 580px) {
+@media (max-width: 600px) {
     .opac-lightbox-prev { left: 8px; }
     .opac-lightbox-next { right: 8px; }
 }
