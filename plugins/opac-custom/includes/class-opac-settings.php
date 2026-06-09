@@ -63,6 +63,7 @@ class OPAC_Settings {
             'opac_org_charte_pdf_url'    => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_helloasso_url'     => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_helloasso_qr_url'  => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
+            'opac_org_partenaire_logo_url' => [ 'type' => 'string', 'default' => '',                                          'sanitize' => 'esc_url_raw' ],
 
             // Section 2 : Tarifs adhesion
             'opac_adhesion_plerinais'    => [ 'type' => 'integer', 'default' => 15, 'sanitize' => 'absint' ],
@@ -163,6 +164,7 @@ class OPAC_Settings {
                     self::render_media_row( 'opac_org_charte_pdf_url', __( 'Charte des ateliers', 'opac-custom' ), __( 'Affichée en lien dans le footer (PDF ou image). Cliquez sur « Choisir un fichier » pour téléverser ou remplacer le document via la médiathèque. Laisser vide pour masquer le lien.', 'opac-custom' ) );
                     self::render_input_row( 'opac_org_helloasso_url', __( 'URL HelloAsso (dons)', 'opac-custom' ), __( 'Lien vers la page de dons HelloAsso. Laisser vide pour masquer (footer + page Association).', 'opac-custom' ), 'url' );
                     self::render_input_row( 'opac_org_helloasso_qr_url', __( 'URL image QR HelloAsso', 'opac-custom' ), __( 'Optionnel. Uploadez le QR dans la médiathèque et collez son URL ici. Vide = placeholder dans la bande Soutenir.', 'opac-custom' ), 'url' );
+                    self::render_media_row( 'opac_org_partenaire_logo_url', __( 'Logo partenaire Ville de Plérin', 'opac-custom' ), __( 'Affiché sur la page Association, à côté de « Ville de Plérin ». Cliquez sur « Choisir un fichier » pour téléverser le logo via la médiathèque. Laisser vide pour garder le placeholder texte.', 'opac-custom' ) );
                     ?>
                 </table>
 

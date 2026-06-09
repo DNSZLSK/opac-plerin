@@ -43,15 +43,9 @@
         <!-- Coordonnées centralisées : éditables via OPAC > Réglages > Coordonnées -->
         <!-- wp:opac/coord-block {"variant":"infos"} /-->
 
-        <!-- wp:html -->
-        <div class="opac-partenaire">
-            <div class="opac-part-logo" aria-hidden="true">Ville de<br/>Plérin</div>
-            <div>
-                <div class="opac-part-name">Ville de Plérin</div>
-                <div class="opac-part-sub">Partenaire institutionnel</div>
-            </div>
-        </div>
-        <!-- /wp:html -->
+        <!-- Partenaire Ville de Plérin : logo éditable via OPAC > Réglages > Coordonnées.
+             Le bloc serveur rend le logo (img) si l'URL est renseignée, sinon le placeholder texte. -->
+        <!-- wp:opac/partenaire /-->
 
         <!-- Lien statuts PDF : URL editable via OPAC > Reglages > Coordonnees.
              Le bloc serveur ne rend rien si l'URL est vide. -->
