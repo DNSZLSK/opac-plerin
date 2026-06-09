@@ -1767,13 +1767,109 @@ body {
     color: var(--opac-muted);
 }
 
-/* Single event : reutilise .opac-detail-* mais avec layout 1-col (pas de photo gauche).
-   .opac-event-detail bypass le grid 2-col de .opac-detail. */
-.opac-event-detail .opac-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin: 16px 0 20px;
+/* ----------------------------------------------------------------
+ * Agenda : pave date colore + photo de fond degradee. Meme langage
+ * visuel que les cards ephemeres (.opac-stage-date / .opac-stage-bg),
+ * la couleur du pave suit la categorie. Additif : les regles
+ * .opac-event-stripe restent en place (inertes sur l'agenda).
+ * ---------------------------------------------------------------- */
+.opac-event-date-box {
+    flex: 0 0 auto;
+    width: 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+    color: #fff;
+    line-height: 1.1;
+}
+.opac-event-day {
+    font-family: var(--wp--preset--font-family--display, Georgia, serif);
+    font-size: 22px;
+    font-weight: 600;
+}
+.opac-event-mon {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.opac-cat-sortie      .opac-event-date-box { background: var(--wp--preset--color--teal); }
+.opac-cat-expo        .opac-event-date-box { background: var(--wp--preset--color--mauve); }
+.opac-cat-association .opac-event-date-box { background: var(--wp--preset--color--accent); }
+.opac-cat-ephemere    .opac-event-date-box { background: var(--wp--preset--color--gold); color: #4a3a10; }
+.opac-cat-partenaire  .opac-event-date-box { background: var(--opac-muted); }
+
+/* Photo de fond degradee (version claire, comme l'archive ephemeres) */
+.opac-event { position: relative; overflow: hidden; }
+/* Reset marge UA des enfants (sinon le <figure> a margin:1em 40px par defaut et
+   la photo flotte avec du blanc autour). Calque .opac-stage-card > * (l.~889). */
+.opac-event > * { margin: 0 !important; }
+.opac-event > .opac-event-bg { position: absolute; inset: 0; margin: 0; z-index: 0; pointer-events: none; }
+.opac-event > .opac-event-bg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.opac-event > .opac-event-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.86) 42%, rgba(255,255,255,0.45) 72%, rgba(255,255,255,0) 100%);
+}
+.opac-event > .opac-event-date-box,
+.opac-event > .opac-event-body { position: relative; z-index: 1; }
+.opac-event:has(> .opac-event-bg) .opac-event-name { text-shadow: 0 1px 2px rgba(255,255,255,0.6); }
+
+/* Single event : layout 2-col .opac-detail (comme single-opac_stage), avec un
+   cover "flyer" portrait scope a l'event via le modifier --event. Atelier et
+   ephemere gardent leur cover paysage. Ratio/colonnes a finaliser au rendu. */
+.opac-detail--event {
+    grid-template-columns: 1fr 1.2fr !important;
+    align-items: start;
+}
+.opac-detail--event .opac-detail-photo {
+    aspect-ratio: 4 / 5;
+    height: auto !important;
+}
+/* L'image d'un event est souvent une affiche/flyer (texte bord a bord) : contain
+   pour l'afficher entiere, pas de recadrage. Bat .opac-card-cover img
+   { object-fit: cover !important } (l.~1514) par specificite. Atelier/ephemere
+   gardent cover. */
+.opac-detail--event .opac-card-cover img {
+    object-fit: contain !important;
+}
+/* Le placeholder du cover est en accent-light (rose) et deborderait autour de
+   l'affiche contenue. Transparent -> les bandes prennent le fond de page (creme)
+   et disparaissent ; l'affiche flotte. Event sans image -> cover creme vide (ok). */
+.opac-detail--event .opac-card-cover-fill {
+    background: transparent !important;
+}
+.opac-detail--event .opac-detail-content {
+    align-self: center;
+}
+/* Mobile : fiche event en 1 colonne. Mon .opac-detail--event force le 2-col meme
+   sous 760px (le !important bat la regle responsive du theme), d'ou une photo
+   coincee dans une colonne etroite (timbre-poste). On repasse en 1 colonne, on
+   enleve le cadre 4/5, et on sort l'image du positionnement absolu de l'img-frame
+   pour qu'elle prenne sa hauteur naturelle pleine largeur (sinon le conteneur
+   s'effondre, enfants absolus = 0 de hauteur). Le placeholder creme est masque. */
+@media (max-width: 760px) {
+    .opac-detail--event {
+        grid-template-columns: 1fr !important;
+    }
+    .opac-detail--event .opac-detail-photo {
+        aspect-ratio: auto;
+        height: auto !important;
+    }
+    .opac-detail--event .opac-detail-photo .wp-block-post-featured-image,
+    .opac-detail--event .opac-detail-photo figure.wp-block-image {
+        position: static !important;
+    }
+    .opac-detail--event .opac-card-cover img {
+        height: auto !important;
+        object-fit: unset !important;
+    }
+    .opac-detail--event .opac-card-cover-fill {
+        display: none !important;
+    }
 }
 
 /* ========================================================================
