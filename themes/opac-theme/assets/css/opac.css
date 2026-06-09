@@ -890,15 +890,16 @@ a.opac-card-link:hover,
     margin: 0 !important;
 }
 
-/* Rotation 2 couleurs sur le badge date des stages (accent / teal alternes).
-   Avec query loop on perd l'inline color individuelle, on bascule sur
-   nth-child. */
-.opac-stages-list > *:nth-child(odd) .opac-stage-date {
-    background-color: var(--opac-accent) !important;
-}
-.opac-stages-list > *:nth-child(even) .opac-stage-date {
-    background-color: var(--opac-teal) !important;
-}
+/* Couleur du pave date des stages PAR SAISON (classe opac-period-<slug> posee
+   par render_ephemeres_list). Remplace l'ancienne alternance nth-child : memes
+   tokens, mais la couleur = la saison (renforce les onglets de periode).
+   Automne en terracotta fonce (accent-text) pour le contraste du texte blanc,
+   ete (gold clair) en texte fonce. L'override "passe = gris" (.is-past, plus
+   bas, !important) reste prioritaire sur un ephemere termine. */
+.opac-period-automne   .opac-stage-date { background-color: var(--opac-accent-text) !important; }
+.opac-period-hiver     .opac-stage-date { background-color: var(--opac-teal) !important; }
+.opac-period-printemps .opac-stage-date { background-color: var(--wp--preset--color--mauve) !important; }
+.opac-period-ete       .opac-stage-date { background-color: var(--wp--preset--color--gold) !important; color: #4a3a10 !important; }
 
 /* Separateur "Ephemeres passes" entre le groupe a-venir et le groupe passe
    (emis par render_ephemeres_list seulement si les deux groupes existent).
@@ -2374,7 +2375,9 @@ body {
 .opac-form-btn { background: var(--opac-accent-text); }
 
 /* Badge date des stages (chiffre + mois blancs) : fond terracotta -> fonce */
-.opac-stages-list > *:nth-child(odd) .opac-stage-date { background-color: var(--opac-accent-text) !important; }
+/* (Ancien override nth-child(odd) terracotta fonce retire : la couleur du pave
+   est desormais geree par saison via .opac-period-* (cf. plus haut). Le laisser
+   battrait les regles par saison sur une card sur deux.) */
 
 /* Liens / textes accent sur fond clair (4.24) -> terracotta fonce */
 .opac-section-link a,
