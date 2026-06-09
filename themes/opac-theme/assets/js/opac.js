@@ -312,6 +312,25 @@
             else if (e.key === 'ArrowLeft') { show(current - 1); }
             else if (e.key === 'ArrowRight') { show(current + 1); }
         });
+
+        // Swipe horizontal sur la lightbox (mobile) : photo precedente / suivante.
+        // Reutilise show()/current. Ignore le multi-touch (pinch) et les gestes
+        // verticaux (scroll), pour ne declencher que sur un vrai swipe lateral.
+        var touchX = null, touchY = null;
+        lb.addEventListener('touchstart', function (e) {
+            if (e.touches.length > 1) { touchX = null; return; }
+            touchX = e.touches[0].clientX;
+            touchY = e.touches[0].clientY;
+        }, { passive: true });
+        lb.addEventListener('touchend', function (e) {
+            if (touchX === null || !lb.classList.contains('is-open')) { return; }
+            var t = e.changedTouches[0];
+            var dx = t.clientX - touchX, dy = t.clientY - touchY;
+            touchX = null;
+            if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                show(dx < 0 ? current + 1 : current - 1);
+            }
+        }, { passive: true });
     }
 
     /**
