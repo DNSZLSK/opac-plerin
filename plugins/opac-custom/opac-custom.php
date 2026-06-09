@@ -104,3 +104,22 @@ add_filter( 'query_loop_block_query_vars', static function ( $query ) {
 
     return $query;
 }, 10, 1 );
+
+/**
+ * Injecte la classe opac-period-<slug> sur chaque post opac_stage rendu par un
+ * Query Loop natif : post-template enveloppe chaque post dans un <li> passe par
+ * get_post_class() (cf. wp-includes/blocks/post-template.php). Sans ca, la
+ * couleur saisonniere du pave date (.opac-period-* .opac-stage-date) ne
+ * s'applique pas sur l'apercu d'accueil (front-page.html, Query Loop natif).
+ * L'archive /ephemeres/ pose deja la classe en dur via render_ephemeres_list.
+ */
+add_filter( 'post_class', static function ( $classes, $css_class, $post_id ) {
+    if ( 'opac_stage' !== get_post_type( $post_id ) ) {
+        return $classes;
+    }
+    $periods = wp_get_post_terms( $post_id, 'opac_period', [ 'fields' => 'slugs' ] );
+    if ( ! is_wp_error( $periods ) && ! empty( $periods ) ) {
+        $classes[] = 'opac-period-' . sanitize_html_class( $periods[0] );
+    }
+    return $classes;
+}, 10, 3 );
