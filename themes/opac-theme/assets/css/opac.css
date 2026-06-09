@@ -451,6 +451,11 @@ a.opac-card-link:hover,
 .opac-stage-date {
     padding: 16px 12px;
     text-align: center;
+    /* Fallback couleur si l'ephemere n'a aucun terme de periode : sans ca le
+       texte blanc serait sur fond transparent (invisible). Les regles par
+       saison .opac-period-* et l'override .is-past (tous deux !important)
+       restent prioritaires des qu'une periode est posee. */
+    background-color: var(--opac-teal);
     /* La largeur vient du grid-template-columns (100px), pas besoin de flex */
 }
 
