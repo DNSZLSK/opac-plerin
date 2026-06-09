@@ -334,24 +334,21 @@
     }
 
     /**
-     * Cartes ephemeres entierement cliquables : un clic n'importe ou sur la
-     * carte suit le lien du titre, vers la fiche. Les vrais liens/boutons
-     * internes (titre, "S'inscrire") gardent leur comportement propre, et le
-     * titre reste un <a> natif (navigation clavier / lecteurs d'ecran).
+     * Rend une famille de cards entierement cliquable : un clic n'importe ou
+     * sur la carte suit le lien retourne par getLink(card). Les vrais
+     * liens/boutons internes (titre, "S'inscrire", "Details") gardent leur
+     * comportement propre, et on ne navigue pas pendant une selection de texte.
+     * Le lien cible reste un <a> natif (navigation clavier / lecteurs d'ecran).
      */
-    function initCardLinks() {
-        var cards = document.querySelectorAll('.opac-stage-card');
-        if (!cards.length) {
-            return;
-        }
-        cards.forEach(function (card) {
-            var link = card.querySelector('.opac-stage-name a');
+    function bindCardLinks(selector, getLink) {
+        document.querySelectorAll(selector).forEach(function (card) {
+            var link = getLink(card);
             if (!link) {
                 return;
             }
             card.classList.add('is-clickable');
             card.addEventListener('click', function (e) {
-                // Laisse les liens/boutons internes (titre, S'inscrire) agir seuls.
+                // Laisse les liens/boutons internes agir seuls.
                 if (e.target.closest('a, button')) {
                     return;
                 }
@@ -361,6 +358,21 @@
                 }
                 link.click();
             });
+        });
+    }
+
+    /**
+     * Cartes entierement cliquables vers leur fiche, meme pattern pour les 3 :
+     * - ephemeres (.opac-stage-card)            : lien = titre .opac-stage-name a
+     * - ateliers + actualites (.opac-card hors ephemeres) : lien = titre
+     *   .opac-card-name a, sinon le "Details ->" du footer .opac-card-footer a
+     */
+    function initCardLinks() {
+        bindCardLinks('.opac-stage-card', function (card) {
+            return card.querySelector('.opac-stage-name a');
+        });
+        bindCardLinks('.opac-card:not(.opac-stage-card)', function (card) {
+            return card.querySelector('.opac-card-name a') || card.querySelector('.opac-card-footer a');
         });
     }
 
