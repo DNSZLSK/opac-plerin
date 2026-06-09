@@ -1634,11 +1634,12 @@ body {
 }
 
 /* Conteneur agenda */
-.opac-agenda {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 0 32px 40px;
-}
+/* Conteneur de la liste agenda : volontairement SANS max-width / margin / padding.
+   Le groupe parent (section alignwide, constrained contentSize:1080px, opac-section-padded)
+   centre, limite a 1080px et pose deja les 32px de gouttiere, exactement comme pour
+   .opac-stages-list (ephemeres). Une gouttiere ici doublait le padding et rendait les
+   cards agenda ~64px plus etroites que les ephemeres. Les .opac-event remplissent donc
+   la meme largeur que les .opac-stage-card. */
 
 /* Empty state */
 .opac-empty {
@@ -1665,10 +1666,20 @@ body {
 
 /* Card event : <a> entierement cliquable */
 .opac-event {
-    display: flex;
+    /* Meme gabarit que .opac-stage-card (ephemeres) : grid date | corps | (action vide
+       ici, l'agenda n'a pas de bouton). Le pave date prend la colonne 100px exactement,
+       comme l'ephemere. min-height : .opac-stage-card n'a pas de hauteur explicite (elle
+       vient du contenu bouton+tags), donc on force ici une hauteur plancher equivalente
+       pour que les deux cards soient a la meme hauteur. A ajuster au pixel au rendu. */
+    display: grid;
+    grid-template-columns: 100px 1fr auto;
+    grid-template-rows: 1fr;
+    gap: 0;
+    align-items: stretch;
+    min-height: 124px;
     background: var(--opac-card);
     border: 1px solid var(--opac-border);
-    border-radius: 10px;
+    border-radius: var(--opac-radius);
     overflow: hidden;
     margin-bottom: 12px;
     text-decoration: none;
@@ -1721,12 +1732,11 @@ body {
 }
 
 .opac-event-name {
-    font-family: var(--wp--preset--font-family--display, Georgia, serif);
-    font-size: 18px;
-    font-weight: 400;
+    font-size: 15px;
+    font-weight: 500;
     color: var(--opac-ink);
     margin: 0 0 4px;
-    line-height: 1.35;
+    line-height: 1.3;
 }
 
 .opac-event-desc {
@@ -1780,24 +1790,23 @@ body {
  * .opac-event-stripe restent en place (inertes sur l'agenda).
  * ---------------------------------------------------------------- */
 .opac-event-date-box {
-    flex: 0 0 auto;
-    width: 72px;
+    /* Largeur = colonne grid 100px de .opac-event (comme .opac-stage-date dans
+       sa colonne 100px). Pas de width explicite : evite que width:100px + padding
+       en content-box donne 124px. Stretch du grid -> border-box = 100px pile. */
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 12px 8px;
+    justify-content: flex-start; /* date en haut du pave, comme .opac-stage-date (flux normal) */
+    padding: 16px 12px;
     color: #fff;
     line-height: 1.1;
 }
 .opac-event-day {
-    font-family: var(--wp--preset--font-family--display, Georgia, serif);
     font-size: 22px;
-    font-weight: 600;
+    font-weight: 500;
 }
 .opac-event-mon {
     font-size: 11px;
-    text-transform: uppercase;
     letter-spacing: 0.04em;
 }
 
