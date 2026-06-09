@@ -2034,6 +2034,21 @@ body {
     flex-shrink: 0;
 }
 
+/* Variante logo image (option opac_org_partenaire_logo_url) : meme principe
+   qu'une affiche/flyer d'event (cf. .opac-detail--event .opac-card-cover-fill) :
+   object-fit contain pour l'afficher entier sans recadrage, et fond transparent
+   pour effacer le cadre creme (--opac-card) de .opac-part-logo -> le logo flotte
+   directement sur la card teal-light, sans cadre. Le placeholder texte garde
+   son cadre creme (variante .opac-part-logo seule). */
+.opac-part-logo--img {
+    background: transparent !important;
+}
+.opac-part-logo--img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
 .opac-part-name {
     font-family: var(--wp--preset--font-family--display, Georgia, serif);
     font-size: 15px;

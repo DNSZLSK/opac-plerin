@@ -120,6 +120,13 @@ class OPAC_Blocks {
             'supports'        => [ 'html' => false ],
         ] );
 
+        register_block_type( 'opac/partenaire', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_partenaire' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+
         register_block_type( 'opac/soutenir', [
             'api_version'     => 3,
             'render_callback' => [ __CLASS__, 'render_soutenir' ],
@@ -185,6 +192,37 @@ class OPAC_Blocks {
             esc_url( $url ),
             esc_html__( 'Charte des ateliers', 'opac-custom' )
         );
+    }
+
+    /**
+     * Bloc partenaire "Ville de Plerin" sur la page Association. Le logo est
+     * editable via OPAC > Reglages > Coordonnees (opac_org_partenaire_logo_url) :
+     * si une image est renseignee (mediatheque), on la rend contenue (object-fit:
+     * contain, jamais rognee comme un logo/QR), sinon on garde le placeholder
+     * texte "Ville de / Plerin". Meme pattern que render_statuts_link /
+     * render_charte_link (lecture d'option) + branche img/placeholder de
+     * render_soutenir.
+     */
+    public static function render_partenaire( $attrs, $content, $block ) {
+        $logo_url = class_exists( 'OPAC_Settings' )
+            ? (string) OPAC_Settings::get( 'opac_org_partenaire_logo_url' ) : '';
+
+        if ( $logo_url ) {
+            // alt vide : le nom "Ville de Plerin" est deja porte par .opac-part-name.
+            $logo = sprintf(
+                '<div class="opac-part-logo opac-part-logo--img" aria-hidden="true"><img src="%s" alt="" loading="lazy" decoding="async" /></div>',
+                esc_url( $logo_url )
+            );
+        } else {
+            $logo = '<div class="opac-part-logo" aria-hidden="true">Ville de<br/>Plérin</div>';
+        }
+
+        return '<div class="opac-partenaire">' . $logo
+            . '<div>'
+                . '<div class="opac-part-name">Ville de Plérin</div>'
+                . '<div class="opac-part-sub">' . esc_html__( 'Partenaire institutionnel', 'opac-custom' ) . '</div>'
+            . '</div>'
+        . '</div>';
     }
 
     /**
