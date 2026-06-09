@@ -10,47 +10,87 @@
     </div>
     <!-- /wp:group -->
 
-    <!-- Detail event -->
-    <!-- wp:group {"align":"wide","className":"opac-event-detail","style":{"spacing":{"padding":{"top":"24px","right":"32px","bottom":"40px","left":"32px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
-    <div class="wp-block-group alignwide opac-event-detail" style="padding-top:24px;padding-right:32px;padding-bottom:40px;padding-left:32px">
+    <!-- Detail event (photo flyer + contenu) : meme layout 2-col que single-opac_stage,
+         modifier --event pour le cover portrait (cf. opac.css .opac-detail--event) -->
+    <!-- wp:group {"align":"wide","className":"opac-detail opac-detail--event","style":{"spacing":{"padding":{"top":"24px","right":"32px","bottom":"40px","left":"32px"}}},"layout":{"type":"constrained","contentSize":"1080px"}} -->
+    <div class="wp-block-group alignwide opac-detail opac-detail--event" style="padding-top:24px;padding-right:32px;padding-bottom:40px;padding-left:32px">
 
-        <!-- wp:post-title {"level":1,"className":"opac-detail-title","fontFamily":"display"} /-->
+        <!-- Colonne gauche : photo couverture (format flyer portrait, placeholder si pas de photo) -->
+        <!-- wp:group {"className":"opac-detail-photo opac-card-cover"} -->
+        <div class="wp-block-group opac-detail-photo opac-card-cover">
+            <!-- wp:group {"className":"opac-card-cover-fill"} -->
+            <div class="wp-block-group opac-card-cover-fill"></div>
+            <!-- /wp:group -->
+            <!-- wp:post-featured-image /-->
+        </div>
+        <!-- /wp:group -->
 
-        <!-- Info-grid : date + lieu -->
-        <!-- wp:group {"className":"opac-info-grid","layout":{"type":"default"}} -->
-        <div class="wp-block-group opac-info-grid">
+        <!-- Colonne droite : contenu -->
+        <!-- wp:group {"className":"opac-detail-content"} -->
+        <div class="wp-block-group opac-detail-content">
 
-            <!-- wp:group {"className":"opac-info-item","backgroundColor":"card"} -->
-            <div class="wp-block-group opac-info-item has-card-background-color has-background">
-                <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
-                <p class="opac-info-label has-muted-color has-text-color">Date</p>
-                <!-- /wp:paragraph -->
-                <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"opac/event-meta","args":{"key":"opac_date_event","part":"full"}}}}} -->
-                <p class="opac-info-value">15 juin 2026</p>
-                <!-- /wp:paragraph -->
+            <!-- wp:post-title {"level":1,"className":"opac-detail-title","fontFamily":"display"} /-->
+
+            <!-- Tag categorie colore (equivalent event du places-tag atelier/stage) -->
+            <!-- wp:opac/event-cat-tag /-->
+
+            <!-- Info grid : date + lieu -->
+            <!-- wp:group {"className":"opac-info-grid","layout":{"type":"default"}} -->
+            <div class="wp-block-group opac-info-grid">
+
+                <!-- wp:group {"className":"opac-info-item","backgroundColor":"card"} -->
+                <div class="wp-block-group opac-info-item has-card-background-color has-background">
+                    <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
+                    <p class="opac-info-label has-muted-color has-text-color">Date</p>
+                    <!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"opac/event-meta","args":{"key":"opac_date_event","part":"full"}}}}} -->
+                    <p class="opac-info-value">15 juin 2026</p>
+                    <!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+
+                <!-- wp:group {"className":"opac-info-item","backgroundColor":"card"} -->
+                <div class="wp-block-group opac-info-item has-card-background-color has-background">
+                    <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
+                    <p class="opac-info-label has-muted-color has-text-color">Lieu</p>
+                    <!-- /wp:paragraph -->
+                    <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_lieu"}}}}} -->
+                    <p class="opac-info-value">Plérin</p>
+                    <!-- /wp:paragraph -->
+                </div>
+                <!-- /wp:group -->
+
             </div>
             <!-- /wp:group -->
 
-            <!-- wp:group {"className":"opac-info-item","backgroundColor":"card"} -->
-            <div class="wp-block-group opac-info-item has-card-background-color has-background">
-                <!-- wp:paragraph {"className":"opac-info-label","textColor":"muted"} -->
-                <p class="opac-info-label has-muted-color has-text-color">Lieu</p>
-                <!-- /wp:paragraph -->
-                <!-- wp:paragraph {"className":"opac-info-value","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_lieu"}}}}} -->
-                <p class="opac-info-value">Plérin</p>
-                <!-- /wp:paragraph -->
+            <!-- Actions : bouton contact (un event = info, pas d'inscription) -->
+            <!-- wp:group {"className":"opac-detail-actions","style":{"spacing":{"margin":{"top":"16px"},"blockGap":"8px"}},"layout":{"type":"flex","flexWrap":"wrap"}} -->
+            <div class="wp-block-group opac-detail-actions" style="margin-top:16px">
+                <!-- wp:buttons -->
+                <div class="wp-block-buttons">
+                    <!-- wp:button {"className":"is-style-opac-secondary"} -->
+                    <div class="wp-block-button is-style-opac-secondary"><a class="wp-block-button__link wp-element-button" href="/contact/">Poser une question</a></div>
+                    <!-- /wp:button -->
+                </div>
+                <!-- /wp:buttons -->
             </div>
-            <!-- /wp:group -->
 
         </div>
         <!-- /wp:group -->
 
-        <!-- Contenu (post_content) : descriptif complet edite via Gutenberg.
-             opac_description_courte sert uniquement aux cards d'archive. -->
-        <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
-
     </div>
     <!-- /wp:group -->
+
+    <!-- Contenu (post_content) : descriptif complet edite via Gutenberg, largeur lecture confortable.
+         opac_description_courte sert uniquement aux cards d'archive. -->
+    <!-- wp:group {"className":"opac-event-body-content","style":{"spacing":{"padding":{"top":"0","right":"32px","bottom":"24px","left":"32px"}}},"layout":{"type":"constrained","contentSize":"820px"}} -->
+    <div class="wp-block-group opac-event-body-content" style="padding-top:0;padding-right:32px;padding-bottom:24px;padding-left:32px">
+        <!-- wp:post-content /-->
+    </div>
+    <!-- /wp:group -->
+
+    <!-- Section galerie : photos liees a cet evenement (masquee si vide) -->
+    <!-- wp:opac/gallery-grid /-->
 
 </main>
 <!-- /wp:group -->
