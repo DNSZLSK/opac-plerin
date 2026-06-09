@@ -29,6 +29,14 @@ class OPAC_Blocks {
             'supports'        => [ 'html' => false ],
         ] );
 
+        register_block_type( 'opac/event-cat-tag', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_event_cat_tag' ],
+            'uses_context'    => [ 'postId', 'postType' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+
         register_block_type( 'opac/breadcrumb', [
             'api_version'     => 3,
             'render_callback' => [ __CLASS__, 'render_breadcrumb' ],
@@ -418,6 +426,27 @@ class OPAC_Blocks {
     }
 
     /**
+     * Tag de categorie d'un event (taxonomy opac_event_cat) : equivalent du
+     * places-tag pour la fiche evenement. Pastille coloree par categorie,
+     * reutilise les couleurs .opac-cat-X / .opac-event-cat. Vide si pas de term.
+     */
+    public static function render_event_cat_tag( $attrs, $content, $block ) {
+        $post_id = isset( $block->context['postId'] ) ? (int) $block->context['postId'] : (int) get_the_ID();
+        if ( ! $post_id ) {
+            return '';
+        }
+        $terms = wp_get_post_terms( $post_id, 'opac_event_cat', [ 'number' => 1 ] );
+        if ( is_wp_error( $terms ) || empty( $terms ) ) {
+            return '';
+        }
+        return sprintf(
+            '<p class="opac-tag opac-event-cat opac-cat-%s">%s</p>',
+            esc_attr( sanitize_html_class( $terms[0]->slug ) ),
+            esc_html( $terms[0]->name )
+        );
+    }
+
+    /**
      * Liste "vitrine" des ateliers ephemeres pour la page d'archive : tous les
      * ephemeres, a venir d'abord (du plus proche au plus lointain) puis passes
      * (du plus recent au plus ancien). Les passes sont attenues (.is-past), avec
@@ -714,6 +743,11 @@ class OPAC_Blocks {
             5 => 'Mai',     6  => 'Juin',     7  => 'Juillet',  8 => 'Août',
             9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre',
         ];
+        $months_abbr = [
+            1 => 'Janv.', 2  => 'Févr.', 3  => 'Mars',  4 => 'Avr.',
+            5 => 'Mai',   6  => 'Juin',  7  => 'Juil.', 8 => 'Août',
+            9 => 'Sept.', 10 => 'Oct.',  11 => 'Nov.', 12 => 'Déc.',
+        ];
 
         $out        = '<div class="opac-agenda">';
         $last_month = '';
@@ -742,30 +776,42 @@ class OPAC_Blocks {
                 $cat_label = $terms[0]->name;
             }
 
-            $n_event   = (int) wp_date( 'n', $ts );
-            $year_ev   = wp_date( 'Y', $ts );
-            $date_card = ( $months_fr[ $n_event ] ?? '' ) . ' ' . $year_ev;
+            $n_event = (int) wp_date( 'n', $ts );
+            $day     = wp_date( 'j', $ts );
+            $mon     = $months_abbr[ $n_event ] ?? '';
 
             $desc = (string) get_post_meta( $event->ID, 'opac_description_courte', true );
 
+            // Badge categorie seul dans la barre du haut : le jour/mois est dans le
+            // pave date a gauche, l'annee dans le label de mois de la section.
+            $top = $cat_label
+                ? '<div class="opac-event-top"><span class="opac-event-cat">' . esc_html( $cat_label ) . '</span></div>'
+                : '';
+
+            // Photo de fond optionnelle (degrade clair par-dessus, cf. CSS .opac-event-bg).
+            // Calque .opac-stage-bg des ephemeres : meme langage visuel.
+            $img = has_post_thumbnail( $event->ID )
+                ? '<figure class="opac-event-bg" aria-hidden="true">' . get_the_post_thumbnail( $event->ID, 'large', [ 'alt' => '' ] ) . '</figure>'
+                : '';
+
             $out .= sprintf(
                 '<a class="opac-event%s" href="%s">'
-                    . '<span class="opac-event-stripe" aria-hidden="true"></span>'
+                    . '<span class="opac-event-date-box"><span class="opac-event-day">%s</span><span class="opac-event-mon">%s</span></span>'
                     . '<div class="opac-event-body">'
-                        . '<div class="opac-event-top">'
-                            . '<span class="opac-event-date">%s</span>'
-                            . '%s'
-                        . '</div>'
+                        . '%s'
                         . '<h3 class="opac-event-name">%s</h3>'
                         . '%s'
                     . '</div>'
+                    . '%s'
                 . '</a>',
                 $cat_slug ? ' opac-cat-' . esc_attr( sanitize_html_class( $cat_slug ) ) : '',
                 esc_url( get_permalink( $event ) ),
-                esc_html( trim( $date_card ) ),
-                $cat_label ? '<span class="opac-event-cat">' . esc_html( $cat_label ) . '</span>' : '',
+                esc_html( $day ),
+                esc_html( $mon ),
+                $top,
                 esc_html( get_the_title( $event ) ),
-                $desc ? '<p class="opac-event-desc">' . esc_html( $desc ) . '</p>' : ''
+                $desc ? '<p class="opac-event-desc">' . esc_html( $desc ) . '</p>' : '',
+                $img
             );
         }
 
