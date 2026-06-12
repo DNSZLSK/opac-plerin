@@ -26,9 +26,10 @@ class OPAC_Inscriptions {
     const RATE_LIMIT_S  = 60;
 
     private static function recipient() {
-        return class_exists( 'OPAC_Settings' )
-            ? (string) OPAC_Settings::get( 'opac_org_email' )
-            : 'contact@opacplerin.fr';
+        if ( class_exists( 'OPAC_Settings' ) ) {
+            return (string) OPAC_Settings::get( 'opac_org_email' );
+        }
+        return 'contact@opacplerin.fr';
     }
 
     public static function register() {
@@ -56,25 +57,76 @@ class OPAC_Inscriptions {
             exit;
         }
 
-        $nom       = isset( $_POST['opac_nom'] )       ? sanitize_text_field( wp_unslash( $_POST['opac_nom'] ) )       : '';
-        $prenom    = isset( $_POST['opac_prenom'] )    ? sanitize_text_field( wp_unslash( $_POST['opac_prenom'] ) )    : '';
-        $email     = isset( $_POST['opac_email'] )     ? sanitize_email( wp_unslash( $_POST['opac_email'] ) )          : '';
-        $telephone = isset( $_POST['opac_telephone'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_telephone'] ) ) : '';
-        $creneau   = isset( $_POST['opac_creneau'] )   ? sanitize_text_field( wp_unslash( $_POST['opac_creneau'] ) )   : '';
-        $creneau_id = isset( $_POST['opac_creneau_id'] ) ? sanitize_key( wp_unslash( $_POST['opac_creneau_id'] ) )      : '';
-        $mineur    = ! empty( $_POST['opac_mineur'] );
-        $code_postal = isset( $_POST['opac_code_postal'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_code_postal'] ) ) : '';
-        $commune     = isset( $_POST['opac_commune'] )     ? sanitize_text_field( wp_unslash( $_POST['opac_commune'] ) )     : '';
+        // Chaque champ : on lit la valeur envoyee si elle existe, sinon chaine vide.
+        if ( isset( $_POST['opac_nom'] ) ) {
+            $nom = sanitize_text_field( wp_unslash( $_POST['opac_nom'] ) );
+        } else {
+            $nom = '';
+        }
+        if ( isset( $_POST['opac_prenom'] ) ) {
+            $prenom = sanitize_text_field( wp_unslash( $_POST['opac_prenom'] ) );
+        } else {
+            $prenom = '';
+        }
+        if ( isset( $_POST['opac_email'] ) ) {
+            $email = sanitize_email( wp_unslash( $_POST['opac_email'] ) );
+        } else {
+            $email = '';
+        }
+        if ( isset( $_POST['opac_telephone'] ) ) {
+            $telephone = sanitize_text_field( wp_unslash( $_POST['opac_telephone'] ) );
+        } else {
+            $telephone = '';
+        }
+        if ( isset( $_POST['opac_creneau'] ) ) {
+            $creneau = sanitize_text_field( wp_unslash( $_POST['opac_creneau'] ) );
+        } else {
+            $creneau = '';
+        }
+        if ( isset( $_POST['opac_creneau_id'] ) ) {
+            $creneau_id = sanitize_key( wp_unslash( $_POST['opac_creneau_id'] ) );
+        } else {
+            $creneau_id = '';
+        }
+        $mineur = ! empty( $_POST['opac_mineur'] );
+        if ( isset( $_POST['opac_code_postal'] ) ) {
+            $code_postal = sanitize_text_field( wp_unslash( $_POST['opac_code_postal'] ) );
+        } else {
+            $code_postal = '';
+        }
+        if ( isset( $_POST['opac_commune'] ) ) {
+            $commune = sanitize_text_field( wp_unslash( $_POST['opac_commune'] ) );
+        } else {
+            $commune = '';
+        }
         // Adhesion derivee cote serveur (plus de valeur auto-declaree) :
         // mineur -> 'mineur' ; sinon CP 22190 -> 'plerinais' ; sinon 'exterieur'.
-        $adhesion  = $mineur ? 'mineur' : ( '22190' === $code_postal ? 'plerinais' : 'exterieur' );
-        $message   = isset( $_POST['opac_message'] )   ? sanitize_textarea_field( wp_unslash( $_POST['opac_message'] ) ) : '';
-        $rgpd      = ! empty( $_POST['opac_rgpd'] );
+        if ( $mineur ) {
+            $adhesion = 'mineur';
+        } elseif ( '22190' === $code_postal ) {
+            $adhesion = 'plerinais';
+        } else {
+            $adhesion = 'exterieur';
+        }
+        if ( isset( $_POST['opac_message'] ) ) {
+            $message = sanitize_textarea_field( wp_unslash( $_POST['opac_message'] ) );
+        } else {
+            $message = '';
+        }
+        $rgpd = ! empty( $_POST['opac_rgpd'] );
 
         // Resolution de l'atelier/stage cible : soit via hidden inputs (URL pre-remplie),
         // soit via le select unifie opac_cible=atelier:ID ou stage:ID.
-        $atelier_id  = isset( $_POST['opac_atelier_id'] ) ? absint( $_POST['opac_atelier_id'] ) : 0;
-        $stage_id    = isset( $_POST['opac_stage_id'] )   ? absint( $_POST['opac_stage_id'] )   : 0;
+        if ( isset( $_POST['opac_atelier_id'] ) ) {
+            $atelier_id = absint( $_POST['opac_atelier_id'] );
+        } else {
+            $atelier_id = 0;
+        }
+        if ( isset( $_POST['opac_stage_id'] ) ) {
+            $stage_id = absint( $_POST['opac_stage_id'] );
+        } else {
+            $stage_id = 0;
+        }
         if ( ! $atelier_id && ! $stage_id && isset( $_POST['opac_cible'] ) ) {
             $cible = sanitize_text_field( wp_unslash( $_POST['opac_cible'] ) );
             if ( preg_match( '/^(atelier|stage):(\d+)$/', $cible, $m ) ) {
@@ -108,8 +160,16 @@ class OPAC_Inscriptions {
         // creneau + nom + prenom pour qu'un meme parent (meme email + meme IP)
         // puisse inscrire plusieurs enfants, ou lui-meme, voire des freres au
         // meme creneau, sans faux "doublon". L'anti-bot reste honeypot + nonce.
-        $ip       = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
-        $rl_cible = $atelier_id ? ( 'a' . $atelier_id ) : ( 's' . $stage_id );
+        if ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
+            $ip = (string) $_SERVER['REMOTE_ADDR'];
+        } else {
+            $ip = '';
+        }
+        if ( $atelier_id ) {
+            $rl_cible = 'a' . $atelier_id;
+        } else {
+            $rl_cible = 's' . $stage_id;
+        }
         $rl_sig   = strtolower( $ip . '|' . $email . '|' . $rl_cible . '|' . $creneau . '|' . $creneau_id . '|' . $nom . '|' . $prenom );
         $rl_key   = 'opac_insc_rl_' . md5( $rl_sig );
         if ( get_transient( $rl_key ) ) {
@@ -119,9 +179,17 @@ class OPAC_Inscriptions {
         set_transient( $rl_key, 1, self::RATE_LIMIT_S );
 
         // Verifie que l'atelier/stage existe encore (peut avoir ete supprime).
-        $cible_id    = $atelier_id ? $atelier_id : $stage_id;
-        $cible_post  = get_post( $cible_id );
-        $cible_type  = $atelier_id ? 'opac_atelier' : 'opac_stage';
+        if ( $atelier_id ) {
+            $cible_id = $atelier_id;
+        } else {
+            $cible_id = $stage_id;
+        }
+        $cible_post = get_post( $cible_id );
+        if ( $atelier_id ) {
+            $cible_type = 'opac_atelier';
+        } else {
+            $cible_type = 'opac_stage';
+        }
         if ( ! $cible_post || $cible_post->post_type !== $cible_type ) {
             wp_safe_redirect( add_query_arg( 'erreur', 'atelier', $back ) );
             exit;
@@ -148,9 +216,17 @@ class OPAC_Inscriptions {
                 ];
                 foreach ( $struct as $c ) {
                     if ( is_array( $c ) && isset( $c['id'] ) && (string) $c['id'] === $creneau_id ) {
-                        $jlabel        = isset( $jours[ $c['jour'] ?? '' ] ) ? $jours[ $c['jour'] ] : '';
-                        $creneau       = trim( $jlabel . ' ' . ( $c['debut'] ?? '' ) . ' - ' . ( $c['fin'] ?? '' ) );
-                        $creneau_tarif = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
+                        if ( isset( $jours[ $c['jour'] ?? '' ] ) ) {
+                            $jlabel = $jours[ $c['jour'] ];
+                        } else {
+                            $jlabel = '';
+                        }
+                        $creneau = trim( $jlabel . ' ' . ( $c['debut'] ?? '' ) . ' - ' . ( $c['fin'] ?? '' ) );
+                        if ( isset( $c['tarif'] ) ) {
+                            $creneau_tarif = (int) $c['tarif'];
+                        } else {
+                            $creneau_tarif = 0;
+                        }
                         $auto_waitlist = self::creneau_is_full( $cible_id, $c );
                         break;
                     }
@@ -189,7 +265,12 @@ class OPAC_Inscriptions {
             update_post_meta( $post_id, 'opac_insc_commune', $commune );
         }
         // Flag Plerinais (code postal 22190) pour le tri prioritaire en admin.
-        update_post_meta( $post_id, 'opac_insc_plerinais', ( '22190' === $code_postal ) ? 1 : 0 );
+        if ( '22190' === $code_postal ) {
+            $est_plerinais = 1;
+        } else {
+            $est_plerinais = 0;
+        }
+        update_post_meta( $post_id, 'opac_insc_plerinais', $est_plerinais );
         if ( '' !== $creneau_id ) {
             update_post_meta( $post_id, 'opac_insc_creneau_id', $creneau_id );
         }
@@ -198,7 +279,11 @@ class OPAC_Inscriptions {
         }
 
         // Creneau complet -> liste d'attente automatique (palier 3), sinon en-attente.
-        $statut_initial = $auto_waitlist ? 'liste-attente' : 'en-attente';
+        if ( $auto_waitlist ) {
+            $statut_initial = 'liste-attente';
+        } else {
+            $statut_initial = 'en-attente';
+        }
         wp_set_object_terms( $post_id, [ $statut_initial ], 'opac_inscription_status', false );
 
         // Notification Katell.
@@ -230,9 +315,21 @@ class OPAC_Inscriptions {
     }
 
     public static function handle_action() {
-        $id     = isset( $_GET['id'] )     ? absint( $_GET['id'] )                            : 0;
-        $status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) )    : '';
-        $nonce  = isset( $_GET['_wpnonce'] ) ? (string) $_GET['_wpnonce']                     : '';
+        if ( isset( $_GET['id'] ) ) {
+            $id = absint( $_GET['id'] );
+        } else {
+            $id = 0;
+        }
+        if ( isset( $_GET['status'] ) ) {
+            $status = sanitize_key( wp_unslash( $_GET['status'] ) );
+        } else {
+            $status = '';
+        }
+        if ( isset( $_GET['_wpnonce'] ) ) {
+            $nonce = (string) $_GET['_wpnonce'];
+        } else {
+            $nonce = '';
+        }
 
         if ( ! current_user_can( 'edit_posts' ) ) {
             wp_die( esc_html__( 'Permissions insuffisantes.', 'opac-custom' ) );
@@ -288,7 +385,11 @@ class OPAC_Inscriptions {
     }
 
     private static function send_admin_notification( $post_id, $data ) {
-        $type_label = $data['cible_type'] === 'opac_atelier' ? 'Atelier à l\'année' : 'Atelier éphémère';
+        if ( $data['cible_type'] === 'opac_atelier' ) {
+            $type_label = 'Atelier à l\'année';
+        } else {
+            $type_label = 'Atelier éphémère';
+        }
         $subject = sprintf( '[OPAC inscription] %s - %s %s', $data['cible_titre'], $data['prenom'], $data['nom'] );
 
         $edit_link = get_edit_post_link( $post_id, '' );
@@ -307,7 +408,18 @@ class OPAC_Inscriptions {
         $body .= "Prenom : {$data['prenom']}\n";
         $body .= "Email : {$data['email']}\n";
         $body .= "Telephone : {$data['telephone']}\n";
-        $loc = trim( ( isset( $data['commune'] ) ? $data['commune'] : '' ) . ' ' . ( isset( $data['code_postal'] ) ? $data['code_postal'] : '' ) );
+        // Commune affichee si renseignee, code postal idem (sinon chaine vide).
+        if ( isset( $data['commune'] ) ) {
+            $loc_commune = $data['commune'];
+        } else {
+            $loc_commune = '';
+        }
+        if ( isset( $data['code_postal'] ) ) {
+            $loc_cp = $data['code_postal'];
+        } else {
+            $loc_cp = '';
+        }
+        $loc = trim( $loc_commune . ' ' . $loc_cp );
         if ( $loc ) {
             $body .= "Commune : {$loc}\n";
         }
@@ -339,11 +451,19 @@ class OPAC_Inscriptions {
             return;
         }
 
-        $cible_id    = (int) get_post_meta( $post_id, 'opac_insc_atelier_id', true );
-        $cible_titre = $cible_id ? get_the_title( $cible_id ) : '';
+        $cible_id = (int) get_post_meta( $post_id, 'opac_insc_atelier_id', true );
+        if ( $cible_id ) {
+            $cible_titre = get_the_title( $cible_id );
+        } else {
+            $cible_titre = '';
+        }
 
         $template_key = 'opac_email_' . str_replace( '-', '_', $status );
-        $template     = class_exists( 'OPAC_Settings' ) ? (string) OPAC_Settings::get( $template_key ) : '';
+        if ( class_exists( 'OPAC_Settings' ) ) {
+            $template = (string) OPAC_Settings::get( $template_key );
+        } else {
+            $template = '';
+        }
         if ( ! $template ) {
             return;
         }
@@ -354,11 +474,27 @@ class OPAC_Inscriptions {
         $insc_tarif = (int) get_post_meta( $post_id, 'opac_insc_tarif', true );
         if ( $cible_id ) {
             if ( get_post_type( $cible_id ) === 'opac_atelier' ) {
-                $montant = $insc_tarif > 0 ? $insc_tarif : (int) get_post_meta( $cible_id, 'opac_tarif_annuel', true );
-                $tarif = $montant > 0 ? $montant . ' € / an' : '';
+                if ( $insc_tarif > 0 ) {
+                    $montant = $insc_tarif;
+                } else {
+                    $montant = (int) get_post_meta( $cible_id, 'opac_tarif_annuel', true );
+                }
+                if ( $montant > 0 ) {
+                    $tarif = $montant . ' € / an';
+                } else {
+                    $tarif = '';
+                }
             } elseif ( get_post_type( $cible_id ) === 'opac_stage' ) {
-                $montant = $insc_tarif > 0 ? $insc_tarif : (int) get_post_meta( $cible_id, 'opac_tarif_seance', true );
-                $tarif = $montant > 0 ? $montant . ' €' : '';
+                if ( $insc_tarif > 0 ) {
+                    $montant = $insc_tarif;
+                } else {
+                    $montant = (int) get_post_meta( $cible_id, 'opac_tarif_seance', true );
+                }
+                if ( $montant > 0 ) {
+                    $tarif = $montant . ' €';
+                } else {
+                    $tarif = '';
+                }
             }
         }
 
@@ -384,7 +520,12 @@ class OPAC_Inscriptions {
             'liste-attente' => sprintf( '[OPAC] Votre inscription à %s : liste d\'attente', $cible_titre ),
             'place-liberee' => sprintf( '[OPAC] Une place s\'est libérée pour %s', $cible_titre ),
         ];
-        $subject = $subjects_map[ $status ] ?? '[OPAC] Votre inscription';
+        // Sujet selon le statut, avec un sujet par defaut si le statut est inconnu.
+        if ( isset( $subjects_map[ $status ] ) ) {
+            $subject = $subjects_map[ $status ];
+        } else {
+            $subject = '[OPAC] Votre inscription';
+        }
 
         $headers = [ 'Content-Type: text/plain; charset=UTF-8' ];
         $sent = wp_mail( $email, $subject, $body, $headers );
@@ -447,8 +588,16 @@ class OPAC_Inscriptions {
         if ( ! is_array( $creneau ) ) {
             return false;
         }
-        $cap = isset( $creneau['capacite'] ) ? (int) $creneau['capacite'] : 0;
-        $id  = isset( $creneau['id'] ) ? (string) $creneau['id'] : '';
+        if ( isset( $creneau['capacite'] ) ) {
+            $cap = (int) $creneau['capacite'];
+        } else {
+            $cap = 0;
+        }
+        if ( isset( $creneau['id'] ) ) {
+            $id = (string) $creneau['id'];
+        } else {
+            $id = '';
+        }
         if ( $cap <= 0 || '' === $id ) {
             return false;
         }
