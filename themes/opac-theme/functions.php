@@ -54,17 +54,13 @@ add_action( 'after_setup_theme', static function () {
 } );
 
 add_action( 'wp_enqueue_scripts', static function () {
-    wp_enqueue_style(
-        'opac-fonts',
-        'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Caveat:wght@600;700&display=swap',
-        [],
-        null
-    );
-
+    // Polices auto-hebergees : declarees via theme.json (fontFace). WordPress
+    // imprime les @font-face automatiquement (front + editeur). Plus aucune
+    // dependance a Google Fonts -> zero transfert d'IP visiteur vers Google (RGPD).
     wp_enqueue_style(
         'opac-main',
         get_template_directory_uri() . '/assets/css/opac.css',
-        [ 'opac-fonts' ],
+        [],
         opac_asset_version( 'assets/css/opac.css' )
     );
 
@@ -77,13 +73,7 @@ add_action( 'wp_enqueue_scripts', static function () {
     );
 } );
 
-add_filter( 'wp_resource_hints', static function ( $urls, $relation_type ) {
-    if ( 'preconnect' === $relation_type ) {
-        $urls[] = [ 'href' => 'https://fonts.googleapis.com', 'crossorigin' => '' ];
-        $urls[] = [ 'href' => 'https://fonts.gstatic.com', 'crossorigin' => '' ];
-    }
-    return $urls;
-}, 10, 2 );
+// Aucun preconnect Google : les polices sont auto-hebergees (theme.json fontFace).
 
 add_action( 'init', static function () {
     remove_action( 'wp_head', 'print_emoji_detection_script', 7 );

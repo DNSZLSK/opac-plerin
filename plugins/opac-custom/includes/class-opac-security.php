@@ -107,15 +107,16 @@ class OPAC_Security {
 
         // CSP : minimum viable pour ne rien casser. 'unsafe-inline' tolere
         // pour script + style car Gutenberg injecte beaucoup d'inline.
-        // En M10, tightening possible avec nonces si requis par audit.
+        // Polices auto-hebergees + carte OpenStreetMap : aucune origine Google
+        // (RGPD, pas de transfert d'IP). M10 : tightening avec nonces possible.
         $csp = [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline'",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-            "font-src 'self' https://fonts.gstatic.com data:",
+            "style-src 'self' 'unsafe-inline'",
+            "font-src 'self' data:",
             "img-src 'self' data: https://www.openstreetmap.org https://*.tile.openstreetmap.org",
-            "frame-src https://maps.google.com https://www.google.com",
-            "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
+            "frame-src https://www.openstreetmap.org",
+            "connect-src 'self'",
             "form-action 'self'",
             "base-uri 'self'",
             "object-src 'none'",
