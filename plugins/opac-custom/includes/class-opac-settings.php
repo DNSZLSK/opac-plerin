@@ -96,6 +96,9 @@ class OPAC_Settings {
             'opac_insc_date_ouverture'     => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
             'opac_insc_date_fermeture'     => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
             'opac_insc_date_confirmation'  => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
+
+            // Section 8 : Donnees personnelles (RGPD)
+            'opac_insc_purge_months'       => [ 'type' => 'integer', 'default' => 24, 'sanitize' => 'absint' ],
         ];
     }
 
@@ -235,6 +238,16 @@ class OPAC_Settings {
                     self::render_input_row( 'opac_insc_date_ouverture', __( 'Début inscription générale', 'opac-custom' ), __( 'Ouverture des inscriptions à tous (priorité aux Plérinais).', 'opac-custom' ), 'date' );
                     self::render_input_row( 'opac_insc_date_fermeture', __( 'Fin des inscriptions', 'opac-custom' ), __( 'Optionnel. Laisser vide s\'il n\'y a pas de date de clôture.', 'opac-custom' ), 'date' );
                     self::render_input_row( 'opac_insc_date_confirmation', __( 'Date de confirmation des nouvelles inscriptions', 'opac-custom' ), __( 'Optionnel. Affichée pendant la phase d\'inscription ouverte : les nouvelles demandes seront confirmées à partir de cette date.', 'opac-custom' ), 'date' );
+                    ?>
+                </table>
+
+                <h2><?php esc_html_e( 'Données personnelles (RGPD)', 'opac-custom' ); ?></h2>
+                <p class="description">
+                    <?php esc_html_e( 'Suppression automatique des anciennes demandes reçues via le formulaire d\'inscription en ligne (nom, prénom, email, téléphone, message), pour respecter la limitation de conservation prévue par le RGPD. Un nettoyage a lieu chaque jour. Vos adhérents gérés par ailleurs (papier, tableur) ne sont pas concernés.', 'opac-custom' ); ?>
+                </p>
+                <table class="form-table" role="presentation">
+                    <?php
+                    self::render_input_row( 'opac_insc_purge_months', __( 'Durée de conservation (mois)', 'opac-custom' ), __( 'Les demandes d\'inscription plus anciennes que cette durée sont supprimées automatiquement. Exemple : 24 = deux ans. Mettre 0 pour désactiver la suppression automatique.', 'opac-custom' ), 'number' );
                     ?>
                 </table>
 

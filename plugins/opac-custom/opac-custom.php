@@ -37,6 +37,7 @@ require_once OPAC_CUSTOM_PATH . 'includes/class-opac-seo.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-security.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-settings.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-meta-boxes.php';
+require_once OPAC_CUSTOM_PATH . 'includes/class-opac-rgpd.php';
 
 add_action( 'init', [ 'OPAC_CPTs', 'register' ], 5 );
 add_action( 'init', [ 'OPAC_Taxonomies', 'register' ], 6 );
@@ -48,6 +49,7 @@ OPAC_Inscriptions::register();
 OPAC_SEO::register();
 OPAC_Security::register();
 OPAC_Settings::register();
+OPAC_RGPD::register();
 add_action( 'admin_init', [ 'OPAC_Admin', 'boot' ] );
 add_action( 'admin_init', [ 'OPAC_Meta_Boxes', 'boot' ] );
 add_action( 'wp_dashboard_setup', [ 'OPAC_Admin', 'register_dashboard_widget' ] );
@@ -56,10 +58,12 @@ register_activation_hook( __FILE__, static function () {
     OPAC_CPTs::register();
     OPAC_Taxonomies::register();
     OPAC_Taxonomies::seed_default_terms();
+    OPAC_RGPD::maybe_schedule();
     flush_rewrite_rules();
 } );
 
 register_deactivation_hook( __FILE__, static function () {
+    OPAC_RGPD::unschedule();
     flush_rewrite_rules();
 } );
 

@@ -2256,6 +2256,39 @@ body {
     flex-shrink: 0;
 }
 
+/* ============================================================
+ * RGPD : lien politique (case consentement) + mentions d'info
+ * Bloc ADDITIF (formulaires inscription + contact).
+ * ============================================================ */
+
+/* Lien "En savoir plus sur vos donnees" sous la case de consentement. */
+.opac-form-privacy-link {
+    display: inline-block;
+    margin: 8px 0 0 28px;
+    font-size: 12px;
+    color: var(--wp--preset--color--accent);
+}
+
+/* Mention d'information sous le bouton du formulaire de contact. */
+.opac-form-legal {
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--opac-muted);
+}
+
+.opac-form-legal a {
+    color: var(--wp--preset--color--accent);
+}
+
+/* Precision "representant legal" sous la case mineur. */
+.opac-form-hint {
+    margin: 8px 0 0 28px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--opac-muted);
+}
+
 /* Heritage : .opac-detail-actions devient un container flex pour
    accommoder inscription-button + bouton "Poser une question" cote a cote */
 .opac-detail-actions {
