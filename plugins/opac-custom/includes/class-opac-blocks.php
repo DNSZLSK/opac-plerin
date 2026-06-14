@@ -1003,6 +1003,17 @@ class OPAC_Blocks {
 
         $out .= '<button type="submit" class="opac-form-btn">' . esc_html__( 'Envoyer le message', 'opac-custom' ) . '</button>';
 
+        // Mention d'information RGPD : le contact ne stocke rien (simple envoi
+        // d'email), avec lien vers la politique de confidentialite si presente.
+        $opac_privacy_url = class_exists( 'OPAC_RGPD' ) ? OPAC_RGPD::privacy_policy_url() : '';
+        $out .= '<p class="opac-form-legal">'
+            . esc_html__( 'Vos coordonnées servent uniquement à traiter votre message et ne sont pas conservées au-delà.', 'opac-custom' );
+        if ( $opac_privacy_url ) {
+            $out .= ' <a href="' . esc_url( $opac_privacy_url ) . '" target="_blank" rel="noopener">'
+                . esc_html__( 'Politique de confidentialité', 'opac-custom' ) . '</a>.';
+        }
+        $out .= '</p>';
+
         $out .= '</form>';
         return $out;
     }
@@ -1297,10 +1308,12 @@ class OPAC_Blocks {
             $tarif_e = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_exterieur' ) : 30;
             $tarif_m = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_adhesion_mineur' )    : 10;
 
-            $out .= '<div class="opac-form-rgpd opac-form-mineur"><label>'
-                . '<input type="checkbox" id="opac-mineur" name="opac_mineur" value="1" /> '
+            $out .= '<div class="opac-form-rgpd opac-form-mineur">'
+                . '<label><input type="checkbox" id="opac-mineur" name="opac_mineur" value="1" /> '
                 . esc_html__( 'La personne inscrite est mineure (moins de 18 ans)', 'opac-custom' )
-                . '</label></div>';
+                . '</label>'
+                . '<p class="opac-form-hint">' . esc_html__( 'Pour un mineur, la demande est effectuée par son représentant légal.', 'opac-custom' ) . '</p>'
+                . '</div>';
 
             $hint = __( 'Renseignez votre code postal pour estimer le montant de l\'adhésion.', 'opac-custom' );
             $out .= '<p class="opac-adhesion-info" id="opac-adhesion-info" aria-live="polite"'
@@ -1337,11 +1350,18 @@ class OPAC_Blocks {
         $out .= '<div class="opac-form-row"><label for="opac-message">' . esc_html__( 'Message (optionnel)', 'opac-custom' ) . '</label>'
             . '<textarea class="opac-form-input opac-form-textarea" id="opac-message" name="opac_message" rows="4"></textarea></div>';
 
-        // RGPD checkbox obligatoire.
-        $out .= '<div class="opac-form-rgpd"><label>'
-            . '<input type="checkbox" name="opac_rgpd" value="1" required /> '
-            . esc_html__( 'J\'accepte que ces données soient utilisées par l\'OPAC pour traiter ma demande d\'inscription (RGPD).', 'opac-custom' )
-            . '</label></div>';
+        // RGPD checkbox obligatoire + lien vers la politique de confidentialite
+        // (resolu automatiquement, cf. OPAC_RGPD::privacy_policy_url).
+        $out .= '<div class="opac-form-rgpd">'
+            . '<label><input type="checkbox" name="opac_rgpd" value="1" required /> '
+            . esc_html__( 'J\'accepte que mes données soient utilisées par l\'Association OPAC pour traiter ma demande d\'inscription.', 'opac-custom' )
+            . '</label>';
+        $opac_privacy_url = class_exists( 'OPAC_RGPD' ) ? OPAC_RGPD::privacy_policy_url() : '';
+        if ( $opac_privacy_url ) {
+            $out .= ' <a class="opac-form-privacy-link" href="' . esc_url( $opac_privacy_url ) . '" target="_blank" rel="noopener">'
+                . esc_html__( 'En savoir plus sur vos données', 'opac-custom' ) . '</a>';
+        }
+        $out .= '</div>';
 
         $out .= '<button type="submit" class="opac-form-btn">' . esc_html__( 'Envoyer ma demande', 'opac-custom' ) . '</button>';
         $out .= '</form>';
