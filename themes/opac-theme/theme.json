@@ -46,12 +46,51 @@
                 {
                     "slug": "display",
                     "name": "Playfair Display",
-                    "fontFamily": "'Playfair Display', Georgia, 'Times New Roman', serif"
+                    "fontFamily": "'Playfair Display', Georgia, 'Times New Roman', serif",
+                    "fontFace": [
+                        {
+                            "fontFamily": "Playfair Display",
+                            "fontStyle": "normal",
+                            "fontWeight": "400 700",
+                            "fontDisplay": "swap",
+                            "src": [ "file:./assets/fonts/playfair.woff2" ]
+                        },
+                        {
+                            "fontFamily": "Playfair Display",
+                            "fontStyle": "italic",
+                            "fontWeight": "400 700",
+                            "fontDisplay": "swap",
+                            "src": [ "file:./assets/fonts/playfair-italic.woff2" ]
+                        }
+                    ]
                 },
                 {
                     "slug": "body",
                     "name": "DM Sans",
-                    "fontFamily": "'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+                    "fontFamily": "'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+                    "fontFace": [
+                        {
+                            "fontFamily": "DM Sans",
+                            "fontStyle": "normal",
+                            "fontWeight": "400 700",
+                            "fontDisplay": "swap",
+                            "src": [ "file:./assets/fonts/dmsans.woff2" ]
+                        }
+                    ]
+                },
+                {
+                    "slug": "handwriting",
+                    "name": "Caveat",
+                    "fontFamily": "'Caveat', cursive",
+                    "fontFace": [
+                        {
+                            "fontFamily": "Caveat",
+                            "fontStyle": "normal",
+                            "fontWeight": "400 700",
+                            "fontDisplay": "swap",
+                            "src": [ "file:./assets/fonts/caveat.woff2" ]
+                        }
+                    ]
                 }
             ],
             "fontSizes": [
