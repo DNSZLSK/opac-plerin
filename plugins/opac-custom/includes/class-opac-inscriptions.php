@@ -23,6 +23,7 @@ class OPAC_Inscriptions {
 
     const ACTION_SUBMIT = 'opac_inscription';
     const ACTION_ADMIN  = 'opac_insc_action';
+    const ACTION_EXPORT = 'opac_insc_export';
     const RATE_LIMIT_S  = 60;
 
     private static function recipient() {
@@ -39,6 +40,9 @@ class OPAC_Inscriptions {
 
         // Workflow admin (Valider / Refuser / Liste d'attente).
         add_action( 'admin_post_' . self::ACTION_ADMIN, [ __CLASS__, 'handle_action' ] );
+
+        // Export CSV des inscriptions (bouton liste admin).
+        add_action( 'admin_post_' . self::ACTION_EXPORT, [ __CLASS__, 'handle_export' ] );
     }
 
     public static function handle_submit() {
@@ -381,6 +385,103 @@ class OPAC_Inscriptions {
             admin_url( 'edit.php' )
         );
         wp_safe_redirect( $redirect );
+        exit;
+    }
+
+    /**
+     * Export CSV des inscriptions, colonnes separees (nom, prenom, email...).
+     * Capability + nonce. Respecte le filtre de statut courant s'il est passe
+     * (?opac_inscription_status=slug), sinon exporte toutes les inscriptions.
+     * En-tete UTF-8 BOM pour une ouverture propre dans Excel.
+     */
+    public static function handle_export() {
+        if ( ! current_user_can( 'edit_posts' ) ) {
+            wp_die( esc_html__( 'Permissions insuffisantes.', 'opac-custom' ) );
+        }
+        $nonce = isset( $_GET['_wpnonce'] ) ? (string) $_GET['_wpnonce'] : '';
+        if ( ! wp_verify_nonce( $nonce, self::ACTION_EXPORT ) ) {
+            wp_die( esc_html__( 'Lien d\'export invalide ou expiré.', 'opac-custom' ) );
+        }
+
+        $status = isset( $_GET['opac_inscription_status'] ) ? sanitize_key( wp_unslash( $_GET['opac_inscription_status'] ) ) : '';
+
+        $args = [
+            'post_type'      => 'opac_inscription',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+            'no_found_rows'  => true,
+        ];
+        if ( '' !== $status ) {
+            $args['tax_query'] = [
+                [
+                    'taxonomy' => 'opac_inscription_status',
+                    'field'    => 'slug',
+                    'terms'    => $status,
+                ],
+            ];
+        }
+        $posts = get_posts( $args );
+
+        $adh_labels = [
+            'plerinais' => __( 'Plérinais', 'opac-custom' ),
+            'exterieur' => __( 'Extérieur', 'opac-custom' ),
+            'mineur'    => __( 'Mineur', 'opac-custom' ),
+        ];
+
+        $filename = 'inscriptions-opac-' . current_time( 'Y-m-d' ) . '.csv';
+
+        nocache_headers();
+        header( 'Content-Type: text/csv; charset=UTF-8' );
+        header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+
+        $out = fopen( 'php://output', 'w' );
+        // BOM UTF-8 : Excel detecte l'encodage et affiche les accents correctement.
+        fwrite( $out, "\xEF\xBB\xBF" );
+
+        fputcsv( $out, [
+            __( 'Nom', 'opac-custom' ),
+            __( 'Prénom', 'opac-custom' ),
+            __( 'Email', 'opac-custom' ),
+            __( 'Téléphone', 'opac-custom' ),
+            __( 'Code postal', 'opac-custom' ),
+            __( 'Commune', 'opac-custom' ),
+            __( 'Atelier', 'opac-custom' ),
+            __( 'Créneau', 'opac-custom' ),
+            __( 'Adhésion', 'opac-custom' ),
+            __( 'Statut', 'opac-custom' ),
+            __( 'Date', 'opac-custom' ),
+            __( 'Message', 'opac-custom' ),
+        ] );
+
+        foreach ( $posts as $p ) {
+            $id         = $p->ID;
+            $atelier_id = (int) get_post_meta( $id, 'opac_insc_atelier_id', true );
+            $atelier    = ( $atelier_id && get_post( $atelier_id ) ) ? get_the_title( $atelier_id ) : '';
+            $adhesion   = (string) get_post_meta( $id, 'opac_insc_adhesion', true );
+            $adh_label  = ( '' !== $adhesion && isset( $adh_labels[ $adhesion ] ) ) ? $adh_labels[ $adhesion ] : $adhesion;
+
+            $status_terms = wp_get_object_terms( $id, 'opac_inscription_status', [ 'fields' => 'names' ] );
+            $statut       = ( ! is_wp_error( $status_terms ) && ! empty( $status_terms ) ) ? implode( ', ', $status_terms ) : '';
+
+            fputcsv( $out, [
+                (string) get_post_meta( $id, 'opac_insc_nom', true ),
+                (string) get_post_meta( $id, 'opac_insc_prenom', true ),
+                (string) get_post_meta( $id, 'opac_insc_email', true ),
+                (string) get_post_meta( $id, 'opac_insc_telephone', true ),
+                (string) get_post_meta( $id, 'opac_insc_code_postal', true ),
+                (string) get_post_meta( $id, 'opac_insc_commune', true ),
+                $atelier,
+                (string) get_post_meta( $id, 'opac_insc_creneau', true ),
+                $adh_label,
+                $statut,
+                (string) get_post_meta( $id, 'opac_insc_date_submitted', true ),
+                (string) get_post_meta( $id, 'opac_insc_message', true ),
+            ] );
+        }
+
+        fclose( $out );
         exit;
     }
 

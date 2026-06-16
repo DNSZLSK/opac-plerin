@@ -51,6 +51,12 @@ class OPAC_Admin {
         // Ateliers : meta box d'edition des creneaux structures (palier 2).
         add_action( 'add_meta_boxes', [ __CLASS__, 'atelier_creneaux_meta_box' ] );
         add_action( 'save_post_opac_atelier', [ __CLASS__, 'save_atelier_creneaux' ], 10, 2 );
+
+        // Inscriptions : fiche editable (consultation + saisie manuelle) remplacant
+        // les champs bruts. Le titre [Atelier] Prenom Nom est compose a l'insert.
+        add_action( 'add_meta_boxes', [ __CLASS__, 'inscription_details_meta_box' ] );
+        add_action( 'save_post_opac_inscription', [ __CLASS__, 'save_inscription_details' ], 10, 2 );
+        add_filter( 'wp_insert_post_data', [ __CLASS__, 'inject_inscription_title' ], 10, 2 );
     }
 
     public static function enqueue_admin_assets( $hook ) {
@@ -60,6 +66,17 @@ class OPAC_Admin {
             [],
             OPAC_CUSTOM_VERSION
         );
+
+        // Inscriptions : le titre [Atelier] Prenom Nom est toujours genere depuis
+        // l'atelier + le nom/prenom. On masque le champ « Saisissez le titre »
+        // (creation comme modification) : un titre manuel deviendrait faux des
+        // qu'on change l'atelier ou le nom.
+        if ( in_array( $hook, [ 'post-new.php', 'post.php' ], true ) ) {
+            $screen = get_current_screen();
+            if ( $screen && 'opac_inscription' === $screen->post_type ) {
+                wp_add_inline_style( 'opac-admin', '#titlediv{display:none;}' );
+            }
+        }
 
         // Garde-fous suppression + "modifications non enregistrees" : listes et
         // editeurs des CPTs geres + inscriptions uniquement.
@@ -129,7 +146,11 @@ class OPAC_Admin {
     public static function inscription_columns( $columns ) {
         return [
             'cb' => $columns['cb'] ?? '',
-            'title' => __( 'Nom', 'opac-custom' ),
+            // 'title' reste la colonne cliquable (lien d'edition + actions de ligne) ;
+            // relabel « Inscription » car le nom/prenom ont leurs propres colonnes.
+            'title' => __( 'Inscription', 'opac-custom' ),
+            'opac_insc_nom' => __( 'Nom', 'opac-custom' ),
+            'opac_insc_prenom' => __( 'Prénom', 'opac-custom' ),
             'opac_insc_email' => __( 'Email', 'opac-custom' ),
             'opac_insc_atelier' => __( 'Atelier', 'opac-custom' ),
             'opac_insc_priorite' => __( 'Priorité', 'opac-custom' ),
@@ -140,6 +161,14 @@ class OPAC_Admin {
 
     public static function inscription_column_content( $column, $post_id ) {
         switch ( $column ) {
+            case 'opac_insc_nom':
+                $nom = get_post_meta( $post_id, 'opac_insc_nom', true );
+                echo $nom ? esc_html( $nom ) : '-';
+                break;
+            case 'opac_insc_prenom':
+                $prenom = get_post_meta( $post_id, 'opac_insc_prenom', true );
+                echo $prenom ? esc_html( $prenom ) : '-';
+                break;
             case 'opac_insc_email':
                 $email = get_post_meta( $post_id, 'opac_insc_email', true );
                 if ( $email ) {
@@ -243,6 +272,421 @@ class OPAC_Admin {
             esc_attr( $notice_class ),
             esc_html( $msg )
         );
+    }
+
+    /**
+     * Fiche d'une inscription : remplace l'affichage des « champs personnalises »
+     * bruts par un formulaire etiquete. Les coordonnees (nom, prenom, email,
+     * telephone, code postal, commune, message) sont editables pour corriger une
+     * demande (changement d'adresse, de numero...). Atelier, creneau, adhesion,
+     * statut et date restent en lecture seule (geres par le workflow / la demande).
+     */
+    public static function inscription_details_meta_box() {
+        add_meta_box(
+            'opac_inscription_details',
+            __( 'Détails de la demande', 'opac-custom' ),
+            [ __CLASS__, 'render_inscription_details_box' ],
+            'opac_inscription',
+            'normal',
+            'high'
+        );
+    }
+
+    public static function render_inscription_details_box( $post ) {
+        $id = $post->ID;
+        wp_nonce_field( 'opac_inscription_details', 'opac_inscription_details_nonce' );
+
+        $nom         = (string) get_post_meta( $id, 'opac_insc_nom', true );
+        $prenom      = (string) get_post_meta( $id, 'opac_insc_prenom', true );
+        $email       = (string) get_post_meta( $id, 'opac_insc_email', true );
+        $tel         = (string) get_post_meta( $id, 'opac_insc_telephone', true );
+        $code_postal = (string) get_post_meta( $id, 'opac_insc_code_postal', true );
+        $commune     = (string) get_post_meta( $id, 'opac_insc_commune', true );
+        $atelier_id  = (int) get_post_meta( $id, 'opac_insc_atelier_id', true );
+        $creneau     = (string) get_post_meta( $id, 'opac_insc_creneau', true );
+        $creneau_id  = (string) get_post_meta( $id, 'opac_insc_creneau_id', true );
+        $adhesion    = (string) get_post_meta( $id, 'opac_insc_adhesion', true );
+        $message     = (string) get_post_meta( $id, 'opac_insc_message', true );
+        $date        = (string) get_post_meta( $id, 'opac_insc_date_submitted', true );
+
+        $adh_labels = [
+            'plerinais' => __( 'Plérinais', 'opac-custom' ),
+            'exterieur' => __( 'Extérieur', 'opac-custom' ),
+            'mineur'    => __( 'Mineur', 'opac-custom' ),
+        ];
+
+        echo '<table class="form-table" role="presentation"><tbody>';
+
+        // Coordonnees editables.
+        self::insc_edit_row( 'opac_insc_nom', __( 'Nom', 'opac-custom' ), $nom );
+        self::insc_edit_row( 'opac_insc_prenom', __( 'Prénom', 'opac-custom' ), $prenom );
+        self::insc_edit_row( 'opac_insc_email', __( 'Email', 'opac-custom' ), $email, 'email' );
+        self::insc_edit_row( 'opac_insc_telephone', __( 'Téléphone', 'opac-custom' ), $tel, 'tel' );
+        self::insc_edit_row( 'opac_insc_code_postal', __( 'Code postal', 'opac-custom' ), $code_postal );
+        self::insc_edit_row( 'opac_insc_commune', __( 'Commune', 'opac-custom' ), $commune );
+
+        // Atelier / ephemere : selecteur (modifiable, requis pour une saisie manuelle).
+        echo '<tr><th scope="row"><label for="opac_insc_atelier_id">' . esc_html__( 'Atelier / éphémère', 'opac-custom' ) . '</label></th><td>';
+        self::render_insc_cible_select( $atelier_id );
+        echo '</td></tr>';
+
+        // Creneau : selecteur dependant de l'atelier choisi (rempli par le JS
+        // ci-dessous depuis les creneaux structures de l'atelier, ou parses depuis
+        // l'ancien champ texte). data-current = id structure ou libelle deja stocke.
+        $current_creneau_value = ( '' !== $creneau_id ) ? $creneau_id : $creneau;
+        echo '<tr><th scope="row"><label for="opac_insc_creneau_choice">' . esc_html__( 'Créneau', 'opac-custom' ) . '</label></th><td>';
+        printf(
+            '<select id="opac_insc_creneau_choice" name="opac_insc_creneau_choice" data-current="%s"></select>',
+            esc_attr( $current_creneau_value )
+        );
+        echo '<p class="description">' . esc_html__( 'Créneaux de l\'atelier sélectionné. Vide si l\'atelier n\'a pas encore de créneaux (à définir sur la fiche de l\'atelier).', 'opac-custom' ) . '</p>';
+
+        // Carte { atelier_id => [ {v:id|libelle, t:libelle affiché}, ... ] }.
+        $creneaux_map = [];
+        foreach ( get_posts( [ 'post_type' => 'opac_atelier', 'post_status' => 'publish', 'posts_per_page' => -1 ] ) as $a ) {
+            $opts = self::atelier_creneau_options( $a->ID );
+            if ( ! empty( $opts ) ) {
+                $creneaux_map[ (string) $a->ID ] = $opts;
+            }
+        }
+        ?>
+        <script>
+        (function(){
+            var map = <?php echo wp_json_encode( $creneaux_map ); ?> || {};
+            var aSel = document.getElementById('opac_insc_atelier_id');
+            var cSel = document.getElementById('opac_insc_creneau_choice');
+            if(!aSel||!cSel){return;}
+            function fill(){
+                var aid=aSel.value, cur=cSel.getAttribute('data-current')||'', list=map[aid]||[];
+                cSel.innerHTML='';
+                var o0=document.createElement('option');
+                o0.value='';
+                o0.textContent=list.length?'<?php echo esc_js( __( '— Choisir un créneau —', 'opac-custom' ) ); ?>':'<?php echo esc_js( __( '— Aucun créneau —', 'opac-custom' ) ); ?>';
+                cSel.appendChild(o0);
+                list.forEach(function(c){
+                    var o=document.createElement('option');
+                    o.value=c.v; o.textContent=c.t;
+                    if(c.v===cur){o.selected=true;}
+                    cSel.appendChild(o);
+                });
+            }
+            fill();
+            aSel.addEventListener('change',function(){cSel.setAttribute('data-current','');fill();});
+        })();
+        </script>
+        <?php
+        echo '</td></tr>';
+
+        // Adhesion : select (vide = déduit du code postal à l'enregistrement).
+        echo '<tr><th scope="row"><label for="opac_insc_adhesion">' . esc_html__( 'Adhésion', 'opac-custom' ) . '</label></th><td>';
+        $adh_options = [ '' => __( '— Selon code postal —', 'opac-custom' ) ] + $adh_labels;
+        echo '<select id="opac_insc_adhesion" name="opac_insc_adhesion">';
+        foreach ( $adh_options as $val => $lab ) {
+            printf( '<option value="%s"%s>%s</option>', esc_attr( $val ), selected( $adhesion, $val, false ), esc_html( $lab ) );
+        }
+        echo '</select></td></tr>';
+
+        // Statut : select des termes (modifiable sans envoi d'email ; les emails
+        // restent declenches par les actions Valider/Refuser de la liste).
+        echo '<tr><th scope="row"><label for="opac_insc_status_term">' . esc_html__( 'Statut', 'opac-custom' ) . '</label></th><td>';
+        self::render_insc_status_select( $id );
+        echo '</td></tr>';
+
+        // Date : lecture seule (definie automatiquement a l'enregistrement si vide).
+        $date_html = '';
+        if ( '' !== $date ) {
+            $ts = strtotime( $date );
+            $date_html = $ts ? esc_html( wp_date( 'j F Y à H:i', $ts ) ) : esc_html( $date );
+        } else {
+            $date_html = '<em>' . esc_html__( 'Définie à l\'enregistrement', 'opac-custom' ) . '</em>';
+        }
+        self::insc_detail_row( __( 'Date de la demande', 'opac-custom' ), $date_html );
+
+        // Message editable.
+        printf(
+            '<tr><th scope="row"><label for="opac_insc_message">%s</label></th><td><textarea id="opac_insc_message" name="opac_insc_message" rows="4" class="large-text">%s</textarea></td></tr>',
+            esc_html__( 'Message', 'opac-custom' ),
+            esc_textarea( $message )
+        );
+
+        echo '</tbody></table>';
+        echo '<p class="description">' . esc_html__( 'Saisie ou correction d\'une inscription : renseignez l\'atelier, le nom/prénom et les coordonnées, puis cliquez sur « Publier » (ou « Mettre à jour »). Le titre est généré automatiquement depuis l\'atelier et le nom ; la date et la priorité Plérinais sont calculées automatiquement.', 'opac-custom' ) . '</p>';
+    }
+
+    /** Ligne editable de la fiche inscription : libelle + champ input. */
+    private static function insc_edit_row( $key, $label, $value, $type = 'text' ) {
+        printf(
+            '<tr><th scope="row"><label for="%1$s">%2$s</label></th><td><input type="%3$s" id="%1$s" name="%1$s" value="%4$s" class="regular-text" /></td></tr>',
+            esc_attr( $key ),
+            esc_html( $label ),
+            esc_attr( $type ),
+            esc_attr( $value )
+        );
+    }
+
+    /** Selecteur de la cible (atelier annuel ou ephemere) d'une inscription. */
+    private static function render_insc_cible_select( $current_id ) {
+        $args = [ 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ];
+        $ateliers = get_posts( array_merge( $args, [ 'post_type' => 'opac_atelier' ] ) );
+        $stages   = get_posts( array_merge( $args, [ 'post_type' => 'opac_stage' ] ) );
+
+        echo '<select id="opac_insc_atelier_id" name="opac_insc_atelier_id">';
+        echo '<option value="0">' . esc_html__( '— Choisir —', 'opac-custom' ) . '</option>';
+        $groups = [
+            __( 'Ateliers à l\'année', 'opac-custom' ) => $ateliers,
+            __( 'Ateliers éphémères', 'opac-custom' )  => $stages,
+        ];
+        foreach ( $groups as $label => $posts ) {
+            if ( empty( $posts ) ) {
+                continue;
+            }
+            printf( '<optgroup label="%s">', esc_attr( $label ) );
+            foreach ( $posts as $p ) {
+                printf(
+                    '<option value="%d"%s>%s</option>',
+                    (int) $p->ID,
+                    selected( $current_id, $p->ID, false ),
+                    esc_html( get_the_title( $p ) )
+                );
+            }
+            echo '</optgroup>';
+        }
+        echo '</select>';
+    }
+
+    /** Selecteur du statut d'une inscription (defaut « validée » pour une saisie). */
+    private static function render_insc_status_select( $post_id ) {
+        $terms   = get_terms( [ 'taxonomy' => 'opac_inscription_status', 'hide_empty' => false ] );
+        $current = wp_get_object_terms( $post_id, 'opac_inscription_status', [ 'fields' => 'slugs' ] );
+        $current_slug = ( ! is_wp_error( $current ) && ! empty( $current ) ) ? $current[0] : 'validee';
+
+        echo '<select id="opac_insc_status_term" name="opac_insc_status_term">';
+        if ( ! is_wp_error( $terms ) ) {
+            foreach ( $terms as $t ) {
+                printf(
+                    '<option value="%s"%s>%s</option>',
+                    esc_attr( $t->slug ),
+                    selected( $current_slug, $t->slug, false ),
+                    esc_html( $t->name )
+                );
+            }
+        }
+        echo '</select>';
+    }
+
+    /** Libelles FR des jours (slug -> libelle), pour les creneaux. */
+    private static function jours_fr() {
+        return [
+            'lundi'    => __( 'Lundi', 'opac-custom' ),
+            'mardi'    => __( 'Mardi', 'opac-custom' ),
+            'mercredi' => __( 'Mercredi', 'opac-custom' ),
+            'jeudi'    => __( 'Jeudi', 'opac-custom' ),
+            'vendredi' => __( 'Vendredi', 'opac-custom' ),
+            'samedi'   => __( 'Samedi', 'opac-custom' ),
+            'dimanche' => __( 'Dimanche', 'opac-custom' ),
+        ];
+    }
+
+    /** "14:30" -> "14h30", "14:00" -> "14h". */
+    private static function format_heure( $t ) {
+        $t = trim( (string) $t );
+        if ( '' === $t ) {
+            return '';
+        }
+        $parts = explode( ':', $t );
+        $h = (int) $parts[0];
+        $m = isset( $parts[1] ) ? (int) $parts[1] : 0;
+        return $m > 0 ? sprintf( '%dh%02d', $h, $m ) : $h . 'h';
+    }
+
+    /** Libelle lisible d'un creneau structure : "Lundi 14h30 - 17h30". */
+    private static function creneau_display_label( $c ) {
+        $jours = self::jours_fr();
+        $slug  = isset( $c['jour'] ) ? (string) $c['jour'] : '';
+        $jour  = isset( $jours[ $slug ] ) ? $jours[ $slug ] : ucfirst( $slug );
+        $deb   = self::format_heure( isset( $c['debut'] ) ? $c['debut'] : '' );
+        $fin   = self::format_heure( isset( $c['fin'] ) ? $c['fin'] : '' );
+        $h     = trim( $deb . ' - ' . $fin, ' -' );
+        return trim( $jour . ' ' . $h );
+    }
+
+    /**
+     * Options de creneaux d'un atelier pour le select de la fiche inscription :
+     * creneaux structures (value = id, comptage des places possible), ou a defaut
+     * creneaux parses de l'ancien champ texte (value = libelle).
+     *
+     * @return array<int,array{v:string,t:string}>
+     */
+    private static function atelier_creneau_options( $atelier_id ) {
+        $struct = get_post_meta( $atelier_id, 'opac_creneaux', true );
+        if ( ! is_array( $struct ) || empty( $struct ) ) {
+            $struct = self::parse_creneaux_text( (string) get_post_meta( $atelier_id, 'opac_creneaux_text', true ) );
+        }
+        $opts = [];
+        foreach ( $struct as $c ) {
+            if ( ! is_array( $c ) ) {
+                continue;
+            }
+            $label = self::creneau_display_label( $c );
+            if ( '' === $label ) {
+                continue;
+            }
+            $tarif = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
+            $text  = $tarif > 0 ? $label . ' (' . number_format_i18n( $tarif, 0 ) . ' €)' : $label;
+            $cid   = isset( $c['id'] ) ? (string) $c['id'] : '';
+            $opts[] = [ 'v' => ( '' !== $cid ) ? $cid : $label, 't' => $text ];
+        }
+        return $opts;
+    }
+
+    /** Ligne en lecture seule de la fiche inscription : libelle + valeur (HTML deja echappe). */
+    private static function insc_detail_row( $label, $value_html ) {
+        if ( '' === $value_html ) {
+            $value_html = '<em>' . esc_html__( '—', 'opac-custom' ) . '</em>';
+        }
+        printf(
+            '<tr><th scope="row" style="width:200px">%s</th><td>%s</td></tr>',
+            esc_html( $label ),
+            $value_html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- echappe par l'appelant
+        );
+    }
+
+    /**
+     * Sauvegarde des coordonnees editees sur la fiche inscription. Recalcule le
+     * flag Plerinais (tri prioritaire) depuis le code postal. N'interfere pas
+     * avec la creation via le formulaire public (nonce absent a ce moment-la).
+     */
+    public static function save_inscription_details( $post_id, $post ) {
+        if ( ! isset( $_POST['opac_inscription_details_nonce'] )
+            || ! wp_verify_nonce( wp_unslash( $_POST['opac_inscription_details_nonce'] ), 'opac_inscription_details' ) ) {
+            return;
+        }
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+            return;
+        }
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        $text_fields = [ 'opac_insc_nom', 'opac_insc_prenom', 'opac_insc_telephone', 'opac_insc_code_postal', 'opac_insc_commune' ];
+        foreach ( $text_fields as $key ) {
+            if ( isset( $_POST[ $key ] ) ) {
+                update_post_meta( $post_id, $key, sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) );
+            }
+        }
+        if ( isset( $_POST['opac_insc_email'] ) ) {
+            update_post_meta( $post_id, 'opac_insc_email', sanitize_email( wp_unslash( $_POST['opac_insc_email'] ) ) );
+        }
+        if ( isset( $_POST['opac_insc_message'] ) ) {
+            update_post_meta( $post_id, 'opac_insc_message', sanitize_textarea_field( wp_unslash( $_POST['opac_insc_message'] ) ) );
+        }
+
+        $atelier_id = isset( $_POST['opac_insc_atelier_id'] ) ? absint( $_POST['opac_insc_atelier_id'] ) : 0;
+        update_post_meta( $post_id, 'opac_insc_atelier_id', $atelier_id );
+
+        // Creneau : resolu depuis le select dependant. Si l'option correspond a un
+        // creneau structure (match par id), on enregistre id + tarif (comptage des
+        // places). Sinon le libelle est conserve en texte (creneau_id efface).
+        $choice        = isset( $_POST['opac_insc_creneau_choice'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_insc_creneau_choice'] ) ) : '';
+        $creneau_label = '';
+        $creneau_id    = '';
+        $creneau_tarif = 0;
+        if ( $atelier_id && '' !== $choice ) {
+            $struct = get_post_meta( $atelier_id, 'opac_creneaux', true );
+            if ( ! is_array( $struct ) || empty( $struct ) ) {
+                $struct = self::parse_creneaux_text( (string) get_post_meta( $atelier_id, 'opac_creneaux_text', true ) );
+            }
+            foreach ( $struct as $c ) {
+                if ( ! is_array( $c ) ) {
+                    continue;
+                }
+                $cid   = isset( $c['id'] ) ? (string) $c['id'] : '';
+                $label = self::creneau_display_label( $c );
+                if ( ( '' !== $cid && $cid === $choice ) || ( '' === $cid && $label === $choice ) ) {
+                    $creneau_label = $label;
+                    if ( '' !== $cid ) {
+                        $creneau_id    = $cid;
+                        $creneau_tarif = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
+                    }
+                    break;
+                }
+            }
+            if ( '' === $creneau_label ) {
+                $creneau_label = $choice; // valeur non reconnue : conservee telle quelle
+            }
+        }
+        update_post_meta( $post_id, 'opac_insc_creneau', $creneau_label );
+        if ( '' !== $creneau_id ) {
+            update_post_meta( $post_id, 'opac_insc_creneau_id', $creneau_id );
+        } else {
+            delete_post_meta( $post_id, 'opac_insc_creneau_id' );
+        }
+        if ( $creneau_tarif > 0 ) {
+            update_post_meta( $post_id, 'opac_insc_tarif', $creneau_tarif );
+        } else {
+            delete_post_meta( $post_id, 'opac_insc_tarif' );
+        }
+
+        // Flag Plerinais recalcule depuis le code postal corrige (cf. handle_submit).
+        $cp = isset( $_POST['opac_insc_code_postal'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_insc_code_postal'] ) ) : '';
+        update_post_meta( $post_id, 'opac_insc_plerinais', '22190' === $cp ? 1 : 0 );
+
+        // Adhesion : valeur choisie si valide, sinon deduite du code postal.
+        $allowed_adh = [ 'plerinais', 'exterieur', 'mineur' ];
+        $adhesion = isset( $_POST['opac_insc_adhesion'] ) ? sanitize_key( wp_unslash( $_POST['opac_insc_adhesion'] ) ) : '';
+        if ( ! in_array( $adhesion, $allowed_adh, true ) ) {
+            $adhesion = ( '22190' === $cp ) ? 'plerinais' : 'exterieur';
+        }
+        update_post_meta( $post_id, 'opac_insc_adhesion', $adhesion );
+
+        // Statut : applique le terme choisi (sans email ; emails via actions de liste).
+        $valid_status = [ 'en-attente', 'validee', 'refusee', 'liste-attente' ];
+        $status = isset( $_POST['opac_insc_status_term'] ) ? sanitize_key( wp_unslash( $_POST['opac_insc_status_term'] ) ) : '';
+        if ( in_array( $status, $valid_status, true ) ) {
+            wp_set_object_terms( $post_id, [ $status ], 'opac_inscription_status', false );
+        }
+
+        // Date de la demande + source : renseignees une fois (saisie manuelle).
+        if ( '' === (string) get_post_meta( $post_id, 'opac_insc_date_submitted', true ) ) {
+            update_post_meta( $post_id, 'opac_insc_date_submitted', current_time( 'mysql' ) );
+        }
+        if ( '' === (string) get_post_meta( $post_id, 'opac_insc_source', true ) ) {
+            update_post_meta( $post_id, 'opac_insc_source', 'saisie-admin' );
+        }
+    }
+
+    /**
+     * Compose le titre [Atelier] Prenom Nom d'une inscription au moment de
+     * l'insert (filtre wp_insert_post_data, pas de recursion), pour la saisie
+     * manuelle comme pour la correction. Meme format que le formulaire public.
+     */
+    public static function inject_inscription_title( $data, $postarr ) {
+        if ( ! isset( $data['post_type'] ) || 'opac_inscription' !== $data['post_type'] ) {
+            return $data;
+        }
+        if ( ! isset( $_POST['opac_inscription_details_nonce'] )
+            || ! wp_verify_nonce( wp_unslash( $_POST['opac_inscription_details_nonce'] ), 'opac_inscription_details' ) ) {
+            return $data;
+        }
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+            return $data;
+        }
+        $post_id = isset( $postarr['ID'] ) ? (int) $postarr['ID'] : 0;
+        if ( $post_id && ! current_user_can( 'edit_post', $post_id ) ) {
+            return $data;
+        }
+
+        $prenom = isset( $_POST['opac_insc_prenom'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_insc_prenom'] ) ) : '';
+        $nom    = isset( $_POST['opac_insc_nom'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_insc_nom'] ) ) : '';
+        $name   = trim( $prenom . ' ' . $nom );
+        if ( '' === $name ) {
+            return $data; // rien a composer (laisse le titre saisi tel quel)
+        }
+        $aid    = isset( $_POST['opac_insc_atelier_id'] ) ? absint( $_POST['opac_insc_atelier_id'] ) : 0;
+        $atitre = ( $aid && get_post( $aid ) ) ? get_the_title( $aid ) : '';
+        $title  = $atitre ? sprintf( '[%s] %s', $atitre, $name ) : $name;
+        $data['post_title'] = wp_slash( $title );
+        return $data;
     }
 
     public static function register_dashboard_widget() {
@@ -575,6 +1019,21 @@ class OPAC_Admin {
             );
         }
         echo '</select>';
+
+        // Bouton d'export CSV : reprend le filtre de statut courant pour exporter
+        // exactement ce qui est affiche (ou tout si aucun filtre).
+        $export_args = [
+            'action'   => 'opac_insc_export',
+            '_wpnonce' => wp_create_nonce( 'opac_insc_export' ),
+        ];
+        if ( '' !== $current ) {
+            $export_args['opac_inscription_status'] = $current;
+        }
+        printf(
+            '<a class="button" href="%s">%s</a>',
+            esc_url( add_query_arg( $export_args, admin_url( 'admin-post.php' ) ) ),
+            esc_html__( 'Exporter en CSV', 'opac-custom' )
+        );
     }
 
     /**
@@ -621,10 +1080,30 @@ class OPAC_Admin {
         if ( ! is_array( $creneaux ) ) {
             $creneaux = [];
         }
+
+        // Pre-remplissage non destructif : si aucun creneau structure mais que
+        // l'ancien champ texte libre « opac_creneaux_text » contient des horaires
+        // (ex : ateliers crees avant le passage au format structure), on parse ce
+        // texte pour afficher les lignes existantes. Rien n'est enregistre tant que
+        // l'utilisateur ne clique pas « Enregistrer » : le texte reste le fallback.
+        $prefilled = false;
+        if ( empty( $creneaux ) ) {
+            $text = (string) get_post_meta( $post->ID, 'opac_creneaux_text', true );
+            $parsed = self::parse_creneaux_text( $text );
+            if ( ! empty( $parsed ) ) {
+                $creneaux  = $parsed;
+                $prefilled = true;
+            }
+        }
         ?>
         <p class="description">
             <?php esc_html_e( 'Un créneau par ligne (jour + horaires). Tarif et capacité servent au formulaire d\'inscription et à l\'affichage des places (capacité 0 = pas de limite). Si vide, l\'ancien champ texte « Créneaux » reste utilisé.', 'opac-custom' ); ?>
         </p>
+        <?php if ( $prefilled ) : ?>
+        <p class="description" style="color:#996800">
+            <?php esc_html_e( 'Horaires repris automatiquement de l\'ancien champ texte. Vérifiez les lignes ci-dessous puis cliquez sur « Mettre à jour » pour les convertir au nouveau format.', 'opac-custom' ); ?>
+        </p>
+        <?php endif; ?>
         <table class="widefat opac-creneaux-editor">
             <thead>
                 <tr>
@@ -713,6 +1192,88 @@ class OPAC_Admin {
         </tr>
         <?php
         return ob_get_clean();
+    }
+
+    /**
+     * Parse l'ancien champ texte libre des creneaux (opac_creneaux_text) en
+     * lignes structurees, pour pre-remplir l'editeur. Une ligne par creneau, ex :
+     *   "Mercredi 14h - 16h (enfants)"  ->  jour=mercredi, debut=14:00, fin=16:00, note=enfants
+     *   "Jeudi 14h30 - 16h30 (1 séance sur 2)" -> jour=jeudi, debut=14:30, fin=16:30, note=...
+     * tarif/capacite a 0, id laisse vide (assigne par save_atelier_creneaux).
+     *
+     * @return array<int,array<string,mixed>> Lignes parsees (vide si rien d'exploitable).
+     */
+    public static function parse_creneaux_text( $text ) {
+        $text = trim( (string) $text );
+        if ( '' === $text ) {
+            return [];
+        }
+        $jours = [
+            'lundi'    => [ 'lundi' ],
+            'mardi'    => [ 'mardi' ],
+            'mercredi' => [ 'mercredi' ],
+            'jeudi'    => [ 'jeudi' ],
+            'vendredi' => [ 'vendredi' ],
+            'samedi'   => [ 'samedi' ],
+            'dimanche' => [ 'dimanche' ],
+        ];
+        $rows = [];
+        foreach ( preg_split( '/\r?\n/', $text ) as $line ) {
+            $line = trim( $line );
+            if ( '' === $line ) {
+                continue;
+            }
+
+            // Jour : premier libelle reconnu en debut de ligne (insensible a la casse).
+            $jour = 'lundi';
+            foreach ( $jours as $slug => $aliases ) {
+                foreach ( $aliases as $alias ) {
+                    if ( 0 === stripos( $line, $alias ) ) {
+                        $jour = $slug;
+                        break 2;
+                    }
+                }
+            }
+
+            // Horaires : deux premiers "14h" / "14h30" -> "HH:MM".
+            $debut = '';
+            $fin   = '';
+            if ( preg_match_all( '/(\d{1,2})\s*h\s*(\d{2})?/i', $line, $m, PREG_SET_ORDER ) ) {
+                $fmt = static function ( $set ) {
+                    $h = (int) $set[1];
+                    $mm = isset( $set[2] ) && '' !== $set[2] ? (int) $set[2] : 0;
+                    return sprintf( '%02d:%02d', $h, $mm );
+                };
+                if ( isset( $m[0] ) ) {
+                    $debut = $fmt( $m[0] );
+                }
+                if ( isset( $m[1] ) ) {
+                    $fin = $fmt( $m[1] );
+                }
+            }
+
+            // Ligne sans aucun horaire reconnu : on l'ignore (rien d'exploitable).
+            if ( '' === $debut && '' === $fin ) {
+                continue;
+            }
+
+            // Note : contenu entre parentheses, si present.
+            $note = '';
+            if ( preg_match( '/\(([^)]*)\)/', $line, $pm ) ) {
+                $note = trim( $pm[1] );
+            }
+
+            $rows[] = [
+                'id'       => '',
+                'jour'     => $jour,
+                'debut'    => $debut,
+                'fin'      => $fin,
+                'tarif'    => 0,
+                'capacite' => 0,
+                'note'     => $note,
+            ];
+        }
+        return $rows;
     }
 
     /**

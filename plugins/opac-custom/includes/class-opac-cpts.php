@@ -142,7 +142,9 @@ class OPAC_CPTs {
             'has_archive' => false,
             'exclude_from_search' => true,
             'publicly_queryable' => false,
-            'supports' => [ 'title', 'custom-fields' ],
+            // Sans 'custom-fields' : les metas sont presentees en fiche lisible
+            // via OPAC_Admin::render_inscription_details_box (plus de champs bruts).
+            'supports' => [ 'title' ],
             'menu_icon' => 'dashicons-yes-alt',
             'menu_position' => 25,
         ] );
