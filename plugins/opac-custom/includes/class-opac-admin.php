@@ -57,6 +57,81 @@ class OPAC_Admin {
         add_action( 'add_meta_boxes', [ __CLASS__, 'inscription_details_meta_box' ] );
         add_action( 'save_post_opac_inscription', [ __CLASS__, 'save_inscription_details' ], 10, 2 );
         add_filter( 'wp_insert_post_data', [ __CLASS__, 'inject_inscription_title' ], 10, 2 );
+
+        // Pages legales : contenu gere dans OPAC > Reglages > Pages legales. On
+        // verrouille leur edition (pas d'editeur, message de renvoi) et on bloque
+        // leur suppression, pour eviter qu'une manipulation casse l'URL/le contenu.
+        // load-post.php est declenche apres admin_init, donc apres ce boot().
+        add_action( 'load-post.php', [ __CLASS__, 'legal_lock_editor' ] );
+        add_filter( 'map_meta_cap', [ __CLASS__, 'legal_protect_delete' ], 10, 4 );
+        add_filter( 'page_row_actions', [ __CLASS__, 'legal_page_row_actions' ], 10, 2 );
+    }
+
+    /**
+     * Vrai si $post_id est l'une des pages legales gerees via les Reglages
+     * (match par slug sur OPAC_Settings::legal_pages()).
+     */
+    private static function is_legal_page( $post_id ) {
+        $post = get_post( $post_id );
+        if ( ! $post || 'page' !== $post->post_type ) {
+            return false;
+        }
+        return class_exists( 'OPAC_Settings' )
+            && array_key_exists( $post->post_name, OPAC_Settings::legal_pages() );
+    }
+
+    /**
+     * Sur l'ecran d'edition d'une page legale : retire l'editeur (Gutenberg comme
+     * classique) et affiche un message renvoyant vers OPAC > Reglages, ou le
+     * contenu se modifie reellement. Le post_content n'etant pas rendu, toute
+     * saisie ici serait de toute facon sans effet.
+     */
+    public static function legal_lock_editor() {
+        $post_id = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0;
+        if ( ! $post_id || ! self::is_legal_page( $post_id ) ) {
+            return;
+        }
+        remove_post_type_support( 'page', 'editor' );
+        add_action( 'edit_form_after_title', [ __CLASS__, 'legal_editor_notice' ] );
+    }
+
+    public static function legal_editor_notice() {
+        $url = admin_url( 'admin.php?page=' . OPAC_Settings::PAGE_SLUG );
+        printf(
+            '<div class="notice notice-info inline" style="margin:1em 0"><p>%s <a href="%s">%s</a></p></div>',
+            esc_html__( 'Le contenu de cette page se modifie dans OPAC > Réglages > Pages légales.', 'opac-custom' ),
+            esc_url( $url ),
+            esc_html__( 'Ouvrir les Réglages →', 'opac-custom' )
+        );
+    }
+
+    /**
+     * Empeche la suppression (corbeille incluse) des pages legales : le lien
+     * « Corbeille » disparait et l'URL ne peut pas etre cassee par erreur.
+     */
+    public static function legal_protect_delete( $caps, $cap, $user_id, $args ) {
+        if ( 'delete_post' !== $cap || empty( $args[0] ) ) {
+            return $caps;
+        }
+        if ( self::is_legal_page( (int) $args[0] ) ) {
+            $caps[] = 'do_not_allow';
+        }
+        return $caps;
+    }
+
+    /**
+     * Actions de ligne des pages legales dans la liste « Pages » : retire la
+     * « Modification rapide » (qui permettrait de changer le slug, donc de casser
+     * l'URL) et la « Corbeille » (suppression deja bloquee par map_meta_cap, on
+     * retire aussi le lien pour la clarte). « Modifier » reste, mais ouvre l'ecran
+     * verrouille qui renvoie vers les Reglages.
+     */
+    public static function legal_page_row_actions( $actions, $post ) {
+        if ( ! $post || ! self::is_legal_page( $post->ID ) ) {
+            return $actions;
+        }
+        unset( $actions['inline hide-if-no-js'], $actions['trash'], $actions['delete'] );
+        return $actions;
     }
 
     public static function enqueue_admin_assets( $hook ) {
@@ -98,6 +173,21 @@ class OPAC_Admin {
                     'bulkDelete' => __( 'Supprimer définitivement les éléments sélectionnés ? Cette action est irréversible.', 'opac-custom' ),
                     'unsaved'    => __( 'Des modifications ne sont pas enregistrées. Voulez-vous vraiment quitter cette page ?', 'opac-custom' ),
                 ] );
+            }
+        }
+
+        // Liste des inscriptions : recherche au fil de la frappe (relance la
+        // recherche native apres une courte pause, sans clic sur « Rechercher »).
+        if ( 'edit.php' === $hook ) {
+            $screen = get_current_screen();
+            if ( $screen && 'opac_inscription' === $screen->post_type ) {
+                wp_enqueue_script(
+                    'opac-insc-livesearch',
+                    OPAC_CUSTOM_URL . 'assets/js/admin-insc-livesearch.js',
+                    [],
+                    OPAC_CUSTOM_VERSION,
+                    true
+                );
             }
         }
     }
@@ -1020,14 +1110,22 @@ class OPAC_Admin {
         }
         echo '</select>';
 
-        // Bouton d'export CSV : reprend le filtre de statut courant pour exporter
-        // exactement ce qui est affiche (ou tout si aucun filtre).
+        // Bouton d'export CSV : reprend les filtres courants (statut + recherche
+        // par nom + mois) pour exporter exactement ce qui est affiche.
         $export_args = [
             'action'   => 'opac_insc_export',
             '_wpnonce' => wp_create_nonce( 'opac_insc_export' ),
         ];
         if ( '' !== $current ) {
             $export_args['opac_inscription_status'] = $current;
+        }
+        $cur_search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
+        if ( '' !== $cur_search ) {
+            $export_args['s'] = $cur_search;
+        }
+        $cur_month = isset( $_GET['m'] ) ? absint( $_GET['m'] ) : 0;
+        if ( $cur_month > 0 ) {
+            $export_args['m'] = $cur_month;
         }
         printf(
             '<a class="button" href="%s">%s</a>',

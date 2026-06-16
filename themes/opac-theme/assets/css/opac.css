@@ -941,6 +941,50 @@ a.opac-card-link:hover,
     margin-right: auto;
 }
 
+/* Pages legales (confidentialite, mentions legales, cookies, CGU) : contenu lu
+   depuis OPAC > Reglages et rendu par le bloc opac/legal-content. Mise en forme
+   prose ; la largeur de colonne lisible vient du template (contentSize 720). */
+.opac-legal-content {
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--opac-ink);
+}
+
+.opac-legal-content h2 {
+    font-size: 19px;
+    font-weight: 600;
+    margin: 1.75em 0 0.4em;
+}
+
+.opac-legal-content h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 1.4em 0 0.3em;
+}
+
+.opac-legal-content h2:first-child {
+    margin-top: 0;
+}
+
+.opac-legal-content p,
+.opac-legal-content ul,
+.opac-legal-content ol {
+    margin: 0 0 1em;
+}
+
+.opac-legal-content ul,
+.opac-legal-content ol {
+    padding-left: 1.4em;
+}
+
+.opac-legal-content li {
+    margin-bottom: 0.3em;
+}
+
+.opac-legal-content a {
+    text-decoration: underline;
+}
+
 .opac-info-bar {
     font-size: 12px;
     color: var(--opac-muted);

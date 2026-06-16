@@ -1,0 +1,23 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+
+    <!-- Hero : titre de la page -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded opac-archive-header","layout":{"type":"constrained","contentSize":"720px"}} -->
+    <section class="wp-block-group alignwide opac-section-padded opac-archive-header">
+        <!-- wp:post-title {"level":1,"textAlign":"center","className":"opac-archive-title","fontFamily":"display"} /-->
+    </section>
+    <!-- /wp:group -->
+
+    <!-- Contenu : édité dans OPAC > Réglages > Pages légales (bloc serveur) -->
+    <!-- wp:group {"tagName":"section","align":"wide","className":"opac-section-padded opac-legal-content","layout":{"type":"constrained","contentSize":"720px"},"style":{"spacing":{"padding":{"top":"0"}}}} -->
+    <section class="wp-block-group alignwide opac-section-padded opac-legal-content" style="padding-top:0">
+        <!-- wp:opac/legal-content /-->
+    </section>
+    <!-- /wp:group -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

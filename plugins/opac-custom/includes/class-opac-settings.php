@@ -19,13 +19,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OPAC_Settings {
 
-    const PAGE_SLUG  = 'opac-settings';
-    const OPTION_GRP = 'opac_settings_group';
+    const PAGE_SLUG       = 'opac-settings';
+    const OPTION_GRP      = 'opac_settings_group';
+    const LEGAL_SEED_FLAG = 'opac_legal_pages_seeded';
 
     public static function register() {
         add_action( 'admin_menu', [ __CLASS__, 'add_menu_page' ] );
         add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
         add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
+        // Cree les pages legales manquantes une fois (plugin deja actif : pas de
+        // re-activation necessaire). Le flag porte la version pour re-verifier
+        // apres une mise a jour (creation seulement, jamais d'ecrasement).
+        add_action( 'init', [ __CLASS__, 'maybe_seed_legal_pages' ] );
     }
 
     public static function add_menu_page() {
@@ -99,7 +104,65 @@ class OPAC_Settings {
 
             // Section 8 : Donnees personnelles (RGPD)
             'opac_insc_purge_months'       => [ 'type' => 'integer', 'default' => 24, 'sanitize' => 'absint' ],
+
+            // Section 9 : Contenu des pages legales (rendu par opac/legal-content)
+            'opac_legal_confidentialite' => [ 'type' => 'string', 'default' => self::default_legal( 'confidentialite' ), 'sanitize' => 'wp_kses_post' ],
+            'opac_legal_mentions'        => [ 'type' => 'string', 'default' => self::default_legal( 'mentions' ),        'sanitize' => 'wp_kses_post' ],
+            'opac_legal_cookies'         => [ 'type' => 'string', 'default' => self::default_legal( 'cookies' ),         'sanitize' => 'wp_kses_post' ],
+            'opac_legal_cgu'             => [ 'type' => 'string', 'default' => self::default_legal( 'cgu' ),             'sanitize' => 'wp_kses_post' ],
         ];
+    }
+
+    /**
+     * Carte des pages legales : slug de page => { cle d'option de contenu, titre }.
+     * Source de verite partagee : enregistrement des options (ci-dessus), creation
+     * des pages (ensure_legal_pages), rendu front (OPAC_Blocks::render_legal_content),
+     * verrouillage de l'editeur et blocage de la suppression (OPAC_Admin), liens footer.
+     */
+    public static function legal_pages() {
+        return [
+            'politique-de-confidentialite' => [ 'key' => 'opac_legal_confidentialite', 'title' => __( 'Politique de confidentialité', 'opac-custom' ) ],
+            'mentions-legales'             => [ 'key' => 'opac_legal_mentions',        'title' => __( 'Mentions légales', 'opac-custom' ) ],
+            'politique-cookies'            => [ 'key' => 'opac_legal_cookies',         'title' => __( 'Politique cookies', 'opac-custom' ) ],
+            'conditions-generales'         => [ 'key' => 'opac_legal_cgu',             'title' => __( 'Conditions générales d\'utilisation', 'opac-custom' ) ],
+        ];
+    }
+
+    /**
+     * Cree les pages legales manquantes (slug + titre depuis legal_pages()) afin
+     * que les templates page-<slug>.html et les liens du footer se resolvent. Le
+     * contenu vit dans les Reglages (le post_content de la page n'est jamais lu) ;
+     * la page n'est qu'un point d'ancrage d'URL. Idempotent : une page deja
+     * presente (meme slug) n'est pas touchee.
+     */
+    public static function ensure_legal_pages() {
+        foreach ( self::legal_pages() as $slug => $info ) {
+            if ( get_page_by_path( $slug ) ) {
+                continue;
+            }
+            wp_insert_post( [
+                'post_type'      => 'page',
+                'post_status'    => 'publish',
+                'post_name'      => $slug,
+                'post_title'     => $info['title'],
+                'post_content'   => '',
+                'comment_status' => 'closed',
+                'ping_status'    => 'closed',
+            ] );
+        }
+    }
+
+    /**
+     * Lance ensure_legal_pages() une seule fois par version (evite 4 requetes par
+     * chargement). Appele sur init ; complete le seeding a l'activation pour les
+     * installations ou le plugin etait deja actif.
+     */
+    public static function maybe_seed_legal_pages() {
+        if ( get_option( self::LEGAL_SEED_FLAG ) === OPAC_CUSTOM_VERSION ) {
+            return;
+        }
+        self::ensure_legal_pages();
+        update_option( self::LEGAL_SEED_FLAG, OPAC_CUSTOM_VERSION );
     }
 
     public static function register_settings() {
@@ -130,6 +193,58 @@ class OPAC_Settings {
 
             case 'place-liberee':
                 return "Bonjour {prenom},\n\nBonne nouvelle : une place s'est libérée pour \"{atelier}\" ({tarif}).\n\nVotre demande repasse en cours de traitement. Le règlement se fait sur place au secrétariat ; en cours d'année, le tarif de l'atelier est ajusté au prorata des séances restantes.\n\nMerci de nous confirmer rapidement votre intérêt au {tel} ou par retour d'email.\n\nBien cordialement," . $signature;
+        }
+        return '';
+    }
+
+    /**
+     * Contenu HTML de depart des pages legales. Textes generiques a faire relire /
+     * completer par l'association (responsabilite juridique). Placeholders
+     * {nom_asso} {adresse} {tel} {email} substitues au rendu (cf.
+     * OPAC_Blocks::render_legal_content). Ne PAS appeler self::get() ici :
+     * default_legal() est invoque depuis options_schema(), elle-meme appelee par
+     * get() (recursion).
+     */
+    private static function default_legal( $type ) {
+        switch ( $type ) {
+            case 'mentions':
+                return "<h2>Éditeur du site</h2>\n"
+                    . "<p>{nom_asso}<br>{adresse}<br>Téléphone : {tel}<br>Email : {email}</p>\n"
+                    . "<p>Association loi 1901.</p>\n"
+                    . "<h2>Directeur de la publication</h2>\n"
+                    . "<p>Le représentant légal de l'association.</p>\n"
+                    . "<h2>Hébergement</h2>\n"
+                    . "<p>Ce site est hébergé par OVH SAS, 2 rue Kellermann, 59100 Roubaix, France (RCS Lille Métropole 424 761 419 00045).</p>\n"
+                    . "<h2>Propriété intellectuelle</h2>\n"
+                    . "<p>L'ensemble des contenus de ce site (textes, images, logo) est la propriété de {nom_asso}, sauf mention contraire. Toute reproduction sans autorisation est interdite.</p>";
+
+            case 'confidentialite':
+                return "<h2>Responsable du traitement</h2>\n"
+                    . "<p>{nom_asso}, {adresse}. Pour toute question : {email} ou {tel}.</p>\n"
+                    . "<h2>Données collectées</h2>\n"
+                    . "<p>Lorsque vous remplissez le formulaire d'inscription ou de contact, nous collectons les informations que vous nous transmettez (nom, prénom, email, téléphone, commune, message). Aucune donnée n'est collectée à votre insu.</p>\n"
+                    . "<h2>Finalité</h2>\n"
+                    . "<p>Ces données servent uniquement à traiter votre demande d'inscription ou votre message. Elles ne sont ni vendues ni transmises à des tiers.</p>\n"
+                    . "<h2>Durée de conservation</h2>\n"
+                    . "<p>Les demandes d'inscription envoyées en ligne sont conservées le temps nécessaire à leur traitement, puis supprimées automatiquement.</p>\n"
+                    . "<h2>Vos droits</h2>\n"
+                    . "<p>Conformément au RGPD, vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Pour l'exercer, écrivez-nous à {email}.</p>";
+
+            case 'cookies':
+                return "<h2>Utilisation des cookies</h2>\n"
+                    . "<p>Ce site utilise uniquement les cookies techniques nécessaires à son bon fonctionnement. Il ne dépose aucun cookie publicitaire ni de suivi à des fins commerciales.</p>\n"
+                    . "<h2>Contenus externes</h2>\n"
+                    . "<p>Certaines pages peuvent intégrer des contenus externes (par exemple une carte de localisation) susceptibles de déposer leurs propres cookies. Vous pouvez configurer votre navigateur pour les refuser.</p>";
+
+            case 'cgu':
+                return "<h2>Objet</h2>\n"
+                    . "<p>Les présentes conditions régissent l'utilisation du site de {nom_asso}.</p>\n"
+                    . "<h2>Accès au site</h2>\n"
+                    . "<p>Le site est accessible gratuitement. {nom_asso} s'efforce d'en assurer la disponibilité sans pouvoir en garantir l'accès permanent.</p>\n"
+                    . "<h2>Inscriptions</h2>\n"
+                    . "<p>Une demande d'inscription effectuée en ligne ne vaut pas inscription définitive : elle est confirmée par l'association, le règlement s'effectuant sur place au secrétariat.</p>\n"
+                    . "<h2>Contact</h2>\n"
+                    . "<p>Pour toute question : {email} ou {tel}.</p>";
         }
         return '';
     }
@@ -251,6 +366,18 @@ class OPAC_Settings {
                     ?>
                 </table>
 
+                <h2><?php esc_html_e( 'Pages légales', 'opac-custom' ); ?></h2>
+                <p class="description">
+                    <?php esc_html_e( 'Modifiez le texte de chaque page comme dans un traitement de texte (gras, titres, listes, liens), sans connaître le HTML.', 'opac-custom' ); ?>
+                    <?php esc_html_e( 'Les mentions {nom_asso}, {adresse}, {tel} et {email} sont remplacées automatiquement par les coordonnées de l\'association : laissez-les telles quelles.', 'opac-custom' ); ?>
+                </p>
+                <?php
+                self::render_editor_row( 'opac_legal_confidentialite', __( 'Politique de confidentialité', 'opac-custom' ) );
+                self::render_editor_row( 'opac_legal_mentions', __( 'Mentions légales', 'opac-custom' ) );
+                self::render_editor_row( 'opac_legal_cookies', __( 'Politique cookies', 'opac-custom' ) );
+                self::render_editor_row( 'opac_legal_cgu', __( 'Conditions générales d\'utilisation', 'opac-custom' ) );
+                ?>
+
                 <?php submit_button(); ?>
             </form>
         </div>
@@ -258,7 +385,7 @@ class OPAC_Settings {
     }
 
     private static function render_input_row( $key, $label, $desc = '', $type = 'text' ) {
-        $value = get_option( $key, '' );
+        $value = self::get( $key );
         ?>
         <tr>
             <th scope="row"><label for="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th>
@@ -271,7 +398,7 @@ class OPAC_Settings {
     }
 
     private static function render_textarea_row( $key, $label, $desc = '', $rows = 4 ) {
-        $value = get_option( $key, '' );
+        $value = self::get( $key );
         ?>
         <tr>
             <th scope="row"><label for="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th>
@@ -283,8 +410,34 @@ class OPAC_Settings {
         <?php
     }
 
+    /**
+     * Champ « éditeur visuel » (TinyMCE) pour un contenu HTML riche : bien plus
+     * simple qu'un textarea HTML pour une personne non technique (gras, titres,
+     * listes, liens via des boutons, sans voir les balises). La valeur reste du
+     * HTML, nettoyée par wp_kses_post à l'enregistrement. L'editor_id ne doit pas
+     * contenir d'underscore (TinyMCE) ; le champ posté garde la clé d'option
+     * exacte grâce à textarea_name. La liste des formats est volontairement
+     * réduite (Paragraphe / Titre de section / Sous-titre) pour rester simple.
+     */
+    private static function render_editor_row( $key, $label ) {
+        $value     = self::get( $key );
+        $editor_id = str_replace( '_', '', $key );
+        echo '<h3 style="margin:24px 0 6px">' . esc_html( $label ) . '</h3>';
+        wp_editor( $value, $editor_id, [
+            'textarea_name' => $key,
+            'media_buttons' => false,
+            'textarea_rows' => 12,
+            'tinymce'       => [
+                'toolbar1'      => 'formatselect,bold,italic,bullist,numlist,link,unlink,undo,redo',
+                'toolbar2'      => '',
+                'block_formats' => 'Paragraphe=p;Titre de section=h2;Sous-titre=h3',
+            ],
+            'quicktags'     => [ 'buttons' => 'strong,em,link,ul,ol,li' ],
+        ] );
+    }
+
     private static function render_checkbox_row( $key, $label, $desc = '' ) {
-        $value = (int) get_option( $key, 0 );
+        $value = (int) self::get( $key );
         ?>
         <tr>
             <th scope="row"><label for="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th>
@@ -305,7 +458,7 @@ class OPAC_Settings {
      * admin-settings-media ouvre wp.media et écrit l'URL choisie dans l'input.
      */
     private static function render_media_row( $key, $label, $desc = '' ) {
-        $value = get_option( $key, '' );
+        $value = self::get( $key );
         ?>
         <tr>
             <th scope="row"><label for="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th>

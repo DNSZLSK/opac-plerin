@@ -390,8 +390,9 @@ class OPAC_Inscriptions {
 
     /**
      * Export CSV des inscriptions, colonnes separees (nom, prenom, email...).
-     * Capability + nonce. Respecte le filtre de statut courant s'il est passe
-     * (?opac_inscription_status=slug), sinon exporte toutes les inscriptions.
+     * Capability + nonce. Reprend exactement les filtres affiches dans la liste
+     * admin : statut (?opac_inscription_status=slug), recherche par nom (?s) et
+     * filtre mois (?m). Sans filtre, exporte toutes les inscriptions.
      * En-tete UTF-8 BOM pour une ouverture propre dans Excel.
      */
     public static function handle_export() {
@@ -422,6 +423,19 @@ class OPAC_Inscriptions {
                 ],
             ];
         }
+
+        // Recherche par nom et filtre mois : on reprend les memes filtres que la
+        // liste a l'ecran. Le titre contenant « [Atelier] Prenom Nom », la
+        // recherche WP (?s) couvre nom / prenom / atelier comme la liste.
+        $search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
+        if ( '' !== $search ) {
+            $args['s'] = $search;
+        }
+        $month = isset( $_GET['m'] ) ? absint( $_GET['m'] ) : 0;
+        if ( $month > 0 ) {
+            $args['m'] = $month;
+        }
+
         $posts = get_posts( $args );
 
         $adh_labels = [

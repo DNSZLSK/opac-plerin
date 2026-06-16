@@ -58,6 +58,7 @@ register_activation_hook( __FILE__, static function () {
     OPAC_CPTs::register();
     OPAC_Taxonomies::register();
     OPAC_Taxonomies::seed_default_terms();
+    OPAC_Settings::ensure_legal_pages();
     OPAC_RGPD::maybe_schedule();
     flush_rewrite_rules();
 } );
