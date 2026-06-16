@@ -163,6 +163,13 @@ class OPAC_Blocks {
             'attributes'      => [],
             'supports'        => [ 'html' => false ],
         ] );
+
+        register_block_type( 'opac/legal-content', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_legal_content' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
     }
 
     public static function render_statuts_link( $attrs, $content, $block ) {
@@ -192,6 +199,39 @@ class OPAC_Blocks {
             esc_url( $url ),
             esc_html__( 'Charte des ateliers', 'opac-custom' )
         );
+    }
+
+    /**
+     * Corps d'une page legale, lu depuis OPAC > Reglages selon le slug de la page
+     * courante (cf. OPAC_Settings::legal_pages). Le titre est rendu a part par
+     * core/post-title dans le template ; ce bloc ne rend que le contenu HTML, avec
+     * substitution des placeholders {nom_asso}/{adresse}/{tel}/{email}. Slug non
+     * mappe ou contenu vide : rend une chaine vide.
+     */
+    public static function render_legal_content( $attrs, $content, $block ) {
+        if ( ! class_exists( 'OPAC_Settings' ) ) {
+            return '';
+        }
+        $page = get_queried_object();
+        $slug = ( $page instanceof WP_Post ) ? $page->post_name : '';
+
+        $map = OPAC_Settings::legal_pages();
+        if ( '' === $slug || ! isset( $map[ $slug ] ) ) {
+            return '';
+        }
+
+        $raw = (string) OPAC_Settings::get( $map[ $slug ]['key'] );
+        if ( '' === trim( $raw ) ) {
+            return '';
+        }
+
+        $vars = [
+            '{nom_asso}' => (string) OPAC_Settings::get( 'opac_org_legal_name' ),
+            '{adresse}'  => OPAC_Settings::full_address(),
+            '{tel}'      => (string) OPAC_Settings::get( 'opac_org_phone_accueil' ),
+            '{email}'    => (string) OPAC_Settings::get( 'opac_org_email' ),
+        ];
+        return wp_kses_post( strtr( $raw, $vars ) );
     }
 
     /**
