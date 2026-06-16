@@ -162,6 +162,15 @@ class OPAC_Settings {
             return;
         }
         self::ensure_legal_pages();
+        // Regenere les permaliens une fois par version : les archives de CPT
+        // (/ateliers/, /ephemeres/, /agenda/) reposent sur les regles de reecriture,
+        // qui peuvent etre perimees apres un deploiement ou une migration et
+        // provoquer des 404 d'archive (contenu intact mais URL non routee). Ce hook
+        // tourne a la priorite init par defaut (10), donc apres l'enregistrement des
+        // CPT (priorite 5) et des taxonomies (6) : le flush capture bien toutes leurs
+        // regles. Soft flush (regles stockees en option, suffisant pour le routage WP ;
+        // pas de .htaccess requis sous nginx).
+        flush_rewrite_rules( false );
         update_option( self::LEGAL_SEED_FLAG, OPAC_CUSTOM_VERSION );
     }
 
