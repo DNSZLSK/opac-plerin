@@ -1006,21 +1006,25 @@ a.opac-card-link:hover,
    depuis OPAC > Reglages et rendu par le bloc opac/legal-content. Mise en forme
    prose ; la largeur de colonne lisible vient du template (contentSize 720). */
 .opac-legal-content {
-    font-size: 15px;
-    line-height: 1.65;
+    font-size: 16px;
+    line-height: 1.7;
     color: var(--opac-ink);
 }
 
+/* Titres de section : un cran plus marques + filet de separation sous le
+   titre, pour structurer un contenu dense (h2 lus depuis OPAC > Reglages). */
 .opac-legal-content h2 {
-    font-size: 19px;
+    font-size: 20px;
     font-weight: 600;
-    margin: 1.75em 0 0.4em;
+    margin: 2em 0 0.7em;
+    padding-bottom: 0.35em;
+    border-bottom: 1px solid var(--opac-border);
 }
 
 .opac-legal-content h3 {
     font-size: 16px;
     font-weight: 600;
-    margin: 1.4em 0 0.3em;
+    margin: 1.5em 0 0.3em;
 }
 
 .opac-legal-content h2:first-child {
@@ -1030,7 +1034,7 @@ a.opac-card-link:hover,
 .opac-legal-content p,
 .opac-legal-content ul,
 .opac-legal-content ol {
-    margin: 0 0 1em;
+    margin: 0 0 1.1em;
 }
 
 .opac-legal-content ul,
@@ -1940,26 +1944,23 @@ body {
     padding: 0 32px;
 }
 
+/* Grille equipe : cartes compactes a largeur fixe, en flex avec retour a la
+   ligne et CHAQUE rangee centree, y compris la derniere meme incomplete (ce
+   que auto-fit ne savait pas faire : il ne recentre que les colonnes vides sur
+   toute la grille, pas une derniere rangee partielle). Le nombre par rangee
+   decoule de la largeur dispo (~5 en pleine largeur, moins sur mobile), et la
+   grille s'adapte seule a l'ajout/suppression de membres. */
 .opac-team-grid {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
     gap: 14px;
+    justify-content: center;
 }
 
-.opac-team-grid.is-cols-2 { grid-template-columns: repeat(2, 1fr); }
-.opac-team-grid.is-cols-3 { grid-template-columns: repeat(3, 1fr); }
-.opac-team-grid.is-cols-5 { grid-template-columns: repeat(5, 1fr); }
-
-@media (max-width: 768px) {
-    .opac-team-grid.is-cols-3,
-    .opac-team-grid.is-cols-5 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 480px) {
-    .opac-team-grid {
-        grid-template-columns: 1fr !important;
-    }
+.opac-team-grid > .opac-person {
+    box-sizing: border-box;
+    flex: 0 0 190px;
+    max-width: 100%;
 }
 
 /* Person card */
