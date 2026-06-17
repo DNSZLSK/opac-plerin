@@ -793,6 +793,67 @@ a.opac-card-link:hover,
     .opac-cta-band { padding: 28px 24px; }
 }
 
+/* ----------------------------------------------------------------
+ * Page 404 (template 404.html + pattern opac/error-404)
+ * ---------------------------------------------------------------- */
+
+.opac-404 {
+    text-align: center;
+    padding: 64px 32px 80px;
+}
+
+/* Illustration de marque : jamais rognee (donc pas opac-img-frame, qui
+   sert aux photos variees de l'equipe). Ici on contraint juste la largeur
+   et on centre, l'illustration garde ses proportions. */
+.opac-404-illus {
+    max-width: 440px;
+    margin: 0 auto 4px;
+}
+
+.opac-404-illus img {
+    width: 100%;
+    height: auto;
+}
+
+.opac-404-title {
+    font-size: 32px;
+    font-weight: 400;
+    margin: 0 0 12px;
+}
+
+.opac-404-text {
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 420px;
+    margin: 0 auto 24px;
+}
+
+.opac-404-actions {
+    margin-bottom: 20px;
+}
+
+.opac-404-links {
+    font-size: 14px;
+    color: var(--opac-muted);
+}
+
+.opac-404-links a {
+    color: var(--opac-muted);
+    text-decoration: none;
+}
+
+.opac-404-links a:hover,
+.opac-404-links a:focus-visible {
+    color: var(--opac-accent);
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    .opac-404 { padding: 40px 20px 56px; }
+    .opac-404-illus { max-width: 320px; }
+    .opac-404-title { font-size: 26px; }
+}
+
 .opac-eph-section {
     background: var(--opac-hero);
     color: #fff;
