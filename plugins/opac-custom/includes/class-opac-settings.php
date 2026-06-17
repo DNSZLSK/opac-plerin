@@ -64,6 +64,7 @@ class OPAC_Settings {
             'opac_org_founding_year'     => [ 'type' => 'integer', 'default' => 1980,                                           'sanitize' => 'absint' ],
             'opac_org_facebook_url'      => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_instagram_url'     => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
+            'opac_org_tiktok_url'        => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_statuts_pdf_url'   => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_charte_pdf_url'    => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
             'opac_org_helloasso_url'     => [ 'type' => 'string',  'default' => '',                                             'sanitize' => 'esc_url_raw' ],
@@ -287,6 +288,7 @@ class OPAC_Settings {
                     self::render_input_row( 'opac_org_founding_year', __( 'Année de fondation', 'opac-custom' ), '', 'number' );
                     self::render_input_row( 'opac_org_facebook_url', __( 'URL Facebook', 'opac-custom' ), __( 'Laisser vide pour masquer le lien', 'opac-custom' ), 'url' );
                     self::render_input_row( 'opac_org_instagram_url', __( 'URL Instagram', 'opac-custom' ), __( 'Laisser vide pour masquer le lien', 'opac-custom' ), 'url' );
+                    self::render_input_row( 'opac_org_tiktok_url', __( 'URL TikTok', 'opac-custom' ), __( 'Laisser vide pour masquer le lien', 'opac-custom' ), 'url' );
                     self::render_media_row( 'opac_org_statuts_pdf_url', __( 'Statuts (PDF)', 'opac-custom' ), __( 'Affiché en lien sur la page Association. Cliquez sur « Choisir un fichier » pour téléverser ou remplacer le document via la médiathèque. Laisser vide pour masquer le lien.', 'opac-custom' ) );
                     self::render_media_row( 'opac_org_charte_pdf_url', __( 'Charte des ateliers', 'opac-custom' ), __( 'Affichée en lien dans le footer (PDF ou image). Cliquez sur « Choisir un fichier » pour téléverser ou remplacer le document via la médiathèque. Laisser vide pour masquer le lien.', 'opac-custom' ) );
                     self::render_input_row( 'opac_org_helloasso_url', __( 'URL HelloAsso (dons)', 'opac-custom' ), __( 'Lien vers la page de dons HelloAsso. Laisser vide pour masquer (footer + page Association).', 'opac-custom' ), 'url' );

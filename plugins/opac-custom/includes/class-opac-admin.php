@@ -176,11 +176,14 @@ class OPAC_Admin {
             }
         }
 
-        // Liste des inscriptions : recherche au fil de la frappe (relance la
-        // recherche native apres une courte pause, sans clic sur « Rechercher »).
+        // Listes OPAC (ateliers, ephemeres, agenda, equipe, inscriptions) :
+        // recherche au fil de la frappe (relance la recherche native apres une
+        // courte pause, sans clic sur « Rechercher »). Le script est generique
+        // (pilote la barre native #post-search-input + le form #posts-filter),
+        // donc le meme JS sert toutes les listes ; on reutilise CONFIRM_TYPES.
         if ( 'edit.php' === $hook ) {
             $screen = get_current_screen();
-            if ( $screen && 'opac_inscription' === $screen->post_type ) {
+            if ( $screen && in_array( $screen->post_type, self::CONFIRM_TYPES, true ) ) {
                 wp_enqueue_script(
                     'opac-insc-livesearch',
                     OPAC_CUSTOM_URL . 'assets/js/admin-insc-livesearch.js',

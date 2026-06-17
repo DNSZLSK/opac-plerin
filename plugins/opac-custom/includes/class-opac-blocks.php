@@ -231,7 +231,12 @@ class OPAC_Blocks {
             '{tel}'      => (string) OPAC_Settings::get( 'opac_org_phone_accueil' ),
             '{email}'    => (string) OPAC_Settings::get( 'opac_org_email' ),
         ];
-        return wp_kses_post( strtr( $raw, $vars ) );
+        // wpautop() indispensable : le contenu est stocke sans <p> (l'editeur WP
+        // les retire et compte sur wpautop au rendu). Sans ca, les lignes d'un
+        // meme bloc (nom + adresse + tel + email de l'editeur) se collent sur une
+        // seule ligne et aucun paragraphe n'a d'espacement. On enveloppe avant
+        // wp_kses_post, qui autorise les <p>/<br> produits.
+        return wp_kses_post( wpautop( strtr( $raw, $vars ) ) );
     }
 
     /**
@@ -1519,6 +1524,7 @@ class OPAC_Blocks {
         $paths = [
             'facebook'  => 'M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z',
             'instagram' => 'M12 4.622c2.403 0 2.688.01 3.637.052.877.04 1.354.187 1.671.31.42.163.72.358 1.035.673.315.315.51.615.673 1.035.123.317.27.794.31 1.671.042.949.052 1.234.052 3.637 0 2.403-.01 2.688-.052 3.637-.04.877-.187 1.354-.31 1.671-.163.42-.358.72-.673 1.035-.315.315-.615.51-1.035.673-.317.123-.794.27-1.671.31-.949.042-1.234.052-3.637.052-2.403 0-2.688-.01-3.637-.052-.877-.04-1.354-.187-1.671-.31-.42-.163-.72-.358-1.035-.673-.315-.315-.51-.615-.673-1.035-.123-.317-.27-.794-.31-1.671-.042-.949-.052-1.234-.052-3.637 0-2.403.01-2.688.052-3.637.04-.877.187-1.354.31-1.671.163-.42.358-.72.673-1.035.315-.315.615-.51 1.035-.673.317-.123.794-.27 1.671-.31.949-.042 1.234-.052 3.637-.052M12 3c-2.444 0-2.751.01-3.711.054-.958.044-1.612.196-2.184.418-.592.23-1.094.538-1.594 1.038-.5.5-.808 1.002-1.038 1.594-.222.572-.374 1.226-.418 2.184C3.01 9.249 3 9.556 3 12s.01 2.751.054 3.711c.044.958.196 1.612.418 2.184.23.592.538 1.094 1.038 1.594.5.5 1.002.808 1.594 1.038.572.222 1.226.374 2.184.418C9.249 20.99 9.556 21 12 21s2.751-.01 3.711-.054c.958-.044 1.612-.196 2.184-.418.592-.23 1.094-.538 1.594-1.038.5-.5.808-1.002 1.038-1.594.222-.572.374-1.226.418-2.184C20.99 14.751 21 14.444 21 12s-.01-2.751-.054-3.711c-.044-.958-.196-1.612-.418-2.184-.23-.592-.538-1.094-1.038-1.594-.5-.5-1.002-.808-1.594-1.038-.572-.222-1.226-.374-2.184-.418C14.751 3.01 14.444 3 12 3zm0 4.378c-2.552 0-4.622 2.069-4.622 4.622 0 2.552 2.069 4.622 4.622 4.622 2.552 0 4.622-2.069 4.622-4.622 0-2.552-2.069-4.622-4.622-4.622zm0 7.629c-1.658 0-3.007-1.343-3.007-3.007 0-1.658 1.343-3.007 3.007-3.007 1.658 0 3.007 1.343 3.007 3.007 0 1.658-1.343 3.007-3.007 3.007zm5.884-7.813c0 .597-.484 1.08-1.08 1.08-.596 0-1.08-.483-1.08-1.08 0-.595.484-1.079 1.08-1.079.595 0 1.079.484 1.079 1.079z',
+            'tiktok'    => 'M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z',
             'helloasso' => 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
         ];
         if ( empty( $paths[ $network ] ) ) {
@@ -1535,7 +1541,7 @@ class OPAC_Blocks {
      * visuellement au footer via .opac-footer-social .opac-social-label.
      */
     private static function social_link_tag( $network, $url ) {
-        $labels = [ 'facebook' => 'Facebook', 'instagram' => 'Instagram' ];
+        $labels = [ 'facebook' => 'Facebook', 'instagram' => 'Instagram', 'tiktok' => 'TikTok' ];
         $label  = isset( $labels[ $network ] ) ? $labels[ $network ] : ucfirst( $network );
         return sprintf(
             '<a class="opac-social-link" href="%s" target="_blank" rel="noopener noreferrer" aria-label="%s">%s<span class="opac-social-label">%s</span></a>',
@@ -1547,7 +1553,7 @@ class OPAC_Blocks {
     }
 
     /**
-     * Bloc reseaux sociaux (FB + IG) lu depuis OPAC_Settings.
+     * Bloc reseaux sociaux (FB + IG + TikTok) lu depuis OPAC_Settings.
      * Retourne '' si aucune URL renseignee (masquage). Si $include_helloasso,
      * ajoute le lien dons HelloAsso a la suite (footer uniquement).
      */
@@ -1555,6 +1561,7 @@ class OPAC_Blocks {
         $networks = [
             'facebook'  => OPAC_Settings::get( 'opac_org_facebook_url' ),
             'instagram' => OPAC_Settings::get( 'opac_org_instagram_url' ),
+            'tiktok'    => OPAC_Settings::get( 'opac_org_tiktok_url' ),
         ];
         $links = [];
         foreach ( $networks as $net => $url ) {

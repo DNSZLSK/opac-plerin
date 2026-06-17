@@ -1,5 +1,6 @@
 /**
- * OPAC Custom - Recherche au fil de la frappe (liste des inscriptions).
+ * OPAC Custom - Recherche au fil de la frappe (listes OPAC : ateliers,
+ * ephemeres, agenda, equipe, inscriptions).
  *
  * Ameliore la barre de recherche native de la liste admin : au lieu de taper
  * puis cliquer « Rechercher », on relance la recherche automatiquement apres une
