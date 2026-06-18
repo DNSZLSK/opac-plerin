@@ -31,6 +31,12 @@ class OPAC_Security {
         // HTTP security headers via filter wp_headers.
         add_filter( 'wp_headers', [ __CLASS__, 'add_security_headers' ] );
 
+        // RGPD : avatar local par defaut au lieu de Gravatar (Automattic/US).
+        // Evite tout transfert d'IP / hash email vers secure.gravatar.com et garde
+        // le CSP img-src sans origine tierce (cf. add_security_headers). Le seul
+        // Gravatar cote public etait celui de la barre admin des membres connectes.
+        add_filter( 'pre_get_avatar_data', [ __CLASS__, 'force_local_avatar' ], 10, 2 );
+
         // Masque la version WP partout (meta generator + ?ver= sur assets).
         remove_action( 'wp_head', 'wp_generator' );
         add_filter( 'the_generator', '__return_empty_string' );
@@ -124,6 +130,23 @@ class OPAC_Security {
         $headers['Content-Security-Policy'] = implode( '; ', $csp );
 
         return $headers;
+    }
+
+    /**
+     * RGPD : remplace l'avatar Gravatar (requete vers secure.gravatar.com,
+     * Automattic/US) par un SVG generique local servi en data: URI (deja autorise
+     * par le CSP img-src). Aucune requete tierce, aucun transfert d'IP / hash
+     * email. Court-circuite get_avatar_data() en posant directement $args['url'].
+     */
+    public static function force_local_avatar( $args, $id_or_email ) {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">'
+            . '<rect width="96" height="96" fill="#e7e2db"/>'
+            . '<circle cx="48" cy="38" r="17" fill="#b7ac9e"/>'
+            . '<path d="M16 86c0-16 14-28 32-28s32 12 32 28z" fill="#b7ac9e"/>'
+            . '</svg>';
+        $args['url']          = 'data:image/svg+xml;base64,' . base64_encode( $svg );
+        $args['found_avatar'] = true;
+        return $args;
     }
 
     /**

@@ -130,3 +130,25 @@ add_shortcode( 'opac_year', static function () {
 add_filter( 'document_title_separator', static function () {
     return '·';
 } );
+
+// Signature dev (easter-egg) injectee dans le <head>, visible uniquement en
+// view-source (Ctrl+U). Via wp_head pour survivre aux mises a jour du core,
+// jamais en dur dans un fichier core WP. NOWDOC (<<<'SIG') = zero interpolation,
+// sans risque pour les caracteres box-drawing. Ce fichier doit rester en UTF-8.
+add_action( 'wp_head', static function () {
+    echo <<<'SIG'
+<!--
+
+  ██████╗ ███╗   ██╗███████╗███████╗██╗     ███████╗██╗  ██╗
+  ██╔══██╗████╗  ██║██╔════╝╚══███╔╝██║     ██╔════╝██║ ██╔╝
+  ██║  ██║██╔██╗ ██║███████╗  ███╔╝ ██║     ███████╗█████╔╝
+  ██║  ██║██║╚██╗██║╚════██║ ███╔╝  ██║     ╚════██║██╔═██╗
+  ██████╔╝██║ ╚████║███████║███████╗███████╗███████║██║  ██╗
+  ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝
+
+  kewin.io · OPAC Plérin · 2025-2026
+
+-->
+
+SIG;
+}, 0 );

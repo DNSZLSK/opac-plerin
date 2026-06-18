@@ -117,23 +117,10 @@
         <h2 class="wp-block-heading opac-section-title has-display-font-family" style="margin-bottom:16px">Animateur</h2>
         <!-- /wp:heading -->
 
-        <!-- wp:group {"className":"opac-animateur","backgroundColor":"card","layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"center"}} -->
-        <div class="wp-block-group opac-animateur has-card-background-color has-background">
-            <!-- wp:html -->
-            <div class="opac-animateur-avatar" aria-hidden="true">·</div>
-            <!-- /wp:html -->
-            <!-- wp:group {"className":"opac-animateur-info","layout":{"type":"flex","orientation":"vertical"},"style":{"spacing":{"blockGap":"2px"}}} -->
-            <div class="wp-block-group opac-animateur-info">
-                <!-- wp:paragraph {"className":"opac-animateur-name","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"opac_animator"}}}}} -->
-                <p class="opac-animateur-name">Animateur·rice</p>
-                <!-- /wp:paragraph -->
-                <!-- wp:paragraph {"className":"opac-animateur-role","textColor":"muted"} -->
-                <p class="opac-animateur-role has-muted-color has-text-color">Animateur·rice de l'atelier OPAC</p>
-                <!-- /wp:paragraph -->
-            </div>
-            <!-- /wp:group -->
-        </div>
-        <!-- /wp:group -->
+        <!-- Carte animateur : bloc serveur (opac/atelier-animator) qui lit le champ
+             Animateur et CALCULE les initiales de l'avatar, comme la grille d'equipe.
+             Remplace l'ancien markup statique dont l'avatar etait un "." fige. -->
+        <!-- wp:opac/atelier-animator /-->
 
     </section>
     <!-- /wp:group -->

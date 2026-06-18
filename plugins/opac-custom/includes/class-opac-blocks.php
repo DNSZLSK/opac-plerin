@@ -149,6 +149,14 @@ class OPAC_Blocks {
             'supports'        => [ 'html' => false ],
         ] );
 
+        register_block_type( 'opac/atelier-animator', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_atelier_animator' ],
+            'uses_context'    => [ 'postId', 'postType' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+
         register_block_type( 'opac/creneaux-list', [
             'api_version'     => 3,
             'render_callback' => [ __CLASS__, 'render_creneaux_list' ],
@@ -262,12 +270,14 @@ class OPAC_Blocks {
             $logo = '<div class="opac-part-logo" aria-hidden="true">Ville de<br/>Plérin</div>';
         }
 
-        return '<div class="opac-partenaire">' . $logo
+        // Toute la card (logo + textes) est cliquable vers le site de la ville :
+        // cible de clic large, plus pratique qu'un lien sur le seul nom.
+        return '<a class="opac-partenaire" href="' . esc_url( 'https://www.ville-plerin.fr/' ) . '" target="_blank" rel="noopener">' . $logo
             . '<div>'
                 . '<div class="opac-part-name">Ville de Plérin</div>'
                 . '<div class="opac-part-sub">' . esc_html__( 'Partenaire institutionnel', 'opac-custom' ) . '</div>'
             . '</div>'
-        . '</div>';
+        . '</a>';
     }
 
     /**
@@ -978,6 +988,45 @@ class OPAC_Blocks {
 
         $out .= '</div></section>';
         return $out;
+    }
+
+    /**
+     * Carte animateur de la fiche atelier. Rendue en PHP (et non plus via un
+     * template statique) pour CALCULER les initiales de l'avatar depuis le champ
+     * texte opac_animator, exactement comme la grille d'equipe (compute_initials).
+     * L'ancien markup statique affichait un "." fige, faute de pouvoir executer
+     * de logique. L'animateur est un champ libre (pas une fiche opac_person).
+     */
+    public static function render_atelier_animator( $attrs, $content, $block ) {
+        $post_id = isset( $block->context['postId'] ) ? (int) $block->context['postId'] : (int) get_the_ID();
+        if ( ! $post_id ) {
+            return '';
+        }
+
+        $name = trim( (string) get_post_meta( $post_id, 'opac_animator', true ) );
+
+        // Champ vide (rare : l'animateur est une info fixe) : placeholder neutre
+        // plutot qu'un avatar vide ou une section orpheline.
+        if ( '' === $name ) {
+            $initials  = '·';
+            $name_html = esc_html__( 'Animateur·rice', 'opac-custom' );
+        } else {
+            $initials = self::compute_initials( $name );
+            if ( '' === $initials ) {
+                $initials = '·';
+            }
+            $name_html = esc_html( $name );
+        }
+
+        return '<div class="opac-animateur has-card-background-color has-background">'
+            . '<div class="opac-animateur-avatar" aria-hidden="true">' . esc_html( $initials ) . '</div>'
+            . '<div class="opac-animateur-info">'
+                . '<p class="opac-animateur-name">' . $name_html . '</p>'
+                . '<p class="opac-animateur-role has-muted-color has-text-color">'
+                    . esc_html__( 'Animateur·rice de l\'atelier OPAC', 'opac-custom' )
+                . '</p>'
+            . '</div>'
+        . '</div>';
     }
 
     /**
