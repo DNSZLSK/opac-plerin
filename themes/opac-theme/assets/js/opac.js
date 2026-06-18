@@ -8,6 +8,13 @@
 (function () {
     'use strict';
 
+    // Signature dev dans la console (F12). %c applique du CSS inline au texte.
+    console.log(
+        '%cDNSZLSK%c  kewin.io · OPAC Plérin',
+        'color:#5bc0de;font-size:22px;font-weight:bold;letter-spacing:3px;',
+        'color:#5bc0de;font-size:12px;'
+    );
+
     function closeAll(wrappers) {
         wrappers.forEach(function (wrapper) {
             wrapper.setAttribute('data-open', 'false');
@@ -287,10 +294,13 @@
             lastFocus = document.activeElement;
             show(i);
             lb.classList.add('is-open');
+            // Verrou de scroll : empeche le fond de defiler derriere l'overlay.
+            document.body.classList.add('opac-no-scroll');
             lb.querySelector('.opac-lightbox-close').focus();
         }
         function close() {
             lb.classList.remove('is-open');
+            document.body.classList.remove('opac-no-scroll');
             lbImg.setAttribute('src', '');
             if (lastFocus && lastFocus.focus) {
                 lastFocus.focus();
