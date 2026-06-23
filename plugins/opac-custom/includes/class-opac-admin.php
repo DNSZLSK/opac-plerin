@@ -39,8 +39,10 @@ class OPAC_Admin {
         add_filter( 'post_row_actions', [ __CLASS__, 'remove_quick_edit' ], 10, 2 );
         add_action( 'admin_notices', [ __CLASS__, 'inscription_action_notice' ] );
         add_action( 'restrict_manage_posts', [ __CLASS__, 'inscription_status_filter' ] );
+        add_action( 'pre_get_posts', [ __CLASS__, 'filter_inscriptions_by_atelier' ] );
         add_filter( 'posts_clauses', [ __CLASS__, 'inscription_priority_clauses' ], 10, 2 );
         add_filter( 'the_posts', [ __CLASS__, 'prime_returning_cache' ], 10, 2 );
+        add_action( 'admin_notices', [ __CLASS__, 'inscription_email_notice' ] );
 
         // Galerie : meta box "atelier associe" + colonnes liste.
         add_action( 'add_meta_boxes', [ __CLASS__, 'gallery_meta_box' ] );
@@ -1113,27 +1115,127 @@ class OPAC_Admin {
         }
         echo '</select>';
 
-        // Bouton d'export CSV : reprend les filtres courants (statut + recherche
-        // par nom + mois) pour exporter exactement ce qui est affiche.
-        $export_args = [
-            'action'   => 'opac_insc_export',
-            '_wpnonce' => wp_create_nonce( 'opac_insc_export' ),
-        ];
-        if ( '' !== $current ) {
-            $export_args['opac_inscription_status'] = $current;
+        // Filtre par atelier / ephemere : cible tous les inscrits d'un atelier
+        // (ex : ceramique) avant export ou envoi d'email. opac_insc_atelier_id
+        // pointe vers un atelier OU un stage.
+        $cur_atelier = isset( $_GET['opac_insc_atelier_id'] ) ? absint( $_GET['opac_insc_atelier_id'] ) : 0;
+        $list_args   = [ 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ];
+        $ateliers    = get_posts( array_merge( $list_args, [ 'post_type' => 'opac_atelier' ] ) );
+        $stages      = get_posts( array_merge( $list_args, [ 'post_type' => 'opac_stage' ] ) );
+        echo '<select name="opac_insc_atelier_id">';
+        echo '<option value="">' . esc_html__( 'Tous les ateliers', 'opac-custom' ) . '</option>';
+        if ( $ateliers ) {
+            echo '<optgroup label="' . esc_attr__( 'Ateliers', 'opac-custom' ) . '">';
+            foreach ( $ateliers as $a ) {
+                printf(
+                    '<option value="%d"%s>%s</option>',
+                    (int) $a->ID,
+                    selected( $cur_atelier, $a->ID, false ),
+                    esc_html( get_the_title( $a ) )
+                );
+            }
+            echo '</optgroup>';
         }
+        if ( $stages ) {
+            echo '<optgroup label="' . esc_attr__( 'Éphémères', 'opac-custom' ) . '">';
+            foreach ( $stages as $s ) {
+                printf(
+                    '<option value="%d"%s>%s</option>',
+                    (int) $s->ID,
+                    selected( $cur_atelier, $s->ID, false ),
+                    esc_html( get_the_title( $s ) )
+                );
+            }
+            echo '</optgroup>';
+        }
+        echo '</select>';
+
+        // Filtres courants partages par l'export CSV et l'envoi d'email (statut,
+        // atelier, recherche par nom, mois) : l'action porte sur tout ce qui matche.
         $cur_search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
+        $cur_month  = isset( $_GET['m'] ) ? absint( $_GET['m'] ) : 0;
+        $filters    = [];
+        if ( '' !== $current ) {
+            $filters['opac_inscription_status'] = $current;
+        }
+        if ( $cur_atelier ) {
+            $filters['opac_insc_atelier_id'] = $cur_atelier;
+        }
         if ( '' !== $cur_search ) {
-            $export_args['s'] = $cur_search;
+            $filters['s'] = $cur_search;
         }
-        $cur_month = isset( $_GET['m'] ) ? absint( $_GET['m'] ) : 0;
         if ( $cur_month > 0 ) {
-            $export_args['m'] = $cur_month;
+            $filters['m'] = $cur_month;
         }
+
+        // Bouton export CSV (admin-post).
+        $export_args = array_merge(
+            [ 'action' => 'opac_insc_export', '_wpnonce' => wp_create_nonce( 'opac_insc_export' ) ],
+            $filters
+        );
         printf(
-            '<a class="button" href="%s">%s</a>',
+            '<a class="button" href="%s">%s</a> ',
             esc_url( add_query_arg( $export_args, admin_url( 'admin-post.php' ) ) ),
             esc_html__( 'Exporter en CSV', 'opac-custom' )
+        );
+
+        // Bouton « Envoyer un email » : ouvre l'ecran de redaction cache avec les
+        // memes filtres + un nonce de vue (cf. OPAC_Inscriptions::render_email_page).
+        $email_args = array_merge(
+            [ 'post_type' => 'opac_inscription', 'page' => 'opac-insc-email', '_wpnonce' => wp_create_nonce( 'opac_insc_email_view' ) ],
+            $filters
+        );
+        printf(
+            '<a class="button button-primary" href="%s">%s</a>',
+            esc_url( add_query_arg( $email_args, admin_url( 'edit.php' ) ) ),
+            esc_html__( 'Envoyer un email', 'opac-custom' )
+        );
+    }
+
+    /**
+     * Filtre la liste admin des inscriptions par atelier/ephemere choisi dans le
+     * dropdown (meta opac_insc_atelier_id), pour que la liste affichee corresponde
+     * exactement aux destinataires d'un futur export / email.
+     */
+    public static function filter_inscriptions_by_atelier( $query ) {
+        if ( ! is_admin() || ! $query->is_main_query() ) {
+            return;
+        }
+        if ( 'opac_inscription' !== $query->get( 'post_type' ) ) {
+            return;
+        }
+        $atelier_id = isset( $_GET['opac_insc_atelier_id'] ) ? absint( $_GET['opac_insc_atelier_id'] ) : 0;
+        if ( ! $atelier_id ) {
+            return;
+        }
+        $meta_query   = (array) $query->get( 'meta_query' );
+        $meta_query[] = [ 'key' => 'opac_insc_atelier_id', 'value' => $atelier_id ];
+        $query->set( 'meta_query', $meta_query );
+    }
+
+    /**
+     * Notice apres un envoi d'email groupe : ?opac_insc_email_sent = nombre de
+     * destinataires (succes) ou 'error' (rien envoye).
+     */
+    public static function inscription_email_notice() {
+        if ( ! isset( $_GET['opac_insc_email_sent'] ) || ! isset( $_GET['post_type'] ) || 'opac_inscription' !== $_GET['post_type'] ) {
+            return;
+        }
+        $val = sanitize_text_field( wp_unslash( $_GET['opac_insc_email_sent'] ) );
+        if ( 'error' === $val ) {
+            printf(
+                '<div class="notice notice-error is-dismissible"><p>%s</p></div>',
+                esc_html__( 'Email non envoyé : sujet ou message vide, aucun destinataire valide, ou erreur d\'envoi.', 'opac-custom' )
+            );
+            return;
+        }
+        $count = absint( $val );
+        if ( $count < 1 ) {
+            return;
+        }
+        printf(
+            '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
+            esc_html( sprintf( _n( 'Email envoyé à %d personne.', 'Email envoyé à %d personnes.', $count, 'opac-custom' ), $count ) )
         );
     }
 
