@@ -590,7 +590,17 @@ class OPAC_Inscriptions {
                 }
             }
         } else {
-            $posts = get_posts( self::query_args_from_request() );
+            // Contexte email : par defaut on ne cible que les inscrits VALIDÉS
+            // (jamais refusés / en attente). Un statut explicitement choisi dans
+            // le filtre de la liste est respecte (ex : liste d'attente).
+            $query_args = self::query_args_from_request();
+            if ( '' === $cur_status ) {
+                $cur_status              = 'validee';
+                $query_args['tax_query'] = [
+                    [ 'taxonomy' => 'opac_inscription_status', 'field' => 'slug', 'terms' => 'validee' ],
+                ];
+            }
+            $posts = get_posts( $query_args );
         }
 
         // Lignes destinataires (uniquement email valide).
@@ -663,7 +673,15 @@ class OPAC_Inscriptions {
         echo '</tbody></table>';
 
         printf( '<h2>' . esc_html__( 'Destinataires (%d)', 'opac-custom' ) . '</h2>', count( $rows ) );
-        echo '<p class="description">' . esc_html__( 'Décochez une personne pour l\'exclure. Les adresses partent en copie cachée : les destinataires ne se voient pas entre eux.', 'opac-custom' ) . '</p>';
+        if ( ! $has_draft ) {
+            $status_term  = get_term_by( 'slug', $cur_status, 'opac_inscription_status' );
+            $status_label = ( $status_term && ! is_wp_error( $status_term ) ) ? $status_term->name : $cur_status;
+            printf(
+                '<p>' . esc_html__( 'Statut ciblé : %s. Décochez une personne pour l\'exclure.', 'opac-custom' ) . '</p>',
+                '<strong>' . esc_html( $status_label ) . '</strong>'
+            );
+        }
+        echo '<p class="description">' . esc_html__( 'Les adresses partent en copie cachée : les destinataires ne se voient pas entre eux.', 'opac-custom' ) . '</p>';
         echo '<ul style="max-height:320px;overflow:auto;border:1px solid #dcdcde;padding:10px 14px;margin:0 0 16px;background:#fff;list-style:none">';
         echo implode( '', $rows ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- lignes deja echappees ci-dessus
         echo '</ul>';
