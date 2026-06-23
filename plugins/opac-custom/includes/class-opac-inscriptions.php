@@ -24,6 +24,7 @@ class OPAC_Inscriptions {
     const ACTION_SUBMIT = 'opac_inscription';
     const ACTION_ADMIN  = 'opac_insc_action';
     const ACTION_EXPORT = 'opac_insc_export';
+    const ACTION_SEND_EMAIL = 'opac_insc_send_email';
     const RATE_LIMIT_S  = 60;
 
     private static function recipient() {
@@ -43,6 +44,11 @@ class OPAC_Inscriptions {
 
         // Export CSV des inscriptions (bouton liste admin).
         add_action( 'admin_post_' . self::ACTION_EXPORT, [ __CLASS__, 'handle_export' ] );
+
+        // Envoi d'un email groupe aux inscrits : ecran de redaction cache (sous-menu
+        // masque de la liste) + handler d'envoi.
+        add_action( 'admin_post_' . self::ACTION_SEND_EMAIL, [ __CLASS__, 'handle_send_email' ] );
+        add_action( 'admin_menu', [ __CLASS__, 'register_email_page' ] );
     }
 
     public static function handle_submit() {
@@ -404,39 +410,9 @@ class OPAC_Inscriptions {
             wp_die( esc_html__( 'Lien d\'export invalide ou expiré.', 'opac-custom' ) );
         }
 
-        $status = isset( $_GET['opac_inscription_status'] ) ? sanitize_key( wp_unslash( $_GET['opac_inscription_status'] ) ) : '';
-
-        $args = [
-            'post_type'      => 'opac_inscription',
-            'post_status'    => 'publish',
-            'posts_per_page' => -1,
-            'orderby'        => 'date',
-            'order'          => 'DESC',
-            'no_found_rows'  => true,
-        ];
-        if ( '' !== $status ) {
-            $args['tax_query'] = [
-                [
-                    'taxonomy' => 'opac_inscription_status',
-                    'field'    => 'slug',
-                    'terms'    => $status,
-                ],
-            ];
-        }
-
-        // Recherche par nom et filtre mois : on reprend les memes filtres que la
-        // liste a l'ecran. Le titre contenant « [Atelier] Prenom Nom », la
-        // recherche WP (?s) couvre nom / prenom / atelier comme la liste.
-        $search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
-        if ( '' !== $search ) {
-            $args['s'] = $search;
-        }
-        $month = isset( $_GET['m'] ) ? absint( $_GET['m'] ) : 0;
-        if ( $month > 0 ) {
-            $args['m'] = $month;
-        }
-
-        $posts = get_posts( $args );
+        // Memes filtres que la liste admin (statut, atelier, recherche, mois) :
+        // on exporte tout ce qui matche, pas seulement la page affichee.
+        $posts = get_posts( self::query_args_from_request() );
 
         $adh_labels = [
             'plerinais' => __( 'Plérinais', 'opac-custom' ),
@@ -496,6 +472,324 @@ class OPAC_Inscriptions {
         }
 
         fclose( $out );
+        exit;
+    }
+
+    /**
+     * Args WP_Query construits depuis les filtres de la liste admin (statut,
+     * atelier, recherche par nom, mois). Partage par l'export CSV et l'ecran
+     * d'envoi d'email pour garantir le meme perimetre que ce qui est affiche :
+     * toutes les lignes qui matchent, pas seulement la page courante.
+     */
+    private static function query_args_from_request() {
+        $args = [
+            'post_type'      => 'opac_inscription',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+            'no_found_rows'  => true,
+        ];
+
+        $status = isset( $_GET['opac_inscription_status'] ) ? sanitize_key( wp_unslash( $_GET['opac_inscription_status'] ) ) : '';
+        if ( '' !== $status ) {
+            $args['tax_query'] = [
+                [
+                    'taxonomy' => 'opac_inscription_status',
+                    'field'    => 'slug',
+                    'terms'    => $status,
+                ],
+            ];
+        }
+
+        $atelier_id = isset( $_GET['opac_insc_atelier_id'] ) ? absint( $_GET['opac_insc_atelier_id'] ) : 0;
+        if ( $atelier_id ) {
+            $args['meta_query'] = [
+                [ 'key' => 'opac_insc_atelier_id', 'value' => $atelier_id ],
+            ];
+        }
+
+        // Le titre contient « [Atelier] Prenom Nom » : la recherche WP (?s)
+        // couvre nom / prenom / atelier comme la liste a l'ecran.
+        $search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
+        if ( '' !== $search ) {
+            $args['s'] = $search;
+        }
+        $month = isset( $_GET['m'] ) ? absint( $_GET['m'] ) : 0;
+        if ( $month > 0 ) {
+            $args['m'] = $month;
+        }
+
+        return $args;
+    }
+
+    /**
+     * Enregistre l'ecran de redaction d'email en sous-menu CACHE de la liste des
+     * inscriptions : accessible uniquement via le bouton « Envoyer un email »
+     * (qui transporte les filtres + un nonce), jamais affiche dans le menu.
+     */
+    public static function register_email_page() {
+        $parent = 'edit.php?post_type=opac_inscription';
+        add_submenu_page(
+            $parent,
+            __( 'Envoyer un email aux inscrits', 'opac-custom' ),
+            __( 'Envoyer un email', 'opac-custom' ),
+            'edit_posts',
+            'opac-insc-email',
+            [ __CLASS__, 'render_email_page' ]
+        );
+        // Masque l'entree de menu : la page reste accessible par URL.
+        remove_submenu_page( $parent, 'opac-insc-email' );
+    }
+
+    /**
+     * Ecran de redaction : sujet pre-rempli (atelier filtre), corps en editeur
+     * visuel, et liste des inscrits du filtre courant en cases a cocher (toutes
+     * cochees, decocher pour exclure). L'envoi se base sur les cases cochees.
+     */
+    public static function render_email_page() {
+        if ( ! current_user_can( 'edit_posts' ) ) {
+            wp_die( esc_html__( 'Permissions insuffisantes.', 'opac-custom' ) );
+        }
+        $nonce = isset( $_GET['_wpnonce'] ) ? (string) $_GET['_wpnonce'] : '';
+        if ( ! wp_verify_nonce( $nonce, 'opac_insc_email_view' ) ) {
+            wp_die( esc_html__( 'Lien invalide ou expiré.', 'opac-custom' ) );
+        }
+
+        // Brouillon conserve apres un envoi en echec (one-shot) : on restaure le
+        // sujet, le message et les destinataires coches, puis on consomme le
+        // transient pour ne pas reproposer un brouillon fantome au rechargement.
+        $draft_key = 'opac_insc_email_draft_' . get_current_user_id();
+        $draft     = get_transient( $draft_key );
+        $has_draft = is_array( $draft ) && isset( $draft['subject'], $draft['body'], $draft['ids'] );
+        if ( is_array( $draft ) ) {
+            delete_transient( $draft_key );
+        }
+
+        $atelier_id = isset( $_GET['opac_insc_atelier_id'] ) ? absint( $_GET['opac_insc_atelier_id'] ) : 0;
+
+        // Lien retour vers la liste, filtres conserves.
+        $back_args = [ 'post_type' => 'opac_inscription' ];
+        if ( $atelier_id ) {
+            $back_args['opac_insc_atelier_id'] = $atelier_id;
+        }
+        $cur_status = isset( $_GET['opac_inscription_status'] ) ? sanitize_key( wp_unslash( $_GET['opac_inscription_status'] ) ) : '';
+        if ( '' !== $cur_status ) {
+            $back_args['opac_inscription_status'] = $cur_status;
+        }
+        $back_url = add_query_arg( $back_args, admin_url( 'edit.php' ) );
+
+        // Destinataires affiches : ceux du brouillon restaure (echec precedent),
+        // sinon ceux du filtre courant. Tous coches dans les deux cas.
+        if ( $has_draft ) {
+            $posts = [];
+            foreach ( array_map( 'absint', (array) $draft['ids'] ) as $sid ) {
+                $pp = get_post( $sid );
+                if ( $pp && 'opac_inscription' === $pp->post_type ) {
+                    $posts[] = $pp;
+                }
+            }
+        } else {
+            $posts = get_posts( self::query_args_from_request() );
+        }
+
+        // Lignes destinataires (uniquement email valide).
+        $rows = [];
+        foreach ( $posts as $p ) {
+            $email = (string) get_post_meta( $p->ID, 'opac_insc_email', true );
+            if ( '' === $email || ! is_email( $email ) ) {
+                continue;
+            }
+            $prenom = (string) get_post_meta( $p->ID, 'opac_insc_prenom', true );
+            $nom    = (string) get_post_meta( $p->ID, 'opac_insc_nom', true );
+            $terms  = wp_get_object_terms( $p->ID, 'opac_inscription_status', [ 'fields' => 'names' ] );
+            $statut = ( ! is_wp_error( $terms ) && ! empty( $terms ) ) ? implode( ', ', $terms ) : '';
+            $rows[] = sprintf(
+                '<li><label><input type="checkbox" name="opac_insc_recipients[]" value="%d" checked /> %s %s &lt;%s&gt;%s</label></li>',
+                (int) $p->ID,
+                esc_html( $prenom ),
+                esc_html( $nom ),
+                esc_html( $email ),
+                '' !== $statut ? ' <span style="color:#646970">- ' . esc_html( $statut ) . '</span>' : ''
+            );
+        }
+
+        echo '<div class="wrap">';
+        echo '<h1>' . esc_html__( 'Envoyer un email aux inscrits', 'opac-custom' ) . '</h1>';
+
+        if ( $has_draft ) {
+            echo '<div class="notice notice-error"><p>' . esc_html__( 'L\'envoi précédent a échoué. Votre message a été conservé ci-dessous : vérifiez puis réessayez.', 'opac-custom' ) . '</p></div>';
+        }
+
+        if ( empty( $rows ) ) {
+            echo '<p>' . esc_html__( 'Aucun inscrit avec une adresse email valide ne correspond au filtre courant.', 'opac-custom' ) . '</p>';
+            printf( '<p><a class="button" href="%s">%s</a></p>', esc_url( $back_url ), esc_html__( 'Retour à la liste', 'opac-custom' ) );
+            echo '</div>';
+            return;
+        }
+
+        // Sujet et message : brouillon restaure si echec precedent, sinon valeurs
+        // par defaut (titre de l'atelier filtre ; message vide).
+        if ( $has_draft ) {
+            $subject_value = (string) $draft['subject'];
+            $body_value    = (string) $draft['body'];
+        } elseif ( $atelier_id && get_post( $atelier_id ) ) {
+            $subject_value = get_the_title( $atelier_id );
+            $body_value    = '';
+        } else {
+            $subject_value = __( 'Information - Association OPAC', 'opac-custom' );
+            $body_value    = '';
+        }
+
+        echo '<form id="opac-insc-email-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+        echo '<input type="hidden" name="action" value="' . esc_attr( self::ACTION_SEND_EMAIL ) . '" />';
+        wp_nonce_field( self::ACTION_SEND_EMAIL );
+
+        echo '<table class="form-table" role="presentation"><tbody>';
+        echo '<tr><th scope="row"><label for="opac_insc_subject">' . esc_html__( 'Sujet', 'opac-custom' ) . '</label></th><td>';
+        printf(
+            '<input type="text" id="opac_insc_subject" name="opac_insc_subject" value="%s" class="large-text" required />',
+            esc_attr( $subject_value )
+        );
+        echo '</td></tr>';
+        echo '<tr><th scope="row"><label>' . esc_html__( 'Message', 'opac-custom' ) . '</label></th><td>';
+        wp_editor( $body_value, 'opac_insc_body', [
+            'textarea_name' => 'opac_insc_body',
+            'textarea_rows' => 12,
+            'media_buttons' => false,
+            'teeny'         => true,
+        ] );
+        echo '</td></tr>';
+        echo '</tbody></table>';
+
+        printf( '<h2>' . esc_html__( 'Destinataires (%d)', 'opac-custom' ) . '</h2>', count( $rows ) );
+        echo '<p class="description">' . esc_html__( 'Décochez une personne pour l\'exclure. Les adresses partent en copie cachée : les destinataires ne se voient pas entre eux.', 'opac-custom' ) . '</p>';
+        echo '<ul style="max-height:320px;overflow:auto;border:1px solid #dcdcde;padding:10px 14px;margin:0 0 16px;background:#fff;list-style:none">';
+        echo implode( '', $rows ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- lignes deja echappees ci-dessus
+        echo '</ul>';
+
+        submit_button( __( 'Envoyer l\'email', 'opac-custom' ) );
+        printf( ' <a class="button" href="%s">%s</a>', esc_url( $back_url ), esc_html__( 'Annuler', 'opac-custom' ) );
+        echo '</form>';
+
+        // Garde-fou cote navigateur : feedback instantane si message vide ou aucun
+        // destinataire coche (les vraies pannes serveur sont rattrapees par le
+        // transient de brouillon cote PHP, cf. email_fail_redirect).
+        $js_empty = wp_json_encode( __( 'Le message est vide.', 'opac-custom' ) );
+        $js_norec = wp_json_encode( __( 'Aucun destinataire sélectionné.', 'opac-custom' ) );
+        echo '<script>(function(){'
+            . 'var f=document.getElementById("opac-insc-email-form");if(!f){return;}'
+            . 'f.addEventListener("submit",function(e){'
+            . 'var b="";if(window.tinymce){var ed=tinymce.get("opac_insc_body");if(ed){b=ed.getContent({format:"text"});}}'
+            . 'if(!b){var t=document.getElementById("opac_insc_body");if(t){b=t.value;}}'
+            . 'var n=f.querySelectorAll(\'input[name="opac_insc_recipients[]"]:checked\').length;'
+            . 'if(!b.replace(/\\s/g,"")){e.preventDefault();window.alert(' . $js_empty . ');return false;}'
+            . 'if(!n){e.preventDefault();window.alert(' . $js_norec . ');return false;}'
+            . '});})();</script>';
+        echo '</div>';
+    }
+
+    /**
+     * Traite l'envoi : valide nonce + capability, resout les emails des
+     * inscriptions cochees (verif type + email valide + dedup par email), puis
+     * envoie UN seul message en copie cachee (Bcc), expediteur opac_org_email.
+     */
+    public static function handle_send_email() {
+        if ( ! current_user_can( 'edit_posts' ) ) {
+            wp_die( esc_html__( 'Permissions insuffisantes.', 'opac-custom' ) );
+        }
+        check_admin_referer( self::ACTION_SEND_EMAIL );
+
+        $list_url = add_query_arg( [ 'post_type' => 'opac_inscription' ], admin_url( 'edit.php' ) );
+
+        $subject = isset( $_POST['opac_insc_subject'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_insc_subject'] ) ) : '';
+        $body    = isset( $_POST['opac_insc_body'] ) ? wp_kses_post( wp_unslash( $_POST['opac_insc_body'] ) ) : '';
+        if ( isset( $_POST['opac_insc_recipients'] ) ) {
+            $ids = array_map( 'absint', (array) wp_unslash( $_POST['opac_insc_recipients'] ) );
+        } else {
+            $ids = [];
+        }
+
+        // Garde-fous : sujet, corps (texte reel) et au moins un destinataire. En
+        // cas d'echec, on conserve le brouillon et on revient a l'ecran de
+        // redaction pre-rempli (email_fail_redirect) : aucun message perdu.
+        if ( '' === $subject || '' === trim( wp_strip_all_tags( $body ) ) || empty( $ids ) ) {
+            self::email_fail_redirect( $subject, $body, $ids );
+        }
+
+        // Resolution des emails : on ne fait pas confiance a l'URL, on relit
+        // chaque inscription cochee (type + email valide), dedup par email
+        // (un parent avec plusieurs enfants = un seul destinataire).
+        $emails = [];
+        foreach ( $ids as $id ) {
+            if ( ! $id ) {
+                continue;
+            }
+            $post = get_post( $id );
+            if ( ! $post || 'opac_inscription' !== $post->post_type ) {
+                continue;
+            }
+            $email = (string) get_post_meta( $id, 'opac_insc_email', true );
+            if ( $email && is_email( $email ) ) {
+                $emails[ strtolower( $email ) ] = $email;
+            }
+        }
+        $emails = array_values( $emails );
+        if ( empty( $emails ) ) {
+            self::email_fail_redirect( $subject, $body, $ids );
+        }
+
+        $from_email = self::recipient();
+        if ( class_exists( 'OPAC_Settings' ) ) {
+            $from_name = (string) OPAC_Settings::get( 'opac_org_name' );
+        } else {
+            $from_name = '';
+        }
+        if ( '' === $from_name ) {
+            $from_name = 'Association OPAC';
+        }
+
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            sprintf( 'From: %s <%s>', $from_name, $from_email ),
+            'Reply-To: ' . $from_email,
+            'Bcc: ' . implode( ', ', $emails ),
+        ];
+
+        // To : l'association elle-meme ; tous les inscrits sont en Bcc.
+        $sent = wp_mail( $from_email, $subject, wpautop( $body ), $headers );
+
+        if ( ! $sent ) {
+            error_log( '[OPAC inscription] bulk email wp_mail failed (' . count( $emails ) . ' destinataires)' );
+            self::email_fail_redirect( $subject, $body, $ids );
+        }
+        wp_safe_redirect( add_query_arg( 'opac_insc_email_sent', (string) count( $emails ), $list_url ) );
+        exit;
+    }
+
+    /**
+     * Echec d'envoi : conserve le brouillon (sujet, message, destinataires
+     * coches) dans un transient propre a l'utilisateur (15 min) et renvoie vers
+     * l'ecran de redaction pre-rempli, pour ne pas perdre un message deja redige.
+     */
+    private static function email_fail_redirect( $subject, $body, $ids ) {
+        set_transient(
+            'opac_insc_email_draft_' . get_current_user_id(),
+            [
+                'subject' => (string) $subject,
+                'body'    => (string) $body,
+                'ids'     => array_values( array_map( 'absint', (array) $ids ) ),
+            ],
+            15 * MINUTE_IN_SECONDS
+        );
+        wp_safe_redirect( add_query_arg(
+            [
+                'post_type' => 'opac_inscription',
+                'page'      => 'opac-insc-email',
+                '_wpnonce'  => wp_create_nonce( 'opac_insc_email_view' ),
+            ],
+            admin_url( 'edit.php' )
+        ) );
         exit;
     }
 
