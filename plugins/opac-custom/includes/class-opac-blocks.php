@@ -1509,11 +1509,11 @@ class OPAC_Blocks {
                     esc_html( $hours ),
                     esc_html__( 'Téléphone', 'opac-custom' ),
                     esc_html__( 'Accueil', 'opac-custom' ),
-                    esc_html( $tel_acc ),
+                    self::phone_link( $tel_acc ),
                     esc_html__( 'Administration', 'opac-custom' ),
-                    esc_html( $tel_adm ),
+                    self::phone_link( $tel_adm ),
                     esc_html__( 'Email et réseaux', 'opac-custom' ),
-                    esc_html( $email ),
+                    self::email_link( $email ),
                     $reseaux_html
                 );
 
@@ -1530,9 +1530,9 @@ class OPAC_Blocks {
                     esc_html( $city ),
                     esc_html__( 'Téléphone', 'opac-custom' ),
                     esc_html__( 'Accueil', 'opac-custom' ),
-                    esc_html( $tel_acc ),
+                    self::phone_link( $tel_acc ),
                     esc_html__( 'Administration', 'opac-custom' ),
-                    esc_html( $tel_adm ),
+                    self::phone_link( $tel_adm ),
                     esc_html__( 'Secrétariat', 'opac-custom' ),
                     esc_html( $hours ),
                     esc_html__( 'Réseaux', 'opac-custom' ),
@@ -1543,8 +1543,8 @@ class OPAC_Blocks {
                 // Footer colonne 3 : tel + email + horaires.
                 return sprintf(
                     '<p class="has-muted-color has-text-color" style="font-size:13px;line-height:1.7">%s<br/>%s<br/>%s</p>',
-                    esc_html( $tel_acc ),
-                    esc_html( $email ),
+                    self::phone_link( $tel_acc ),
+                    self::email_link( $email ),
                     esc_html( $hours )
                 );
 
@@ -1564,6 +1564,36 @@ class OPAC_Blocks {
                     $social ? '<div class="opac-footer-social">' . $social . '</div>' : ''
                 );
         }
+    }
+
+    /**
+     * Numero de telephone cliquable (lien tel:). Sur iOS Safari, un numero en
+     * texte brut declenche l'auto-detection (Data Detectors), au comportement
+     * incoherent (popup qui "bloque") ; un vrai lien tel: ouvre l'appel
+     * proprement et de facon identique sur toutes les pages.
+     * Fallback : placeholder muet si le champ n'est pas renseigne.
+     */
+    private static function phone_link( $number ) {
+        $number = trim( (string) $number );
+        if ( '' === $number ) {
+            return '<span class="opac-empty-inline">' . esc_html__( 'Non renseigné', 'opac-custom' ) . '</span>';
+        }
+        // href : on ne garde que les chiffres et un eventuel + en tete.
+        $href = preg_replace( '/[^0-9+]/', '', $number );
+        return sprintf( '<a href="tel:%s">%s</a>', esc_attr( $href ), esc_html( $number ) );
+    }
+
+    /**
+     * Adresse email cliquable (lien mailto:). Meme logique que phone_link :
+     * lien explicite plutot que de dependre de l'auto-detection du navigateur.
+     * Fallback : placeholder muet si le champ n'est pas renseigne.
+     */
+    private static function email_link( $email ) {
+        $email = trim( (string) $email );
+        if ( '' === $email ) {
+            return '<span class="opac-empty-inline">' . esc_html__( 'Non renseigné', 'opac-custom' ) . '</span>';
+        }
+        return sprintf( '<a href="mailto:%s">%s</a>', esc_attr( $email ), esc_html( $email ) );
     }
 
     /**
