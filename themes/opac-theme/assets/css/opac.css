@@ -1993,6 +1993,21 @@ body {
     line-height: 1;
 }
 
+/* Avatar avec photo (grille d'equipe + carte animateur) : meme cadre rond,
+   l'image remplit et est rognee (object-fit) pour homogeneiser les portraits
+   varies uploades par l'equipe. .opac-avatar-photo est la source unique. */
+.opac-person-avatar--photo,
+.opac-animateur-avatar--photo {
+    overflow: hidden;
+}
+
+.opac-avatar-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
 /* Rotation 8 couleurs pour avatars (deterministe par hash du nom) */
 .opac-person-color-1 { background: var(--wp--preset--color--accent); }
 .opac-person-color-2 { background: var(--wp--preset--color--teal); }
