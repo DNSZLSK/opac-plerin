@@ -2312,6 +2312,16 @@ body {
     justify-content: center;
 }
 
+/* Mobile : empiler les boutons verticalement et centres (evite tout
+   chevauchement quand ils ne tiennent pas cote a cote). Placee APRES la regle
+   de base pour gagner au source-order (meme specificite). */
+@media (max-width: 480px) {
+    .opac-confirmation-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
 .opac-form-notice.is-info {
     background: #eef3f6;
     color: #2c3e50;
