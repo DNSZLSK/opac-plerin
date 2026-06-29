@@ -2312,6 +2312,13 @@ body {
     justify-content: center;
 }
 
+/* Neutralise les marges que WordPress applique aux .wp-block-button (block-gap) :
+   l'espacement est gere par 'gap' du conteneur, pas par des marges qui pourraient
+   se chevaucher une fois les boutons empiles. */
+.opac-confirmation-actions .wp-block-button {
+    margin: 0;
+}
+
 /* Mobile : empiler les boutons verticalement et centres (evite tout
    chevauchement quand ils ne tiennent pas cote a cote). Placee APRES la regle
    de base pour gagner au source-order (meme specificite). */
@@ -2319,6 +2326,7 @@ body {
     .opac-confirmation-actions {
         flex-direction: column;
         align-items: center;
+        gap: 16px;
     }
 }
 
