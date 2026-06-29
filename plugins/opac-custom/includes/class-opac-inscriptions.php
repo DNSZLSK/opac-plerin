@@ -455,7 +455,7 @@ class OPAC_Inscriptions {
             $status_terms = wp_get_object_terms( $id, 'opac_inscription_status', [ 'fields' => 'names' ] );
             $statut       = ( ! is_wp_error( $status_terms ) && ! empty( $status_terms ) ) ? implode( ', ', $status_terms ) : '';
 
-            fputcsv( $out, [
+            fputcsv( $out, array_map( [ __CLASS__, 'csv_safe' ], [
                 (string) get_post_meta( $id, 'opac_insc_nom', true ),
                 (string) get_post_meta( $id, 'opac_insc_prenom', true ),
                 (string) get_post_meta( $id, 'opac_insc_email', true ),
@@ -468,11 +468,26 @@ class OPAC_Inscriptions {
                 $statut,
                 (string) get_post_meta( $id, 'opac_insc_date_submitted', true ),
                 (string) get_post_meta( $id, 'opac_insc_message', true ),
-            ] );
+            ] ) );
         }
 
         fclose( $out );
         exit;
+    }
+
+    /**
+     * Neutralise l'injection de formule CSV : un champ saisi au formulaire public
+     * commencant par = + - @ (ou tab / retour chariot) est interprete comme une
+     * formule par Excel / LibreOffice a l'ouverture du fichier. On prefixe ces
+     * valeurs d'une apostrophe : la cellule reste du texte et ne s'execute pas
+     * (l'apostrophe est masquee par le tableur). Mitigation standard OWASP.
+     */
+    private static function csv_safe( $value ) {
+        $value = (string) $value;
+        if ( '' !== $value && in_array( $value[0], [ '=', '+', '-', '@', "\t", "\r" ], true ) ) {
+            return "'" . $value;
+        }
+        return $value;
     }
 
     /**
