@@ -509,20 +509,17 @@ class OPAC_Blocks {
 
         $slug = (string) get_post_meta( $post_id, 'opac_places_dispo', true );
 
-        $map = [
-            'ok'   => [ 'label' => __( 'Places disponibles', 'opac-custom' ), 'class' => 'opac-tag-ok' ],
-            'full' => [ 'label' => __( 'Complet', 'opac-custom' ),            'class' => 'opac-tag-full' ],
-            'few'  => [ 'label' => __( 'Quelques places', 'opac-custom' ),    'class' => 'opac-tag-few' ],
-        ];
-
-        if ( ! isset( $map[ $slug ] ) ) {
+        // Libelles centralises (OPAC_Labels) ; la classe couleur reste propre au tag.
+        $labels  = OPAC_Labels::places();
+        $classes = [ 'ok' => 'opac-tag-ok', 'full' => 'opac-tag-full', 'few' => 'opac-tag-few' ];
+        if ( ! isset( $labels[ $slug ], $classes[ $slug ] ) ) {
             return '';
         }
 
         return sprintf(
             '<p class="opac-tag %s">%s</p>',
-            esc_attr( $map[ $slug ]['class'] ),
-            esc_html( $map[ $slug ]['label'] )
+            esc_attr( $classes[ $slug ] ),
+            esc_html( $labels[ $slug ] )
         );
     }
 
@@ -590,11 +587,7 @@ class OPAC_Blocks {
         $ordered  = array_merge( $upcoming, array_reverse( $past ) );
         $boundary = count( $upcoming ); // index de bascule a-venir -> passes
 
-        $months_abbr = [
-            1 => 'Janv.', 2  => 'Févr.', 3  => 'Mars',  4 => 'Avr.',
-            5 => 'Mai',   6  => 'Juin',  7  => 'Juil.', 8 => 'Août',
-            9 => 'Sept.', 10 => 'Oct.',  11 => 'Nov.', 12 => 'Déc.',
-        ];
+        $months_abbr = OPAC_Calendar::months_abbr();
 
         $out = '<div class="opac-stages-list">';
 
@@ -682,22 +675,18 @@ class OPAC_Blocks {
 
         $creneaux = get_post_meta( $post_id, 'opac_creneaux', true );
         if ( is_array( $creneaux ) && ! empty( $creneaux ) ) {
-            $jours = self::jours_labels();
             $items = '';
             foreach ( $creneaux as $c ) {
                 if ( ! is_array( $c ) ) {
                     continue;
                 }
-                $jour    = isset( $c['jour'] ) ? (string) $c['jour'] : '';
-                $label   = isset( $jours[ $jour ] ) ? $jours[ $jour ] : ucfirst( $jour );
-                $horaire = self::format_horaire( $c['debut'] ?? '', $c['fin'] ?? '' );
-                $line    = trim( $label . ' ' . $horaire );
+                $line = OPAC_Calendar::creneau_label( $c );
                 if ( '' === $line ) {
                     continue;
                 }
                 $tarif = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
                 $tarif_html = $tarif > 0
-                    ? ' <span class="opac-creneau-tarif">' . esc_html( number_format_i18n( $tarif, 0 ) . ' €' ) . '</span>'
+                    ? ' <span class="opac-creneau-tarif">' . esc_html( OPAC_Labels::euros( $tarif ) ) . '</span>'
                     : '';
                 $note = ( isset( $c['note'] ) && '' !== $c['note'] )
                     ? ' <span class="opac-creneau-note">' . esc_html( (string) $c['note'] ) . '</span>'
@@ -725,43 +714,6 @@ class OPAC_Blocks {
             return '';
         }
         return '<p class="opac-creneaux-list">' . esc_html( $text ) . '</p>';
-    }
-
-    /**
-     * Libelles FR des jours (slug -> libelle), pour le rendu des creneaux.
-     */
-    private static function jours_labels() {
-        return [
-            'lundi'    => 'Lundi',
-            'mardi'    => 'Mardi',
-            'mercredi' => 'Mercredi',
-            'jeudi'    => 'Jeudi',
-            'vendredi' => 'Vendredi',
-            'samedi'   => 'Samedi',
-            'dimanche' => 'Dimanche',
-        ];
-    }
-
-    /**
-     * Formate "14:30" + "17:30" en "14h30 - 17h30" (et "14:00" en "14h").
-     */
-    private static function format_horaire( $debut, $fin ) {
-        $fmt = static function ( $t ) {
-            $t = trim( (string) $t );
-            if ( '' === $t ) {
-                return '';
-            }
-            $parts = explode( ':', $t );
-            $h = isset( $parts[0] ) ? (int) $parts[0] : 0;
-            $m = isset( $parts[1] ) ? $parts[1] : '00';
-            return ( '00' === $m ) ? ( $h . 'h' ) : ( $h . 'h' . $m );
-        };
-        $d  = $fmt( $debut );
-        $fi = $fmt( $fin );
-        if ( '' !== $d && '' !== $fi ) {
-            return $d . ' - ' . $fi;
-        }
-        return $d . $fi;
     }
 
     /**
@@ -839,16 +791,8 @@ class OPAC_Blocks {
             return '<p class="opac-empty">' . esc_html__( 'Aucun événement programmé pour le moment.', 'opac-custom' ) . '</p>';
         }
 
-        $months_fr = [
-            1 => 'Janvier', 2  => 'Février',  3  => 'Mars',     4 => 'Avril',
-            5 => 'Mai',     6  => 'Juin',     7  => 'Juillet',  8 => 'Août',
-            9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre',
-        ];
-        $months_abbr = [
-            1 => 'Janv.', 2  => 'Févr.', 3  => 'Mars',  4 => 'Avr.',
-            5 => 'Mai',   6  => 'Juin',  7  => 'Juil.', 8 => 'Août',
-            9 => 'Sept.', 10 => 'Oct.',  11 => 'Nov.', 12 => 'Déc.',
-        ];
+        $months_fr   = OPAC_Calendar::months();
+        $months_abbr = OPAC_Calendar::months_abbr();
 
         $out        = '<div class="opac-agenda">';
         $last_month = '';
@@ -1344,7 +1288,6 @@ class OPAC_Blocks {
         // Creneaux pour atelier a l'annee. Prefere les creneaux structures
         // (value = id, avec tarif), sinon fallback sur l'ancien champ texte.
         if ( $atelier_id && count( $creneaux_struct ) > 0 ) {
-            $jours = self::jours_labels();
             $out .= '<div class="opac-form-row"><label for="opac-creneau">' . esc_html__( 'Créneau choisi', 'opac-custom' ) . ' *</label>';
             $out .= '<select class="opac-form-input" id="opac-creneau" name="opac_creneau_id" required>';
             $out .= '<option value="">' . esc_html__( 'Sélectionner un créneau...', 'opac-custom' ) . '</option>';
@@ -1352,13 +1295,10 @@ class OPAC_Blocks {
                 if ( ! is_array( $c ) || empty( $c['id'] ) ) {
                     continue;
                 }
-                $jour    = isset( $c['jour'] ) ? (string) $c['jour'] : '';
-                $label   = isset( $jours[ $jour ] ) ? $jours[ $jour ] : ucfirst( $jour );
-                $horaire = self::format_horaire( $c['debut'] ?? '', $c['fin'] ?? '' );
                 $tarif_c = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
-                $opt     = trim( $label . ' ' . $horaire );
+                $opt     = OPAC_Calendar::creneau_label( $c );
                 if ( $tarif_c > 0 ) {
-                    $opt .= ' (' . number_format_i18n( $tarif_c, 0 ) . ' €)';
+                    $opt .= ' (' . OPAC_Labels::euros( $tarif_c ) . ')';
                 }
                 if ( class_exists( 'OPAC_Inscriptions' ) && OPAC_Inscriptions::creneau_is_full( $atelier_id, $c ) ) {
                     $opt .= ' - ' . __( 'Complet (liste d\'attente)', 'opac-custom' );
@@ -1728,11 +1668,7 @@ class OPAC_Blocks {
             return '';
         }
 
-        $months_fr = [
-            1 => 'Janvier', 2 => 'Février',  3 => 'Mars',     4 => 'Avril',
-            5 => 'Mai',     6 => 'Juin',     7 => 'Juillet',  8 => 'Août',
-            9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre',
-        ];
+        $months_fr = OPAC_Calendar::months();
 
         // Markup aligne avec l'ancien design statique : wp-block-columns +
         // wp-block-column + opac-card avec fond bg + padding + border-radius.
