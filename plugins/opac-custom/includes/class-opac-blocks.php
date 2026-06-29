@@ -1113,6 +1113,57 @@ class OPAC_Blocks {
     }
 
     /**
+     * Etat de confirmation apres une inscription reussie (cf. render_inscription_form).
+     * On confirme l'action, en nommant l'atelier/stage si transmis par la redirection,
+     * et on propose la suite SANS reafficher le formulaire : l'action est terminee,
+     * re-proposer une inscription seme le doute et provoque des doublons.
+     */
+    private static function inscription_confirmation() {
+        $waitlist = isset( $_GET['attente'] ) && '1' === $_GET['attente'];
+
+        $cible_id = isset( $_GET['atelier'] )
+            ? absint( $_GET['atelier'] )
+            : ( isset( $_GET['stage'] ) ? absint( $_GET['stage'] ) : 0 );
+        $cible    = $cible_id ? get_the_title( $cible_id ) : '';
+
+        if ( $waitlist ) {
+            $titre = __( 'Vous êtes sur la liste d\'attente', 'opac-custom' );
+            $texte = $cible
+                ? sprintf( __( 'Le créneau choisi pour « %s » est complet : votre demande a bien été enregistrée en liste d\'attente. Nous vous recontacterons dès qu\'une place se libère.', 'opac-custom' ), $cible )
+                : __( 'Ce créneau est complet : votre demande a bien été enregistrée en liste d\'attente. Nous vous recontacterons dès qu\'une place se libère.', 'opac-custom' );
+        } else {
+            $titre = __( 'Votre demande est bien enregistrée', 'opac-custom' );
+            $texte = $cible
+                ? sprintf( __( 'Votre demande d\'inscription pour « %s » a bien été prise en compte. Le secrétariat vous contactera prochainement pour la confirmer.', 'opac-custom' ), $cible )
+                : __( 'Votre demande d\'inscription a bien été prise en compte. Le secrétariat vous contactera prochainement pour la confirmer.', 'opac-custom' );
+        }
+
+        $ateliers_url = get_post_type_archive_link( 'opac_atelier' );
+        if ( ! $ateliers_url ) {
+            $ateliers_url = home_url( '/' );
+        }
+
+        $boutons = '<div class="wp-block-buttons opac-confirmation-actions">'
+            . '<div class="wp-block-button is-style-opac-primary"><a class="wp-block-button__link wp-element-button" href="' . esc_url( $ateliers_url ) . '">'
+            . esc_html__( 'Voir tous les ateliers', 'opac-custom' ) . '</a></div>'
+            . '<div class="wp-block-button is-style-opac-secondary"><a class="wp-block-button__link wp-element-button" href="' . esc_url( home_url( '/' ) ) . '">'
+            . esc_html__( 'Retour à l\'accueil', 'opac-custom' ) . '</a></div>'
+            . '</div>';
+
+        return sprintf(
+            '<div class="opac-confirmation" role="status" aria-live="polite">'
+                . '<div class="opac-confirmation-check" aria-hidden="true">&#10003;</div>'
+                . '<h2 class="opac-confirmation-title">%s</h2>'
+                . '<p class="opac-confirmation-text">%s</p>'
+                . '%s'
+            . '</div>',
+            esc_html( $titre ),
+            esc_html( $texte ),
+            $boutons
+        );
+    }
+
+    /**
      * Formulaire d'inscription frontend.
      *
      * Pre-remplit le contexte depuis ?atelier=ID ou ?stage=ID dans l'URL.
@@ -1124,13 +1175,15 @@ class OPAC_Blocks {
      * Submit : POST vers admin-post.php, action=opac_inscription.
      */
     public static function render_inscription_form( $attrs, $content, $block ) {
+        // Etat de succes : l'action est terminee -> confirmation claire + liens de
+        // suite, et on NE reaffiche PAS le formulaire (sinon l'utilisateur doute que
+        // ca a marche, voire re-soumet par confusion sur le formulaire generique).
+        if ( isset( $_GET['envoye'] ) && '1' === $_GET['envoye'] ) {
+            return self::inscription_confirmation();
+        }
+
         $notice = '';
-        if ( isset( $_GET['envoye'] ) && $_GET['envoye'] === '1' ) {
-            $msg = ( isset( $_GET['attente'] ) && '1' === $_GET['attente'] )
-                ? __( 'Ce créneau est complet : votre demande a été enregistrée en liste d\'attente. Nous vous recontacterons dès qu\'une place se libère.', 'opac-custom' )
-                : __( 'Votre demande d\'inscription a bien été enregistrée. Le secrétariat vous contactera prochainement pour confirmation.', 'opac-custom' );
-            $notice = '<div class="opac-form-notice is-success" role="status" aria-live="polite">' . esc_html( $msg ) . '</div>';
-        } elseif ( isset( $_GET['erreur'] ) ) {
+        if ( isset( $_GET['erreur'] ) ) {
             $err = sanitize_key( wp_unslash( $_GET['erreur'] ) );
             $err_labels = [
                 'champs'      => __( 'Merci de remplir tous les champs obligatoires.', 'opac-custom' ),
