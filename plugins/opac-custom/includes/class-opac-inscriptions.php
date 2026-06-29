@@ -341,7 +341,7 @@ class OPAC_Inscriptions {
             $nonce = '';
         }
 
-        if ( ! current_user_can( 'edit_posts' ) ) {
+        if ( ! current_user_can( 'edit_others_posts' ) ) {
             wp_die( esc_html__( 'Permissions insuffisantes.', 'opac-custom' ) );
         }
         if ( ! wp_verify_nonce( $nonce, 'opac_insc_action_' . $id . '_' . $status ) ) {
@@ -402,7 +402,7 @@ class OPAC_Inscriptions {
      * En-tete UTF-8 BOM pour une ouverture propre dans Excel.
      */
     public static function handle_export() {
-        if ( ! current_user_can( 'edit_posts' ) ) {
+        if ( ! current_user_can( 'edit_others_posts' ) ) {
             wp_die( esc_html__( 'Permissions insuffisantes.', 'opac-custom' ) );
         }
         $nonce = isset( $_GET['_wpnonce'] ) ? (string) $_GET['_wpnonce'] : '';
@@ -548,7 +548,7 @@ class OPAC_Inscriptions {
      * cochees, decocher pour exclure). L'envoi se base sur les cases cochees.
      */
     public static function render_email_page() {
-        if ( ! current_user_can( 'edit_posts' ) ) {
+        if ( ! current_user_can( 'edit_others_posts' ) ) {
             wp_die( esc_html__( 'Permissions insuffisantes.', 'opac-custom' ) );
         }
         $nonce = isset( $_GET['_wpnonce'] ) ? (string) $_GET['_wpnonce'] : '';
@@ -713,7 +713,7 @@ class OPAC_Inscriptions {
      * envoie UN seul message en copie cachee (Bcc), expediteur opac_org_email.
      */
     public static function handle_send_email() {
-        if ( ! current_user_can( 'edit_posts' ) ) {
+        if ( ! current_user_can( 'edit_others_posts' ) ) {
             wp_die( esc_html__( 'Permissions insuffisantes.', 'opac-custom' ) );
         }
         check_admin_referer( self::ACTION_SEND_EMAIL );

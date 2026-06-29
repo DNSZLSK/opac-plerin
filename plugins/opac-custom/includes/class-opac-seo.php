@@ -420,7 +420,7 @@ class OPAC_SEO {
     }
 
     private static function render_jsonld( $data ) {
-        $json = wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+        $json = wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG );
         if ( $json === false ) {
             return;
         }

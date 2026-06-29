@@ -142,6 +142,14 @@ class OPAC_CPTs {
             'has_archive' => false,
             'exclude_from_search' => true,
             'publicly_queryable' => false,
+            // Note securite : l'acces aux donnees personnelles est resserre au niveau
+            // des OPERATIONS sensibles (export CSV, email groupe, validation, widget,
+            // row-actions -> 'edit_others_posts', cf. OPAC_Inscriptions et OPAC_Admin),
+            // et NON via les capacites du CPT : remapper celles-ci empoisonne
+            // 'edit_others_posts' au niveau global (WP l'enregistre comme meta-cap) et
+            // casse ce droit partout, y compris pour l'admin (verifie au harnais). Une
+            // restriction complete du menu/liste demanderait un capability_type dedie
+            // + attribution des caps aux roles : a faire proprement si besoin.
             // Sans 'custom-fields' : les metas sont presentees en fiche lisible
             // via OPAC_Admin::render_inscription_details_box (plus de champs bruts).
             'supports' => [ 'title' ],

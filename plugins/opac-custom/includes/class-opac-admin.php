@@ -303,7 +303,7 @@ class OPAC_Admin {
         if ( ! $post || $post->post_type !== 'opac_inscription' ) {
             return $actions;
         }
-        if ( ! current_user_can( 'edit_posts' ) ) {
+        if ( ! current_user_can( 'edit_others_posts' ) ) {
             return $actions;
         }
 
@@ -447,7 +447,7 @@ class OPAC_Admin {
         ?>
         <script>
         (function(){
-            var map = <?php echo wp_json_encode( $creneaux_map ); ?> || {};
+            var map = <?php echo wp_json_encode( $creneaux_map, JSON_HEX_TAG ); ?> || {};
             var aSel = document.getElementById('opac_insc_atelier_id');
             var cSel = document.getElementById('opac_insc_creneau_choice');
             if(!aSel||!cSel){return;}
@@ -785,6 +785,10 @@ class OPAC_Admin {
     }
 
     public static function register_dashboard_widget() {
+        // Le widget liste des noms d'inscrits (PII) : editeurs/admins uniquement.
+        if ( ! current_user_can( 'edit_others_posts' ) ) {
+            return;
+        }
         wp_add_dashboard_widget(
             'opac_inscriptions_widget',
             __( 'OPAC - Inscriptions en attente', 'opac-custom' ),
