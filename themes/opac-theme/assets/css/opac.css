@@ -1445,18 +1445,6 @@ body {
     flex-shrink: 0;
 }
 
-/* Variante photo : meme pastille ronde, l'image remplit et est rognee. */
-.opac-animateur-avatar--photo {
-    overflow: hidden;
-}
-
-.opac-animateur-photo {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
 .opac-animateur-info {
     flex: 1;
     display: flex;
@@ -2005,13 +1993,15 @@ body {
     line-height: 1;
 }
 
-/* Variante photo : meme cadre rond, l'image remplit et est rognee (object-fit)
-   pour homogeneiser les portraits varies uploades par l'equipe. */
-.opac-person-avatar--photo {
+/* Avatar avec photo (grille d'equipe + carte animateur) : meme cadre rond,
+   l'image remplit et est rognee (object-fit) pour homogeneiser les portraits
+   varies uploades par l'equipe. .opac-avatar-photo est la source unique. */
+.opac-person-avatar--photo,
+.opac-animateur-avatar--photo {
     overflow: hidden;
 }
 
-.opac-person-photo {
+.opac-avatar-photo {
     width: 100%;
     height: 100%;
     object-fit: cover;

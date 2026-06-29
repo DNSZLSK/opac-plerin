@@ -970,25 +970,9 @@ class OPAC_Blocks {
                 $initials = self::compute_initials( $name );
             }
 
-            // Photo si une image mise en avant est definie, sinon avatar a initiales.
-            // Fallback : l'equipe OPAC peut laisser le champ photo vide.
-            if ( has_post_thumbnail( $person ) ) {
-                $avatar = '<div class="opac-person-avatar opac-person-avatar--photo">'
-                    . get_the_post_thumbnail(
-                        $person,
-                        'thumbnail',
-                        [ 'class' => 'opac-person-photo', 'alt' => '', 'loading' => 'lazy' ]
-                    )
-                    . '</div>';
-            } else {
-                // Rotation deterministe sur 8 couleurs basee sur le hash du nom.
-                $color_index = ( abs( crc32( $name ) ) % 8 ) + 1;
-                $avatar      = sprintf(
-                    '<div class="opac-person-avatar opac-person-color-%d" aria-hidden="true">%s</div>',
-                    $color_index,
-                    esc_html( $initials )
-                );
-            }
+            // Avatar : photo si image mise en avant, sinon pastille a initiales
+            // coloree. Helper partage avec la carte animateur (cf. render_avatar).
+            $avatar = self::render_avatar( $name, $initials, (int) $person->ID, 'opac-person-avatar', true );
 
             $out .= sprintf(
                 '<div class="opac-person">'
@@ -1037,22 +1021,9 @@ class OPAC_Blocks {
         // Photo : on reutilise l'image mise en avant d'une fiche personne dont le
         // nom correspond (le prof a deja une fiche pour la grille d'equipe), pour
         // ne pas faire ressaisir l'image sur chaque atelier/stage. Sinon, initiales.
-        $avatar = '';
-        if ( '' !== $name ) {
-            $person_id = self::find_person_by_name( $name );
-            if ( $person_id && has_post_thumbnail( $person_id ) ) {
-                $avatar = '<div class="opac-animateur-avatar opac-animateur-avatar--photo">'
-                    . get_the_post_thumbnail(
-                        $person_id,
-                        'thumbnail',
-                        [ 'class' => 'opac-animateur-photo', 'alt' => '', 'loading' => 'lazy' ]
-                    )
-                    . '</div>';
-            }
-        }
-        if ( '' === $avatar ) {
-            $avatar = '<div class="opac-animateur-avatar" aria-hidden="true">' . esc_html( $initials ) . '</div>';
-        }
+        // Meme helper que la grille d'equipe (render_avatar), sans rotation couleur.
+        $person_id = ( '' !== $name ) ? self::find_person_by_name( $name ) : 0;
+        $avatar    = self::render_avatar( $name, $initials, $person_id, 'opac-animateur-avatar', false );
 
         return '<div class="opac-animateur has-card-background-color has-background">'
             . $avatar
@@ -1794,6 +1765,35 @@ class OPAC_Blocks {
         }
         $out .= '</div>';
         return $out;
+    }
+
+    /**
+     * Avatar partage : photo (image mise en avant du post $thumb_id) si presente,
+     * sinon pastille a initiales. Source unique de la logique photo-sinon-initiales,
+     * utilisee par la grille d'equipe (render_team_grid) et la carte animateur
+     * (render_atelier_animator) : elle etait dupliquee dans les deux, d'ou le bug
+     * initial (photo branchee d'un cote, pas de l'autre).
+     *
+     * @param string $name       Nom complet (hash couleur + secours initiales).
+     * @param string $initials   Initiales deja resolues par l'appelant.
+     * @param int    $thumb_id   Post portant l'image mise en avant (0 = aucune).
+     * @param string $base_class Classe du conteneur (taille/forme propres au contexte).
+     * @param bool   $use_color  Pastille couleur rotative par nom (grille d'equipe).
+     * @param string $size       Taille d'image WP (defaut 'thumbnail', carre).
+     */
+    private static function render_avatar( $name, $initials, $thumb_id, $base_class, $use_color = false, $size = 'thumbnail' ) {
+        if ( $thumb_id && has_post_thumbnail( $thumb_id ) ) {
+            return '<div class="' . esc_attr( $base_class . ' ' . $base_class . '--photo' ) . '">'
+                . get_the_post_thumbnail(
+                    $thumb_id,
+                    $size,
+                    [ 'class' => 'opac-avatar-photo', 'alt' => '', 'loading' => 'lazy' ]
+                )
+                . '</div>';
+        }
+        $initials = ( '' !== (string) $initials ) ? (string) $initials : '·';
+        $class    = $base_class . ( $use_color ? ' opac-person-color-' . ( ( abs( crc32( (string) $name ) ) % 8 ) + 1 ) : '' );
+        return '<div class="' . esc_attr( $class ) . '" aria-hidden="true">' . esc_html( $initials ) . '</div>';
     }
 
     /**
