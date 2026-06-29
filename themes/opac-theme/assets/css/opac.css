@@ -1445,6 +1445,18 @@ body {
     flex-shrink: 0;
 }
 
+/* Variante photo : meme pastille ronde, l'image remplit et est rognee. */
+.opac-animateur-avatar--photo {
+    overflow: hidden;
+}
+
+.opac-animateur-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
 .opac-animateur-info {
     flex: 1;
     display: flex;
@@ -1991,6 +2003,19 @@ body {
     font-weight: 500;
     color: var(--opac-card);
     line-height: 1;
+}
+
+/* Variante photo : meme cadre rond, l'image remplit et est rognee (object-fit)
+   pour homogeneiser les portraits varies uploades par l'equipe. */
+.opac-person-avatar--photo {
+    overflow: hidden;
+}
+
+.opac-person-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 /* Rotation 8 couleurs pour avatars (deterministe par hash du nom) */

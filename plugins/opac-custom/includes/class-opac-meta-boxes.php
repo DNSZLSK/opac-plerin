@@ -146,7 +146,7 @@ class OPAC_Meta_Boxes {
 
             case 'opac_person':
                 return [
-                    [ 'key' => '_thumbnail', 'type' => 'image', 'label' => __( 'Photo', 'opac-custom' ), 'desc' => __( 'Optionnelle. L\'affichage actuel utilise un avatar à initiales.', 'opac-custom' ) ],
+                    [ 'key' => '_thumbnail', 'type' => 'image', 'label' => __( 'Photo', 'opac-custom' ), 'desc' => __( 'Optionnelle. Si vous ajoutez une photo, elle remplace l\'avatar à initiales. Sans photo, un avatar coloré avec les initiales s\'affiche automatiquement.', 'opac-custom' ) ],
                     [ 'key' => 'opac_role', 'type' => 'text', 'label' => __( 'Rôle / fonction', 'opac-custom' ), 'desc' => __( 'Ex : Céramique, Présidente, Secrétaire.', 'opac-custom' ) ],
                     [ 'key' => 'opac_person_type', 'type' => 'taxonomy', 'taxonomy' => 'opac_person_type', 'label' => __( 'Type', 'opac-custom' ), 'desc' => __( 'Détermine la grille où la personne apparaît sur la page Association.', 'opac-custom' ) ],
                 ];

@@ -970,17 +970,33 @@ class OPAC_Blocks {
                 $initials = self::compute_initials( $name );
             }
 
-            // Rotation deterministe sur 8 couleurs basee sur le hash du nom.
-            $color_index = ( abs( crc32( $name ) ) % 8 ) + 1;
+            // Photo si une image mise en avant est definie, sinon avatar a initiales.
+            // Fallback : l'equipe OPAC peut laisser le champ photo vide.
+            if ( has_post_thumbnail( $person ) ) {
+                $avatar = '<div class="opac-person-avatar opac-person-avatar--photo">'
+                    . get_the_post_thumbnail(
+                        $person,
+                        'thumbnail',
+                        [ 'class' => 'opac-person-photo', 'alt' => '', 'loading' => 'lazy' ]
+                    )
+                    . '</div>';
+            } else {
+                // Rotation deterministe sur 8 couleurs basee sur le hash du nom.
+                $color_index = ( abs( crc32( $name ) ) % 8 ) + 1;
+                $avatar      = sprintf(
+                    '<div class="opac-person-avatar opac-person-color-%d" aria-hidden="true">%s</div>',
+                    $color_index,
+                    esc_html( $initials )
+                );
+            }
 
             $out .= sprintf(
                 '<div class="opac-person">'
-                    . '<div class="opac-person-avatar opac-person-color-%d" aria-hidden="true">%s</div>'
+                    . '%s'
                     . '<div class="opac-person-name">%s</div>'
                     . '%s'
                 . '</div>',
-                $color_index,
-                esc_html( $initials ),
+                $avatar,
                 esc_html( $name ),
                 $role ? '<div class="opac-person-role">' . esc_html( $role ) . '</div>' : ''
             );
@@ -1018,8 +1034,28 @@ class OPAC_Blocks {
             $name_html = esc_html( $name );
         }
 
+        // Photo : on reutilise l'image mise en avant d'une fiche personne dont le
+        // nom correspond (le prof a deja une fiche pour la grille d'equipe), pour
+        // ne pas faire ressaisir l'image sur chaque atelier/stage. Sinon, initiales.
+        $avatar = '';
+        if ( '' !== $name ) {
+            $person_id = self::find_person_by_name( $name );
+            if ( $person_id && has_post_thumbnail( $person_id ) ) {
+                $avatar = '<div class="opac-animateur-avatar opac-animateur-avatar--photo">'
+                    . get_the_post_thumbnail(
+                        $person_id,
+                        'thumbnail',
+                        [ 'class' => 'opac-animateur-photo', 'alt' => '', 'loading' => 'lazy' ]
+                    )
+                    . '</div>';
+            }
+        }
+        if ( '' === $avatar ) {
+            $avatar = '<div class="opac-animateur-avatar" aria-hidden="true">' . esc_html( $initials ) . '</div>';
+        }
+
         return '<div class="opac-animateur has-card-background-color has-background">'
-            . '<div class="opac-animateur-avatar" aria-hidden="true">' . esc_html( $initials ) . '</div>'
+            . $avatar
             . '<div class="opac-animateur-info">'
                 . '<p class="opac-animateur-name">' . $name_html . '</p>'
                 . '<p class="opac-animateur-role has-muted-color has-text-color">'
@@ -1758,6 +1794,29 @@ class OPAC_Blocks {
         }
         $out .= '</div>';
         return $out;
+    }
+
+    /**
+     * Cherche une fiche opac_person dont le titre correspond au nom donne
+     * (insensible a la casse via la collation MySQL). Sert a reutiliser la photo
+     * d'un prof pour la carte animateur des ateliers/stages sans la ressaisir.
+     * Retourne l'ID de la fiche, ou 0 si aucune ne correspond.
+     */
+    private static function find_person_by_name( $name ) {
+        $name = trim( (string) $name );
+        if ( '' === $name ) {
+            return 0;
+        }
+        $q = new WP_Query( [
+            'post_type'              => 'opac_person',
+            'post_status'            => 'publish',
+            'title'                  => $name,
+            'posts_per_page'         => 1,
+            'fields'                 => 'ids',
+            'no_found_rows'          => true,
+            'update_post_term_cache' => false,
+        ] );
+        return ! empty( $q->posts ) ? (int) $q->posts[0] : 0;
     }
 
     /**
