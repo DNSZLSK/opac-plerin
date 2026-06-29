@@ -311,6 +311,13 @@ class OPAC_Inscriptions {
         if ( $auto_waitlist ) {
             $args['attente'] = '1';
         }
+        // On conserve la cible : la page de confirmation nomme l'atelier/stage et
+        // ne reaffiche plus le formulaire generique (action terminee).
+        if ( $atelier_id ) {
+            $args['atelier'] = $atelier_id;
+        } elseif ( $stage_id ) {
+            $args['stage'] = $stage_id;
+        }
         wp_safe_redirect( add_query_arg( $args, $back ) );
         exit;
     }
