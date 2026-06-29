@@ -97,18 +97,10 @@ class OPAC_Bindings {
 
         switch ( $key ) {
             case 'opac_tarif_annuel':
-                $int = (int) $value;
-                if ( $int <= 0 ) {
-                    return '';
-                }
-                return number_format_i18n( $int, 0 ) . ' € / an';
+                return OPAC_Labels::tarif_annuel( $value );
 
             case 'opac_places_dispo':
-                $labels = [
-                    'ok'   => __( 'Places disponibles', 'opac-custom' ),
-                    'full' => __( 'Complet', 'opac-custom' ),
-                    'few'  => __( 'Quelques places', 'opac-custom' ),
-                ];
+                $labels = OPAC_Labels::places();
                 return isset( $labels[ $value ] ) ? $labels[ $value ] : '';
 
             // Champs ajoutes en M3 : descriptifs longs pour la page single.
@@ -145,11 +137,7 @@ class OPAC_Bindings {
 
         switch ( $key ) {
             case 'opac_tarif_seance':
-                $int = (int) $value;
-                if ( $int <= 0 ) {
-                    return '';
-                }
-                return number_format_i18n( $int, 0 ) . ' €';
+                return OPAC_Labels::tarif_seance( $value );
 
             case 'opac_date_debut':
             case 'opac_date_fin':
@@ -166,13 +154,7 @@ class OPAC_Bindings {
                 }
                 // Abreviation FR forcee (independant de la locale WP qui
                 // peut etre en_US par defaut sur certains serveurs).
-                $months_fr = [
-                    1 => 'Janv.', 2  => 'Févr.', 3  => 'Mars',  4 => 'Avr.',
-                    5 => 'Mai',   6  => 'Juin',  7  => 'Juil.', 8 => 'Août',
-                    9 => 'Sept.', 10 => 'Oct.',  11 => 'Nov.', 12 => 'Déc.',
-                ];
-                $n = (int) wp_date( 'n', $ts );
-                return isset( $months_fr[ $n ] ) ? $months_fr[ $n ] : '';
+                return OPAC_Calendar::month( (int) wp_date( 'n', $ts ), 'abbr' );
 
             // Plage de dates lisible (début -> fin), affichée sur la fiche
             // éphémère. Clé virtuelle : ne correspond à aucune meta stockée,
@@ -200,11 +182,8 @@ class OPAC_Bindings {
      *   rien                    : ""
      */
     private static function format_date_range( $debut, $fin ) {
-        $months_fr = [
-            1 => 'janvier',   2  => 'février', 3  => 'mars',     4 => 'avril',
-            5 => 'mai',       6  => 'juin',    7  => 'juillet',  8 => 'août',
-            9 => 'septembre', 10 => 'octobre', 11 => 'novembre', 12 => 'décembre',
-        ];
+        // Mois en minuscules (milieu de phrase) derives de la source unique.
+        $months_fr = array_map( 'strtolower', OPAC_Calendar::months() );
         $parse = static function ( $d ) {
             $ts = $d ? strtotime( $d ) : false;
             if ( ! $ts ) {
@@ -269,11 +248,7 @@ class OPAC_Bindings {
                 if ( ! $ts ) {
                     return '';
                 }
-                $months_fr = [
-                    1 => 'janvier', 2  => 'février',  3  => 'mars',     4 => 'avril',
-                    5 => 'mai',     6  => 'juin',     7  => 'juillet',  8 => 'août',
-                    9 => 'septembre', 10 => 'octobre', 11 => 'novembre', 12 => 'décembre',
-                ];
+                $months_fr = array_map( 'strtolower', OPAC_Calendar::months() );
                 $n = (int) wp_date( 'n', $ts );
                 $part = isset( $source_args['part'] ) ? (string) $source_args['part'] : 'full';
                 if ( $part === 'year' ) {

@@ -88,12 +88,8 @@ class OPAC_Meta_Boxes {
 
     /** Options du champ "Places" (slug stocke, libelle affiche cote front). */
     private static function places_options() {
-        return [
-            ''     => __( '— Non précisé —', 'opac-custom' ),
-            'ok'   => __( 'Places disponibles', 'opac-custom' ),
-            'few'  => __( 'Quelques places', 'opac-custom' ),
-            'full' => __( 'Complet', 'opac-custom' ),
-        ];
+        // '— Non précisé —' (admin) + libelles centralises (OPAC_Labels::places()).
+        return [ '' => __( '— Non précisé —', 'opac-custom' ) ] + OPAC_Labels::places();
     }
 
     /**

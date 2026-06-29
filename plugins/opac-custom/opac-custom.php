@@ -27,6 +27,8 @@ define( 'OPAC_CUSTOM_URL', plugin_dir_url( __FILE__ ) );
 
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-cpts.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-taxonomies.php';
+require_once OPAC_CUSTOM_PATH . 'includes/class-opac-calendar.php';
+require_once OPAC_CUSTOM_PATH . 'includes/class-opac-labels.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-meta.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-admin.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-bindings.php';

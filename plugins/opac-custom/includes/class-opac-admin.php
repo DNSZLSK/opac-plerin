@@ -229,7 +229,7 @@ class OPAC_Admin {
                 break;
             case 'opac_tarif_annuel':
                 $tarif = (int) get_post_meta( $post_id, 'opac_tarif_annuel', true );
-                echo $tarif > 0 ? esc_html( $tarif . ' € / an' ) : '-';
+                echo $tarif > 0 ? esc_html( OPAC_Labels::tarif_annuel( $tarif ) ) : '-';
                 break;
             case 'opac_places_dispo':
                 $places = get_post_meta( $post_id, 'opac_places_dispo', true );
@@ -404,11 +404,7 @@ class OPAC_Admin {
         $message     = (string) get_post_meta( $id, 'opac_insc_message', true );
         $date        = (string) get_post_meta( $id, 'opac_insc_date_submitted', true );
 
-        $adh_labels = [
-            'plerinais' => __( 'Plérinais', 'opac-custom' ),
-            'exterieur' => __( 'Extérieur', 'opac-custom' ),
-            'mineur'    => __( 'Mineur', 'opac-custom' ),
-        ];
+        $adh_labels = OPAC_Labels::adhesions();
 
         echo '<table class="form-table" role="presentation"><tbody>';
 
@@ -569,42 +565,6 @@ class OPAC_Admin {
         echo '</select>';
     }
 
-    /** Libelles FR des jours (slug -> libelle), pour les creneaux. */
-    private static function jours_fr() {
-        return [
-            'lundi'    => __( 'Lundi', 'opac-custom' ),
-            'mardi'    => __( 'Mardi', 'opac-custom' ),
-            'mercredi' => __( 'Mercredi', 'opac-custom' ),
-            'jeudi'    => __( 'Jeudi', 'opac-custom' ),
-            'vendredi' => __( 'Vendredi', 'opac-custom' ),
-            'samedi'   => __( 'Samedi', 'opac-custom' ),
-            'dimanche' => __( 'Dimanche', 'opac-custom' ),
-        ];
-    }
-
-    /** "14:30" -> "14h30", "14:00" -> "14h". */
-    private static function format_heure( $t ) {
-        $t = trim( (string) $t );
-        if ( '' === $t ) {
-            return '';
-        }
-        $parts = explode( ':', $t );
-        $h = (int) $parts[0];
-        $m = isset( $parts[1] ) ? (int) $parts[1] : 0;
-        return $m > 0 ? sprintf( '%dh%02d', $h, $m ) : $h . 'h';
-    }
-
-    /** Libelle lisible d'un creneau structure : "Lundi 14h30 - 17h30". */
-    private static function creneau_display_label( $c ) {
-        $jours = self::jours_fr();
-        $slug  = isset( $c['jour'] ) ? (string) $c['jour'] : '';
-        $jour  = isset( $jours[ $slug ] ) ? $jours[ $slug ] : ucfirst( $slug );
-        $deb   = self::format_heure( isset( $c['debut'] ) ? $c['debut'] : '' );
-        $fin   = self::format_heure( isset( $c['fin'] ) ? $c['fin'] : '' );
-        $h     = trim( $deb . ' - ' . $fin, ' -' );
-        return trim( $jour . ' ' . $h );
-    }
-
     /**
      * Options de creneaux d'un atelier pour le select de la fiche inscription :
      * creneaux structures (value = id, comptage des places possible), ou a defaut
@@ -622,12 +582,12 @@ class OPAC_Admin {
             if ( ! is_array( $c ) ) {
                 continue;
             }
-            $label = self::creneau_display_label( $c );
+            $label = OPAC_Calendar::creneau_label( $c );
             if ( '' === $label ) {
                 continue;
             }
             $tarif = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
-            $text  = $tarif > 0 ? $label . ' (' . number_format_i18n( $tarif, 0 ) . ' €)' : $label;
+            $text  = $tarif > 0 ? $label . ' (' . OPAC_Labels::euros( $tarif ) . ')' : $label;
             $cid   = isset( $c['id'] ) ? (string) $c['id'] : '';
             $opts[] = [ 'v' => ( '' !== $cid ) ? $cid : $label, 't' => $text ];
         }
@@ -696,7 +656,7 @@ class OPAC_Admin {
                     continue;
                 }
                 $cid   = isset( $c['id'] ) ? (string) $c['id'] : '';
-                $label = self::creneau_display_label( $c );
+                $label = OPAC_Calendar::creneau_label( $c );
                 if ( ( '' !== $cid && $cid === $choice ) || ( '' === $cid && $label === $choice ) ) {
                     $creneau_label = $label;
                     if ( '' !== $cid ) {
@@ -727,7 +687,7 @@ class OPAC_Admin {
         update_post_meta( $post_id, 'opac_insc_plerinais', '22190' === $cp ? 1 : 0 );
 
         // Adhesion : valeur choisie si valide, sinon deduite du code postal.
-        $allowed_adh = [ 'plerinais', 'exterieur', 'mineur' ];
+        $allowed_adh = OPAC_Labels::adhesion_keys();
         $adhesion = isset( $_POST['opac_insc_adhesion'] ) ? sanitize_key( wp_unslash( $_POST['opac_insc_adhesion'] ) ) : '';
         if ( ! in_array( $adhesion, $allowed_adh, true ) ) {
             $adhesion = ( '22190' === $cp ) ? 'plerinais' : 'exterieur';
@@ -979,12 +939,10 @@ class OPAC_Admin {
         }
 
         if ( '' !== $adhesion ) {
-            $adh_labels = [
-                'plerinais' => __( 'Adhésion Plérinais', 'opac-custom' ),
-                'exterieur' => __( 'Adhésion Extérieur', 'opac-custom' ),
-                'mineur'    => __( 'Adhésion Mineur', 'opac-custom' ),
-            ];
-            $label = $adh_labels[ $adhesion ] ?? $adhesion;
+            $base  = OPAC_Labels::adhesions();
+            $label = isset( $base[ $adhesion ] )
+                ? sprintf( __( 'Adhésion %s', 'opac-custom' ), $base[ $adhesion ] )
+                : $adhesion;
             echo '<div class="opac-priorite-adh">' . esc_html( $label ) . '</div>';
         }
 
@@ -1357,15 +1315,7 @@ class OPAC_Admin {
      * existantes (index numerique) et le template JS (index '__i__').
      */
     private static function creneau_row_html( $index, $row ) {
-        $jours = [
-            'lundi'    => __( 'Lundi', 'opac-custom' ),
-            'mardi'    => __( 'Mardi', 'opac-custom' ),
-            'mercredi' => __( 'Mercredi', 'opac-custom' ),
-            'jeudi'    => __( 'Jeudi', 'opac-custom' ),
-            'vendredi' => __( 'Vendredi', 'opac-custom' ),
-            'samedi'   => __( 'Samedi', 'opac-custom' ),
-            'dimanche' => __( 'Dimanche', 'opac-custom' ),
-        ];
+        $jours = OPAC_Calendar::jours();
         $id       = isset( $row['id'] ) ? (string) $row['id'] : '';
         $jour     = isset( $row['jour'] ) ? (string) $row['jour'] : '';
         $debut    = isset( $row['debut'] ) ? (string) $row['debut'] : '';
@@ -1411,15 +1361,6 @@ class OPAC_Admin {
         if ( '' === $text ) {
             return [];
         }
-        $jours = [
-            'lundi'    => [ 'lundi' ],
-            'mardi'    => [ 'mardi' ],
-            'mercredi' => [ 'mercredi' ],
-            'jeudi'    => [ 'jeudi' ],
-            'vendredi' => [ 'vendredi' ],
-            'samedi'   => [ 'samedi' ],
-            'dimanche' => [ 'dimanche' ],
-        ];
         $rows = [];
         foreach ( preg_split( '/\r?\n/', $text ) as $line ) {
             $line = trim( $line );
@@ -1429,12 +1370,10 @@ class OPAC_Admin {
 
             // Jour : premier libelle reconnu en debut de ligne (insensible a la casse).
             $jour = 'lundi';
-            foreach ( $jours as $slug => $aliases ) {
-                foreach ( $aliases as $alias ) {
-                    if ( 0 === stripos( $line, $alias ) ) {
-                        $jour = $slug;
-                        break 2;
-                    }
+            foreach ( OPAC_Calendar::jours_keys() as $slug ) {
+                if ( 0 === stripos( $line, $slug ) ) {
+                    $jour = $slug;
+                    break;
                 }
             }
 
@@ -1498,7 +1437,7 @@ class OPAC_Admin {
         $raw = ( isset( $_POST['opac_creneaux'] ) && is_array( $_POST['opac_creneaux'] ) )
             ? wp_unslash( $_POST['opac_creneaux'] )
             : [];
-        $jours_ok = [ 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche' ];
+        $jours_ok = OPAC_Calendar::jours_keys();
         $clean = [];
         foreach ( $raw as $row ) {
             if ( ! is_array( $row ) ) {

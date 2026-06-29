@@ -220,18 +220,9 @@ class OPAC_Inscriptions {
         if ( 'opac_atelier' === $cible_type && '' !== $creneau_id ) {
             $struct = get_post_meta( $cible_id, 'opac_creneaux', true );
             if ( is_array( $struct ) ) {
-                $jours = [
-                    'lundi' => 'Lundi', 'mardi' => 'Mardi', 'mercredi' => 'Mercredi', 'jeudi' => 'Jeudi',
-                    'vendredi' => 'Vendredi', 'samedi' => 'Samedi', 'dimanche' => 'Dimanche',
-                ];
                 foreach ( $struct as $c ) {
                     if ( is_array( $c ) && isset( $c['id'] ) && (string) $c['id'] === $creneau_id ) {
-                        if ( isset( $jours[ $c['jour'] ?? '' ] ) ) {
-                            $jlabel = $jours[ $c['jour'] ];
-                        } else {
-                            $jlabel = '';
-                        }
-                        $creneau = trim( $jlabel . ' ' . ( $c['debut'] ?? '' ) . ' - ' . ( $c['fin'] ?? '' ) );
+                        $creneau = OPAC_Calendar::creneau_label( $c );
                         if ( isset( $c['tarif'] ) ) {
                             $creneau_tarif = (int) $c['tarif'];
                         } else {
@@ -414,11 +405,7 @@ class OPAC_Inscriptions {
         // on exporte tout ce qui matche, pas seulement la page affichee.
         $posts = get_posts( self::query_args_from_request() );
 
-        $adh_labels = [
-            'plerinais' => __( 'Plérinais', 'opac-custom' ),
-            'exterieur' => __( 'Extérieur', 'opac-custom' ),
-            'mineur'    => __( 'Mineur', 'opac-custom' ),
-        ];
+        $adh_labels = OPAC_Labels::adhesions();
 
         $filename = 'inscriptions-opac-' . current_time( 'Y-m-d' ) . '.csv';
 
@@ -901,27 +888,11 @@ class OPAC_Inscriptions {
         $insc_tarif = (int) get_post_meta( $post_id, 'opac_insc_tarif', true );
         if ( $cible_id ) {
             if ( get_post_type( $cible_id ) === 'opac_atelier' ) {
-                if ( $insc_tarif > 0 ) {
-                    $montant = $insc_tarif;
-                } else {
-                    $montant = (int) get_post_meta( $cible_id, 'opac_tarif_annuel', true );
-                }
-                if ( $montant > 0 ) {
-                    $tarif = $montant . ' € / an';
-                } else {
-                    $tarif = '';
-                }
+                $montant = $insc_tarif > 0 ? $insc_tarif : (int) get_post_meta( $cible_id, 'opac_tarif_annuel', true );
+                $tarif   = OPAC_Labels::tarif_annuel( $montant );
             } elseif ( get_post_type( $cible_id ) === 'opac_stage' ) {
-                if ( $insc_tarif > 0 ) {
-                    $montant = $insc_tarif;
-                } else {
-                    $montant = (int) get_post_meta( $cible_id, 'opac_tarif_seance', true );
-                }
-                if ( $montant > 0 ) {
-                    $tarif = $montant . ' €';
-                } else {
-                    $tarif = '';
-                }
+                $montant = $insc_tarif > 0 ? $insc_tarif : (int) get_post_meta( $cible_id, 'opac_tarif_seance', true );
+                $tarif   = OPAC_Labels::tarif_seance( $montant );
             }
         }
 
