@@ -22,6 +22,8 @@ class OPAC_Settings {
     const PAGE_SLUG       = 'opac-settings';
     const OPTION_GRP      = 'opac_settings_group';
     const LEGAL_SEED_FLAG = 'opac_legal_pages_seeded';
+    const TIMEZONE_FLAG   = 'opac_site_timezone_set';
+    const SITE_TIMEZONE   = 'Europe/Paris';
 
     public static function register() {
         add_action( 'admin_menu', [ __CLASS__, 'add_menu_page' ] );
@@ -31,6 +33,10 @@ class OPAC_Settings {
         // re-activation necessaire). Le flag porte la version pour re-verifier
         // apres une mise a jour (creation seulement, jamais d'ecrasement).
         add_action( 'init', [ __CLASS__, 'maybe_seed_legal_pages' ] );
+        // Garantit le fuseau Europe/Paris apres un deploiement : le reglage vit en
+        // base (timezone_string), non transporte par SFTP. Meme mecanique (flag de
+        // version) que le seed des pages legales.
+        add_action( 'init', [ __CLASS__, 'maybe_set_timezone' ] );
     }
 
     public static function add_menu_page() {
@@ -173,6 +179,31 @@ class OPAC_Settings {
         // pas de .htaccess requis sous nginx).
         flush_rewrite_rules( false );
         update_option( self::LEGAL_SEED_FLAG, OPAC_CUSTOM_VERSION );
+    }
+
+    /**
+     * Force le fuseau horaire du site sur Europe/Paris (fuseau nomme), une fois
+     * par version. Le reglage vit en base (option timezone_string) et n'est donc
+     * pas transporte par un deploiement SFTP : cette methode garantit qu'apres
+     * mise en ligne le site tourne bien sur Europe/Paris.
+     *
+     * Fuseau nomme et non offset fixe (UTC+2) : la logique de dates du plugin
+     * (current_time / wp_timezone : masquage des ateliers passes, cutoff RGPD,
+     * horodatage des inscriptions) deriverait d'1h en hiver avec un offset fige
+     * (Paris = UTC+1 hors ete). Europe/Paris gere l'alternance CET/CEST seule.
+     *
+     * Idempotent (flag de version, comme maybe_seed_legal_pages) : ne reecrit pas
+     * si le fuseau a ete change deliberement ensuite ; re-verifie a la prochaine
+     * montee de version.
+     */
+    public static function maybe_set_timezone() {
+        if ( get_option( self::TIMEZONE_FLAG ) === OPAC_CUSTOM_VERSION ) {
+            return;
+        }
+        if ( self::SITE_TIMEZONE !== get_option( 'timezone_string' ) ) {
+            update_option( 'timezone_string', self::SITE_TIMEZONE );
+        }
+        update_option( self::TIMEZONE_FLAG, OPAC_CUSTOM_VERSION );
     }
 
     public static function register_settings() {
