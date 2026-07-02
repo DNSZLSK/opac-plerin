@@ -950,13 +950,25 @@ class OPAC_Blocks {
      * cible cette classe pour show/hide.
      */
     public static function render_agenda_list( $attrs, $content, $block ) {
+        // Seulement les evenements a venir (date du jour incluse) : un agenda est
+        // tourne vers l'avenir. Les evenements passes sortent de la liste le
+        // lendemain, ce qui evite aussi que la page s'allonge sans fin au fil des
+        // annees. La homepage (bloc opac/upcoming-events) suit deja cette logique.
+        // Une fiche d'evenement passe reste accessible par son URL directe.
+        $today  = current_time( 'Y-m-d' );
         $events = get_posts( [
             'post_type'      => 'opac_event',
             'post_status'    => 'publish',
             'posts_per_page' => -1,
-            'meta_key'       => 'opac_date_event',
-            'orderby'        => 'meta_value',
-            'order'          => 'ASC',
+            'meta_query'     => [
+                'date_event' => [
+                    'key'     => 'opac_date_event',
+                    'value'   => $today,
+                    'compare' => '>=',
+                    'type'    => 'DATE',
+                ],
+            ],
+            'orderby'        => [ 'date_event' => 'ASC' ],
         ] );
 
         if ( empty( $events ) ) {
