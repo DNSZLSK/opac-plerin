@@ -386,11 +386,35 @@
         });
     }
 
+    /**
+     * Selecteur de saison (archive ephemeres) : recharge la page au changement
+     * du menu deroulant et masque le bouton « Afficher » (qui sert de repli
+     * quand le JS est absent).
+     */
+    function initSaisonSelect() {
+        var form = document.querySelector('.opac-saison-form');
+        if (!form) {
+            return;
+        }
+        var select = form.querySelector('.opac-saison-dropdown');
+        if (!select) {
+            return;
+        }
+        var go = form.querySelector('.opac-saison-go');
+        if (go) {
+            go.hidden = true;
+        }
+        select.addEventListener('change', function () {
+            form.submit();
+        });
+    }
+
     function initAll() {
         initStickyHeader();
         initCtaDropdown();
         initStageTabs();
         initEventTabs();
+        initSaisonSelect();
         initGallery();
         initCardLinks();
     }

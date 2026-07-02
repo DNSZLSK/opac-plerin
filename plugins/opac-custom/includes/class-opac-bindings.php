@@ -69,6 +69,10 @@ class OPAC_Bindings {
         if ( $key === 'stats_years_since_founding' ) {
             return (string) OPAC_Settings::years_since_founding();
         }
+        // Badge saison : calcule (auto) ou texte manuel selon le reglage.
+        if ( $key === 'opac_home_saison_badge' ) {
+            return (string) OPAC_Settings::saison_badge();
+        }
 
         // Securite : on n'autorise que les options prefixees opac_.
         if ( strpos( $key, 'opac_' ) !== 0 ) {

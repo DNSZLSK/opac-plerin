@@ -172,6 +172,13 @@ class OPAC_Blocks {
             'supports'        => [ 'html' => false ],
         ] );
 
+        register_block_type( 'opac/ephemeres-saisons', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_ephemeres_saisons' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+
         register_block_type( 'opac/legal-content', [
             'api_version'     => 3,
             'render_callback' => [ __CLASS__, 'render_legal_content' ],
@@ -545,11 +552,173 @@ class OPAC_Blocks {
     }
 
     /**
-     * Liste "vitrine" des ateliers ephemeres pour la page d'archive : tous les
-     * ephemeres, a venir d'abord (du plus proche au plus lointain) puis passes
-     * (du plus recent au plus ancien). Les passes sont attenues (.is-past), avec
-     * le tag "Termine" et sans bouton d'inscription (geres par stage_is_past
-     * dans render_places_tag / render_inscription_button).
+     * Regroupe tous les ateliers ephemeres publies par saison (annee
+     * culturelle). Charge une seule fois par requete (memoise). Les stages
+     * sans date de debut exploitable sont rattaches a la saison courante et
+     * traites comme "a venir" : ils restent ainsi toujours visibles quelque
+     * part (jamais de disparition silencieuse).
+     *
+     * @return array{
+     *   saisons: array<string,array{label:string,start:string,end:string,start_year:int,posts:array,has_upcoming:bool}>,
+     *   default_slug: ?string,
+     *   current_slug: ?string
+     * } saisons triees par annee de debut decroissante (recentes d'abord).
+     */
+    public static function stage_saisons() {
+        static $cache = null;
+        if ( null !== $cache ) {
+            return $cache;
+        }
+
+        $posts   = get_posts( [
+            'post_type'      => 'opac_stage',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'date',
+            'order'          => 'ASC',
+        ] );
+        $today   = current_time( 'Y-m-d' );
+        $current = OPAC_Settings::current_saison();
+
+        // Une ligne par stage : post + date + saison (fallback courante si
+        // sans date exploitable).
+        $rows = [];
+        foreach ( $posts as $p ) {
+            $d = (string) get_post_meta( $p->ID, 'opac_date_debut', true );
+            $s = '' !== $d ? OPAC_Settings::saison_for_date( $d ) : null;
+            if ( ! $s ) {
+                $s = $current; // sans date (ou date illisible) -> saison courante
+            }
+            if ( ! $s ) {
+                continue; // aucune saison calculable (ne devrait pas arriver)
+            }
+            $rows[] = [ 'post' => $p, 'date' => $d, 'saison' => $s ];
+        }
+
+        // Tri par date de debut croissante ; les sans-date (traites "a venir")
+        // passent en tete.
+        usort( $rows, static function ( $a, $b ) {
+            if ( $a['date'] === $b['date'] ) {
+                return 0;
+            }
+            if ( '' === $a['date'] ) {
+                return -1;
+            }
+            if ( '' === $b['date'] ) {
+                return 1;
+            }
+            return strcmp( $a['date'], $b['date'] );
+        } );
+
+        $saisons = [];
+        foreach ( $rows as $r ) {
+            $slug = $r['saison']['slug'];
+            if ( ! isset( $saisons[ $slug ] ) ) {
+                $saisons[ $slug ] = [
+                    'label'        => $r['saison']['label'],
+                    'start'        => $r['saison']['start'],
+                    'end'          => $r['saison']['end'],
+                    'start_year'   => $r['saison']['start_year'],
+                    'posts'        => [],
+                    'has_upcoming' => false,
+                ];
+            }
+            $saisons[ $slug ]['posts'][] = $r['post'];
+            if ( '' === $r['date'] || $r['date'] >= $today ) {
+                $saisons[ $slug ]['has_upcoming'] = true;
+            }
+        }
+
+        // Saisons recentes d'abord dans le selecteur.
+        uasort( $saisons, static function ( $a, $b ) {
+            return $b['start_year'] <=> $a['start_year'];
+        } );
+
+        // Saison affichee par defaut : celle du prochain ephemere a venir
+        // (rows triees croissant) ; sinon la plus recente ; sinon la courante.
+        $default_slug = null;
+        foreach ( $rows as $r ) {
+            if ( '' === $r['date'] || $r['date'] >= $today ) {
+                $default_slug = $r['saison']['slug'];
+                break;
+            }
+        }
+        if ( ! $default_slug ) {
+            $keys         = array_keys( $saisons );
+            $default_slug = $keys ? $keys[0] : ( $current ? $current['slug'] : null );
+        }
+
+        $cache = [
+            'saisons'      => $saisons,
+            'default_slug' => $default_slug,
+            'current_slug' => $current ? $current['slug'] : null,
+        ];
+        return $cache;
+    }
+
+    /**
+     * Slug de la saison a afficher : ?saison=YYYY-YYYY si valide et existante,
+     * sinon la saison par defaut. Filtre de navigation (GET idempotent) : la
+     * valeur est validee au format PUIS confrontee a la liste reelle des
+     * saisons (pas de saison inventee).
+     */
+    public static function active_saison_slug() {
+        $data    = self::stage_saisons();
+        $saisons = $data['saisons'];
+        if ( empty( $saisons ) ) {
+            return null;
+        }
+        $req = isset( $_GET['saison'] ) ? sanitize_text_field( wp_unslash( $_GET['saison'] ) ) : '';
+        if ( '' !== $req && preg_match( '/^\d{4}-\d{4}$/', $req ) && isset( $saisons[ $req ] ) ) {
+            return $req;
+        }
+        return $data['default_slug'];
+    }
+
+    /**
+     * Selecteur de saison (page archive ephemeres). Menu deroulant <select>
+     * (et pas des onglets) : tient sur une ligne et passe l'echelle quel que
+     * soit le nombre de saisons accumulees au fil des annees. Le changement
+     * recharge la page (serveur), donc une seule saison est rendue a la fois :
+     * ni le selecteur ni la liste ne grossissent avec les annees.
+     *
+     * <form method="get"> : fonctionne sans JS (choix + bouton « Afficher »).
+     * opac.js (initSaisonSelect) soumet au changement et masque le bouton.
+     * Masque s'il y a moins de deux saisons (aucun choix a offrir).
+     */
+    public static function render_ephemeres_saisons( $attrs, $content, $block ) {
+        $data    = self::stage_saisons();
+        $saisons = $data['saisons'];
+        if ( count( $saisons ) < 2 ) {
+            return '';
+        }
+
+        $active = self::active_saison_slug();
+        $action = get_post_type_archive_link( 'opac_stage' );
+
+        $options = '';
+        foreach ( $saisons as $slug => $s ) {
+            $options .= '<option value="' . esc_attr( $slug ) . '"' . selected( $slug, $active, false ) . '>'
+                . esc_html( $s['label'] ) . '</option>';
+        }
+
+        return '<div class="wp-block-group alignwide opac-saison-select">'
+            . '<form class="opac-saison-form" method="get" action="' . esc_url( $action ? $action : '' ) . '">'
+            . '<label class="opac-saison-select-label" for="opac-saison-select">'
+                . esc_html__( 'Saison', 'opac-custom' ) . '</label>'
+            . '<select class="opac-saison-dropdown" id="opac-saison-select" name="saison">' . $options . '</select>'
+            . '<button type="submit" class="opac-tab opac-saison-go">' . esc_html__( 'Afficher', 'opac-custom' ) . '</button>'
+            . '</form>'
+            . '</div>';
+    }
+
+    /**
+     * Liste "vitrine" des ateliers ephemeres de la SAISON AFFICHEE (cf.
+     * opac/ephemeres-saisons + active_saison_slug) : a venir d'abord (du plus
+     * proche au plus lointain) puis passes (du plus recent au plus ancien).
+     * Les passes sont attenues (.is-past), avec le tag "Termine" et sans bouton
+     * d'inscription (geres par stage_is_past dans render_places_tag /
+     * render_inscription_button).
      *
      * Bloc serveur (et pas Query Loop) car l'ordre "a venir puis passes" et le
      * traitement par carte ne s'expriment pas avec le bloc Query natif. Calque
@@ -557,18 +726,21 @@ class OPAC_Blocks {
      * carte pour le filtrage par onglet (JS initStageTabs).
      */
     public static function render_ephemeres_list( $attrs, $content, $block ) {
-        $stages = get_posts( [
-            'post_type'      => 'opac_stage',
-            'post_status'    => 'publish',
-            'posts_per_page' => -1,
-            'meta_key'       => 'opac_date_debut',
-            'orderby'        => 'meta_value',
-            'order'          => 'ASC',
-        ] );
+        $data = self::stage_saisons();
+
+        if ( empty( $data['saisons'] ) ) {
+            return '<p class="opac-empty has-text-align-center has-muted-color has-text-color">'
+                . esc_html__( 'Aucun atelier éphémère publié pour le moment.', 'opac-custom' ) . '</p>';
+        }
+
+        $active = self::active_saison_slug();
+        $stages = ( $active && isset( $data['saisons'][ $active ] ) )
+            ? $data['saisons'][ $active ]['posts']
+            : [];
 
         if ( empty( $stages ) ) {
             return '<p class="opac-empty has-text-align-center has-muted-color has-text-color">'
-                . esc_html__( 'Aucun atelier éphémère publié pour le moment.', 'opac-custom' ) . '</p>';
+                . esc_html__( 'Aucun atelier éphémère pour cette saison.', 'opac-custom' ) . '</p>';
         }
 
         // A venir / en cours d'abord (deja triee ASC), puis passes du plus
