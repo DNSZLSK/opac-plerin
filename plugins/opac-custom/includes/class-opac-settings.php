@@ -83,6 +83,12 @@ class OPAC_Settings {
             'opac_adhesion_mineur'       => [ 'type' => 'integer', 'default' => 10, 'sanitize' => 'absint' ],
 
             // Section 3 : Saison + Hero homepage
+            // Debut de saison (jour + mois) : borne unique du decoupage des
+            // saisons. La fin se deduit (veille de la bascule, un an plus tard).
+            'opac_saison_start_day'      => [ 'type' => 'integer', 'default' => 1, 'sanitize' => 'absint' ],
+            'opac_saison_start_month'    => [ 'type' => 'integer', 'default' => 9, 'sanitize' => 'absint' ],
+            // Badge saison du hero : auto (calcule) par defaut, sinon texte manuel.
+            'opac_home_saison_badge_auto' => [ 'type' => 'integer', 'default' => 1, 'sanitize' => 'absint' ],
             'opac_home_saison_badge'     => [ 'type' => 'string', 'default' => 'Saison 2025 / 2026',                                                                    'sanitize' => 'sanitize_text_field' ],
             'opac_home_hero_title'       => [ 'type' => 'string', 'default' => 'La culture au bout des doigts',                                                          'sanitize' => 'sanitize_text_field' ],
             'opac_home_hero_intro'       => [ 'type' => 'string', 'default' => 'Ateliers d\'expression culturelle, activités éphémères et sorties pour tous les âges. Association OPAC, asso loi 1901 à Plérin.', 'sanitize' => 'sanitize_textarea_field' ],
@@ -339,9 +345,14 @@ class OPAC_Settings {
                 </table>
 
                 <h2><?php esc_html_e( 'Saison + Page d\'accueil', 'opac-custom' ); ?></h2>
+                <p class="description">
+                    <?php esc_html_e( 'La saison sert à ranger les ateliers éphémères par année sur le site. Réglez le jour où une nouvelle saison démarre : le classement se fait ensuite tout seul, d\'après la date de début de chaque atelier. Rien n\'est jamais supprimé, les anciennes saisons restent accessibles.', 'opac-custom' ); ?>
+                </p>
                 <table class="form-table" role="presentation">
                     <?php
-                    self::render_input_row( 'opac_home_saison_badge', __( 'Badge saison', 'opac-custom' ), __( 'Affiché en haut du hero homepage. Ex: "Saison 2026 / 2027"', 'opac-custom' ) );
+                    self::render_saison_start_row();
+                    self::render_checkbox_row( 'opac_home_saison_badge_auto', __( 'Badge saison automatique', 'opac-custom' ), __( 'Affiche « Saison AAAA / AAAA » calculé tout seul et mis à jour chaque année. Décochez pour saisir le texte à la main dans le champ ci-dessous.', 'opac-custom' ) );
+                    self::render_input_row( 'opac_home_saison_badge', __( 'Badge saison (manuel)', 'opac-custom' ), __( 'Utilisé uniquement si l\'option « automatique » est décochée. Affiché en haut de la page d\'accueil. Ex : "Saison 2026 / 2027".', 'opac-custom' ) );
                     self::render_input_row( 'opac_home_hero_title', __( 'Titre hero homepage', 'opac-custom' ) );
                     self::render_textarea_row( 'opac_home_hero_intro', __( 'Intro hero homepage', 'opac-custom' ), '', 3 );
                     self::render_input_row( 'opac_home_cta_band_title', __( 'Titre bande CTA inscription', 'opac-custom' ), __( 'Section terracotta en bas de homepage', 'opac-custom' ) );
@@ -494,6 +505,31 @@ class OPAC_Settings {
     }
 
     /**
+     * Ligne « Début de saison » : un jour (1-31) + un mois (select). Cette
+     * seule borne définit tout le découpage : la fin d'une saison se déduit
+     * automatiquement (la veille de la bascule, un an plus tard). On affiche
+     * ce récap calculé sous les champs pour que ce soit explicite.
+     */
+    private static function render_saison_start_row() {
+        $start  = self::saison_start();
+        $months = OPAC_Calendar::months();
+        ?>
+        <tr>
+            <th scope="row"><label for="opac_saison_start_day"><?php esc_html_e( 'Début de saison', 'opac-custom' ); ?></label></th>
+            <td>
+                <input type="number" min="1" max="31" step="1" id="opac_saison_start_day" name="opac_saison_start_day" value="<?php echo esc_attr( $start['day'] ); ?>" class="small-text" />
+                <select id="opac_saison_start_month" name="opac_saison_start_month">
+                    <?php foreach ( $months as $n => $label ) : ?>
+                        <option value="<?php echo (int) $n; ?>" <?php selected( (int) $n, $start['month'] ); ?>><?php echo esc_html( $label ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="description"><?php echo esc_html( self::saison_recap_text() ); ?></p>
+            </td>
+        </tr>
+        <?php
+    }
+
+    /**
      * Ligne « média » : champ URL alimenté par la médiathèque via un bouton
      * « Choisir un fichier » (téléversement/remplacement d'un document, ex :
      * PDF charte), pour éviter le copier-coller d'URL. Le script
@@ -635,5 +671,148 @@ class OPAC_Settings {
         }
         // Aucune date configuree : comportement actuel (toujours ouvert).
         return 'ouverte';
+    }
+
+    /* ---------------------------------------------------------------------
+     * Saisons (annees culturelles) des ateliers ephemeres
+     *
+     * Une saison est definie par UNE seule borne reglable : le jour de bascule
+     * (defaut 1er septembre). La fin se deduit (veille de la bascule, un an
+     * plus tard, ex 31 aout). L'annee d'une saison n'est jamais saisie : elle
+     * est calculee depuis la date de debut de chaque ephemere. Tout est
+     * calcule a la volee (aucune donnee stockee), donc changer la borne
+     * reclasse instantanement l'existant, sans migration.
+     * ------------------------------------------------------------------- */
+
+    /**
+     * Jour + mois de bascule d'une saison, valides et bornes.
+     * Fallback 1er septembre si valeurs vides / incoherentes.
+     *
+     * @return array{day:int,month:int}
+     */
+    public static function saison_start() {
+        $month = (int) self::get( 'opac_saison_start_month' );
+        $day   = (int) self::get( 'opac_saison_start_day' );
+        if ( $month < 1 || $month > 12 ) {
+            $month = 9;
+        }
+        if ( $day < 1 || $day > 31 ) {
+            $day = 1;
+        }
+        // Clamp au nombre de jours du mois (annee bissextile pour tolerer 29/02).
+        $max = (int) date( 't', mktime( 12, 0, 0, $month, 1, 2000 ) );
+        if ( $day > $max ) {
+            $day = $max;
+        }
+        return [ 'day' => $day, 'month' => $month ];
+    }
+
+    /**
+     * Saison d'une date "Y-m-d" (ex "2026-03-10" -> saison 2025/2026 avec une
+     * bascule au 1er septembre). Parse les composantes a la main (pas de
+     * strtotime + fuseau) pour eviter tout decalage de jour.
+     *
+     * @return array{slug:string,label:string,start:string,end:string,start_year:int}|null
+     */
+    public static function saison_for_date( $ymd ) {
+        if ( ! preg_match( '/^(\d{4})-(\d{2})-(\d{2})/', (string) $ymd, $m ) ) {
+            return null;
+        }
+        $year  = (int) $m[1];
+        $month = (int) $m[2];
+        $day   = (int) $m[3];
+        $start = self::saison_start();
+        // La date est-elle a/apres la bascule de son annee civile ?
+        $after = ( $month > $start['month'] )
+            || ( $month === $start['month'] && $day >= $start['day'] );
+        return self::saison_by_start_year( $after ? $year : $year - 1 );
+    }
+
+    /**
+     * Construit la structure d'une saison a partir de son annee de debut.
+     *
+     * @return array{slug:string,label:string,start:string,end:string,start_year:int}
+     */
+    public static function saison_by_start_year( $start_year ) {
+        $start_year = (int) $start_year;
+        $end_year   = $start_year + 1;
+        $s          = self::saison_start();
+
+        // Debut (securise si jour/mois incoherent), fin = veille de la bascule
+        // de l'annee suivante. Calcul pur (date(), ancre a midi) : pas de fuseau.
+        $start   = self::safe_date( $start_year, $s['month'], $s['day'] );
+        $next_ts = mktime( 12, 0, 0, $s['month'], $s['day'], $end_year );
+        $end     = date( 'Y-m-d', $next_ts - DAY_IN_SECONDS );
+
+        return [
+            'slug'       => $start_year . '-' . $end_year,
+            'label'      => $start_year . ' / ' . $end_year,
+            'start'      => $start,
+            'end'        => $end,
+            'start_year' => $start_year,
+        ];
+    }
+
+    /** Saison en cours d'apres la date du jour (fuseau du site). */
+    public static function current_saison() {
+        return self::saison_for_date( current_time( 'Y-m-d' ) );
+    }
+
+    /**
+     * Texte du badge saison du hero : calcule si l'option auto est active,
+     * sinon le texte saisi manuellement (fallback si le calcul echoue).
+     */
+    public static function saison_badge() {
+        if ( 1 === (int) self::get( 'opac_home_saison_badge_auto' ) ) {
+            $saison = self::current_saison();
+            if ( $saison ) {
+                /* translators: %s: libelle de saison, ex "2025 / 2026". */
+                return sprintf( __( 'Saison %s', 'opac-custom' ), $saison['label'] );
+            }
+        }
+        return (string) self::get( 'opac_home_saison_badge' );
+    }
+
+    /**
+     * Phrase recap affichee en admin sous le champ « Début de saison », ex :
+     * « Une saison va du 1er septembre au 31 août de l'année suivante. »
+     */
+    public static function saison_recap_text() {
+        $s      = self::saison_start();
+        $months = OPAC_Calendar::months();
+        // Fin = veille de la bascule (annee non bissextile pour un recap lisible).
+        $end_ts    = mktime( 12, 0, 0, $s['month'], $s['day'], 2001 ) - DAY_IN_SECONDS;
+        $end_day   = (int) date( 'j', $end_ts );
+        $end_month = (int) date( 'n', $end_ts );
+
+        $start_label = self::day_month_label( $s['day'], $s['month'], $months );
+        $end_label   = self::day_month_label( $end_day, $end_month, $months );
+
+        return sprintf(
+            /* translators: 1: date de debut (ex "1er septembre"), 2: date de fin (ex "31 aout"). */
+            __( 'Une saison va du %1$s au %2$s de l\'année suivante. Chaque atelier éphémère est rangé automatiquement d\'après sa date de début.', 'opac-custom' ),
+            $start_label,
+            $end_label
+        );
+    }
+
+    /**
+     * "1er septembre", "31 août" (jour + mois en toutes lettres, minuscule).
+     * strtolower (et non mb_strtolower) suffit : les libelles de mois n'ont
+     * qu'une majuscule ASCII en tete, comme dans OPAC_Bindings::format_date_range.
+     */
+    private static function day_month_label( $day, $month, $months ) {
+        $day    = (int) $day;
+        $prefix = 1 === $day ? '1er' : (string) $day;
+        $name   = isset( $months[ $month ] ) ? strtolower( $months[ $month ] ) : '';
+        return trim( $prefix . ' ' . $name );
+    }
+
+    /** Date "Y-m-d" sure : retombe sur le 1er du mois si jour/mois incoherent. */
+    private static function safe_date( $year, $month, $day ) {
+        if ( ! checkdate( $month, $day, $year ) ) {
+            $day = 1;
+        }
+        return sprintf( '%04d-%02d-%02d', $year, $month, $day );
     }
 }

@@ -987,6 +987,51 @@ a.opac-card-link:hover,
     border-color: var(--opac-ink);
 }
 
+/* Selecteur de saison (menu deroulant) au-dessus des onglets de periode.
+   <select> plutot que des onglets : tient sur une ligne quel que soit le
+   nombre de saisons accumulees au fil des annees. Le bouton « Afficher » est
+   le repli sans JS (masque par opac.js quand le JS est actif). */
+.opac-saison-select {
+    display: flex;
+    justify-content: center;
+    padding: 24px 32px 4px;
+    max-width: 1080px;
+    margin: 0 auto;
+}
+
+.opac-saison-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.opac-saison-select-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--opac-muted);
+}
+
+.opac-saison-dropdown {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border: 0.5px solid var(--opac-border);
+    background: var(--opac-card);
+    color: var(--opac-ink);
+    border-radius: var(--opac-radius-pill);
+    cursor: pointer;
+    transition: border-color var(--opac-transition), color var(--opac-transition);
+}
+
+.opac-saison-dropdown:hover {
+    border-color: var(--opac-muted);
+}
+
 .opac-archive-title {
     font-size: 28px;
     font-weight: 400;
