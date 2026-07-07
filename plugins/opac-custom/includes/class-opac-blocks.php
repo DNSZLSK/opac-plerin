@@ -366,11 +366,19 @@ class OPAC_Blocks {
      */
     public static function render_pwa_install( $attrs, $content, $block ) {
         $label = esc_html__( 'Installer l\'app OPAC', 'opac-custom' );
-        $hint  = esc_html__( 'iPhone : Partager, puis « Sur l\'écran d\'accueil »', 'opac-custom' );
         $arrow = self::install_arrow_svg();
 
-        // Deux variantes dans le meme conteneur ; le JS en revele une (bouton
-        // Android OU instruction iOS) via data-mode + .is-visible.
+        // Deux variantes d'instruction iOS. Sur iPhone, seul Safari peut
+        // installer une PWA (restriction Apple), donc les deux renvoient vers
+        // Safari : "safari" (Safari, ou navigateur non identifie comme Brave qui
+        // se deguise en Safari) mentionne Safari dans le pas-a-pas ; "other"
+        // (Chrome/Firefox/Edge... identifies) dit d'ouvrir dans Safari. Le JS
+        // choisit via data-ios (safari par defaut).
+        $hint_safari = esc_html__( 'iPhone : dans Safari, Partager puis « Sur l\'écran d\'accueil »', 'opac-custom' );
+        $hint_other  = esc_html__( 'iPhone : ouvrez ce site dans Safari pour l\'installer', 'opac-custom' );
+
+        // Le JS revele une variante (bouton Android OU instruction iOS) via
+        // data-mode + .is-visible, et selectionne le bon hint iOS via data-ios.
         return sprintf(
             '<div class="opac-pwa-install">'
                 . '<button type="button" class="opac-pwa-install-btn">'
@@ -378,12 +386,14 @@ class OPAC_Blocks {
                 . '</button>'
                 . '<span class="opac-pwa-install-ios">'
                     . '<span class="opac-pwa-install-text">%1$s</span>%2$s'
-                    . '<span class="opac-pwa-install-hint">%3$s</span>'
+                    . '<span class="opac-pwa-install-hint" data-ios="safari">%3$s</span>'
+                    . '<span class="opac-pwa-install-hint" data-ios="other">%4$s</span>'
                 . '</span>'
             . '</div>',
             $label,
             $arrow, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG statique
-            $hint
+            $hint_safari,
+            $hint_other
         );
     }
 

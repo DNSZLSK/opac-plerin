@@ -43,7 +43,15 @@
                 (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 
     if (isIOS) {
-        // Pas d'install programmatique sur iOS : on montre l'instruction.
+        // Pas d'install programmatique sur iOS : on montre l'instruction. Seul
+        // Safari installe une PWA (restriction Apple). Les navigateurs tiers
+        // identifiables (Chrome=CriOS, Firefox=FxiOS, Edge=EdgiOS, Opera=OPiOS,
+        // app Google=GSA, DuckDuckGo) recoivent "ouvrez dans Safari". Brave se
+        // deguise en Safari (pas de token propre) : il tombe dans "safari", dont
+        // le message mentionne deja Safari, donc l'utilisateur est quand meme
+        // oriente correctement.
+        var iosOther = /CriOS|FxiOS|EdgiOS|OPiOS|GSA|DuckDuckGo/i.test(ua);
+        box.setAttribute('data-ios', iosOther ? 'other' : 'safari');
         reveal('ios');
         return;
     }

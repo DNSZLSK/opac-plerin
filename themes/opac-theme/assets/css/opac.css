@@ -793,8 +793,13 @@ a.opac-card-link:hover,
 .opac-pwa-install-btn:hover .opac-pwa-install-text,
 .opac-pwa-install-btn:focus-visible .opac-pwa-install-text { text-decoration: underline; }
 .opac-pwa-install-hint {
+    display: none; /* une seule variante affichee selon data-ios (pose par le JS) */
     font-size: 12px;
     color: var(--wp--preset--color--muted, #6b6b6b);
+}
+.opac-pwa-install[data-ios="safari"] .opac-pwa-install-hint[data-ios="safari"],
+.opac-pwa-install[data-ios="other"]  .opac-pwa-install-hint[data-ios="other"] {
+    display: block;
 }
 
 /* ----------------------------------------------------------------
