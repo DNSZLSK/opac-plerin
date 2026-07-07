@@ -15,3 +15,62 @@
         });
     });
 })();
+
+/* ------------------------------------------------------------------
+ * Bandeau "Installer l'app" (footer, mobile/tablette). Revele
+ * .opac-pwa-install selon la plateforme : Android via beforeinstallprompt
+ * (le bouton declenche l'invite native), iOS via une instruction (Apple
+ * interdit l'install programmatique). Masque si l'app tourne deja en
+ * standalone. Best-effort : si rien ne matche, le bandeau reste masque.
+ * ------------------------------------------------------------------ */
+(function () {
+    var box = document.querySelector('.opac-pwa-install');
+    if (!box) { return; }
+
+    // Deja installe (lance depuis l'ecran d'accueil) : ne rien proposer.
+    var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+                     window.navigator.standalone === true;
+    if (standalone) { return; }
+
+    function reveal(mode) {
+        box.setAttribute('data-mode', mode);
+        box.classList.add('is-visible');
+    }
+
+    var ua = window.navigator.userAgent || '';
+    // iOS "vrai", ou iPadOS 13+ (qui se declare Macintosh mais est tactile).
+    var isIOS = /iP(hone|ad|od)/.test(ua) ||
+                (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+
+    if (isIOS) {
+        // Pas d'install programmatique sur iOS : on montre l'instruction.
+        reveal('ios');
+        return;
+    }
+
+    // Android / Chromium : le navigateur n'emet beforeinstallprompt que si le
+    // site est installable. On ne montre le bouton qu'a ce moment-la.
+    var deferred = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        deferred = e;
+        reveal('android');
+    });
+
+    var btn = box.querySelector('.opac-pwa-install-btn');
+    if (btn) {
+        btn.addEventListener('click', function () {
+            if (!deferred) { return; }
+            deferred.prompt();
+            deferred.userChoice.then(function () {
+                deferred = null;
+                box.classList.remove('is-visible'); // installe ou refuse : on retire
+            });
+        });
+    }
+
+    // App installee -> plus besoin du bandeau.
+    window.addEventListener('appinstalled', function () {
+        box.classList.remove('is-visible');
+    });
+})();

@@ -134,6 +134,13 @@ class OPAC_Blocks {
             'supports'        => [ 'html' => false ],
         ] );
 
+        register_block_type( 'opac/pwa-install', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_pwa_install' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+
         register_block_type( 'opac/adhesion-line', [
             'api_version'     => 3,
             'render_callback' => [ __CLASS__, 'render_adhesion_line' ],
@@ -344,6 +351,48 @@ class OPAC_Blocks {
      */
     private static function don_arrow_svg() {
         return '<svg class="opac-don-arrow" width="46" height="30" viewBox="0 0 46 30" fill="none" aria-hidden="true" focusable="false">'
+            . '<path d="M2 13 C 15 5, 29 9, 39 16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>'
+            . '<path d="M31 10 L 41 16 L 32 22" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>'
+        . '</svg>';
+    }
+
+    /**
+     * Bandeau "Installer l'app OPAC" (footer, mobile/tablette). Rendu masque :
+     * c'est opac-pwa.js (plugin) qui le revele selon la plateforme, Android via
+     * beforeinstallprompt (le bouton declenche l'invite native) ou iOS via une
+     * instruction (Apple interdit l'install programmatique). Reste masque si
+     * l'app tourne deja en standalone, et jamais affiche >= 1024px (CSS).
+     * Reprend l'aesthetic manuscrit du bloc don (Caveat + fleche + accent).
+     */
+    public static function render_pwa_install( $attrs, $content, $block ) {
+        $label = esc_html__( 'Installer l\'app OPAC', 'opac-custom' );
+        $hint  = esc_html__( 'iPhone : Partager, puis « Sur l\'écran d\'accueil »', 'opac-custom' );
+        $arrow = self::install_arrow_svg();
+
+        // Deux variantes dans le meme conteneur ; le JS en revele une (bouton
+        // Android OU instruction iOS) via data-mode + .is-visible.
+        return sprintf(
+            '<div class="opac-pwa-install">'
+                . '<button type="button" class="opac-pwa-install-btn">'
+                    . '<span class="opac-pwa-install-text">%1$s</span>%2$s'
+                . '</button>'
+                . '<span class="opac-pwa-install-ios">'
+                    . '<span class="opac-pwa-install-text">%1$s</span>%2$s'
+                    . '<span class="opac-pwa-install-hint">%3$s</span>'
+                . '</span>'
+            . '</div>',
+            $label,
+            $arrow, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG statique
+            $hint
+        );
+    }
+
+    /**
+     * Fleche manuscrite du bandeau d'install (meme trait que le bloc don).
+     * Decorative, masquee aux lecteurs d'ecran.
+     */
+    private static function install_arrow_svg() {
+        return '<svg class="opac-pwa-install-arrow" width="40" height="26" viewBox="0 0 46 30" fill="none" aria-hidden="true" focusable="false">'
             . '<path d="M2 13 C 15 5, 29 9, 39 16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>'
             . '<path d="M31 10 L 41 16 L 32 22" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>'
         . '</svg>';
