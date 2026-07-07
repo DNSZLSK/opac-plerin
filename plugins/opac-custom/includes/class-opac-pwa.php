@@ -8,9 +8,9 @@
  * qu'ils changent.
  *
  * Tout vit dans le plugin (manifest + service worker + registration), donc la
- * PWA survit a un changement de theme, comme le SEO. Les icones sont tirees de
- * l'Icone du site WordPress (get_site_icon_url), deja utilisee comme fallback
- * og:image par OPAC_SEO : editable par l'equipe sans code.
+ * PWA survit a un changement de theme, comme le SEO. L'icone d'application est
+ * une image fournie par l'equipe (assets/img/icon-pwa.jpg) ; le favicon (Icone
+ * du site WordPress) reste distinct et inchange.
  *
  * Points sensibles traites :
  * - Scope racine : le service worker est servi a /opac-sw.js (regle de
@@ -170,28 +170,22 @@ class OPAC_PWA {
     }
 
     /**
-     * Icones tirees de l'Icone du site WordPress (Apparence > Personnaliser >
-     * Identite du site), qui genere les tailles 192 et 512. Si aucune icone
-     * n'est definie, le tableau est vide : le manifest reste valide mais
-     * l'installation utilisera une icone generique (fallback sans bug). On
-     * n'emet pas de variante « maskable » avec cette source : sans zone de
-     * securite, l'OS rognerait le logo. Une vraie icone maskable pourra etre
-     * ajoutee plus tard sans toucher a ce code.
+     * Icone de l'application : image fournie par l'equipe (logo OPAC sur fond
+     * blanc, carre), posee dans le plugin. Unique entree du manifest, c'est donc
+     * elle que le navigateur utilise a l'installation, quelle que soit la taille
+     * demandee (il la redimensionne). Purpose "any" : les marges blanches de
+     * l'image sont conservees, rien n'est rogne. Le favicon (Icone du site) est
+     * distinct et n'est pas modifie.
      */
     private static function manifest_icons() {
-        $icons = [];
-        if ( ! function_exists( 'get_site_icon_url' ) ) {
-            return $icons;
-        }
-        $i192 = get_site_icon_url( 192 );
-        $i512 = get_site_icon_url( 512 );
-        if ( $i192 ) {
-            $icons[] = [ 'src' => $i192, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any' ];
-        }
-        if ( $i512 ) {
-            $icons[] = [ 'src' => $i512, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any' ];
-        }
-        return $icons;
+        return [
+            [
+                'src'     => OPAC_CUSTOM_URL . 'assets/img/icon-pwa.jpg',
+                'sizes'   => '1254x1254',
+                'type'    => 'image/jpeg',
+                'purpose' => 'any',
+            ],
+        ];
     }
 
     /* ---------------------------------------------------------------------
