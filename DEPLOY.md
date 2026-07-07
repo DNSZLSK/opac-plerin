@@ -83,7 +83,23 @@ Avant la mise en prod :
 - Vérifier que les 10 ateliers, 5 stages, 8 events, 15 personnes correspondent bien à la réalité Plérin (à valider avec Katell + Laurence)
 - Supprimer le term orphelin `conseil-administration` si non utilisé
 
-## 7. Vérifications post-déploiement
+## 7. Référencement et indexation
+
+Le SEO technique est codé dans le plugin (`OPAC_SEO`, `class-opac-seo.php`) : meta description, Open Graph, Twitter Card, JSON-LD Schema.org, sitemap. Rien à installer. Restent 3 réglages qui vivent en base (donc non transportés par SFTP) ou hors site, à faire une fois en prod :
+
+1. **Indexation activée** : dans `Réglages > Lecture`, la case « Visibilité par les moteurs de recherche » doit être **décochée**. Si elle est cochée, tout le site passe en `noindex` et n'apparaît jamais sur Google. Piège classique après une phase de préparation.
+
+2. **Titre du site** : dans `Réglages > Général`, le « Titre du site » construit le `<title>` et l'`og:title` de l'accueil. Vérifier qu'il contient « OPAC » et « Plérin » (le mot Plérin distingue l'association des OPAC bailleurs sociaux, qui dominent la recherche « OPAC » seule). Exemple : titre « Association OPAC », slogan « Association culturelle à Plérin depuis 1980 ».
+
+3. **Google Search Console** : ajouter la propriété **domaine** `opacplerin.fr`, vérifiée par un enregistrement **DNS TXT** dans la zone DNS OVH du domaine. Méthode volontairement hors du code et hors admin : c'est une action webmaster ponctuelle (une seule fois), pas une donnée à gérer par l'association. Une fois la propriété vérifiée, soumettre le sitemap `https://opacplerin.fr/wp-sitemap.xml`. Accélère l'indexation et fournit les statistiques de recherche. La vérification par balise HTML n'est pas retenue : elle mettrait un code technique soit dans le code, soit dans l'admin de l'association, sans bénéfice (ce n'est pas un facteur de classement).
+
+### Visibilité locale (levier principal pour « OPAC » cherché autour de Plérin)
+
+- **Fiche Google Business Profile** : créer ou revendiquer la fiche établissement de l'Association OPAC (10A rue fleurie, 22190 Plérin). C'est ce qui fait apparaître l'association sur Google Maps et dans le bloc local des résultats. Gratuit, et c'est le levier le plus fort en local.
+- **Backlinks locaux** : obtenir un lien depuis le site de la Ville de Plérin et s'inscrire dans les annuaires d'associations. Construit l'autorité du domaine sur le nom.
+- **Redirections** : si l'ancien site utilisait d'autres URLs, mettre en place des redirections 301 des anciennes vers les nouvelles pour conserver le référencement déjà acquis.
+
+## 8. Vérifications post-déploiement
 
 ```bash
 # Vérifier les security headers présents
