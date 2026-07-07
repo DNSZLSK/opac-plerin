@@ -748,6 +748,56 @@ a.opac-card-link:hover,
 }
 
 /* ----------------------------------------------------------------
+ * Bandeau "Installer l'app OPAC" (footer), MOBILE/TABLETTE uniquement.
+ * Rendu par le bloc serveur opac/pwa-install, masque par defaut : c'est
+ * opac-pwa.js (plugin) qui pose .is-visible + data-mode selon la plateforme
+ * (Android : bouton beforeinstallprompt ; iOS : instruction Partager). Reste
+ * masque si l'app tourne deja en standalone, et jamais >= 1024px (desktop).
+ * Reprend l'aesthetic manuscrit du bloc don (Caveat + fleche + accent).
+ * ---------------------------------------------------------------- */
+.opac-pwa-install { display: none; }
+.opac-pwa-install-btn,
+.opac-pwa-install-ios {
+    display: none; /* revelees par data-mode sous 1024px (voir MQ) */
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    background: none;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+}
+.opac-pwa-install-ios { flex-direction: column; cursor: default; }
+
+@media (max-width: 1023px) {
+    /* Revele uniquement sous 1024px : au-dela, .opac-pwa-install garde
+       display:none, donc rien sur pc/mac/linux. */
+    .opac-pwa-install.is-visible {
+        display: block;
+        margin-top: var(--wp--preset--spacing--20, 16px);
+        text-align: center;
+    }
+    .opac-pwa-install.is-visible[data-mode="android"] .opac-pwa-install-btn { display: inline-flex; }
+    .opac-pwa-install.is-visible[data-mode="ios"]     .opac-pwa-install-ios { display: inline-flex; }
+}
+
+.opac-pwa-install-text {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.4rem;
+    line-height: 1.1;
+    color: var(--opac-accent);
+    transform: rotate(-3deg);
+}
+.opac-pwa-install-arrow { color: var(--opac-accent); flex-shrink: 0; }
+.opac-pwa-install-btn:hover .opac-pwa-install-text,
+.opac-pwa-install-btn:focus-visible .opac-pwa-install-text { text-decoration: underline; }
+.opac-pwa-install-hint {
+    font-size: 12px;
+    color: var(--wp--preset--color--muted, #6b6b6b);
+}
+
+/* ----------------------------------------------------------------
  * Actu cards (section Actualités de la home)
  *
  * Forcer alignement stretch sur le wp:columns parent (defaut WP = center)
