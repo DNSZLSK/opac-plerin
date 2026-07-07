@@ -105,12 +105,16 @@ class OPAC_PWA {
         echo '<meta name="apple-mobile-web-app-status-bar-style" content="default" />' . "\n";
         echo '<meta name="apple-mobile-web-app-title" content="OPAC" />' . "\n";
 
-        if ( function_exists( 'get_site_icon_url' ) ) {
-            $apple = get_site_icon_url( 180 );
-            if ( $apple ) {
-                echo '<link rel="apple-touch-icon" href="' . esc_url( $apple ) . '" />' . "\n";
-            }
-        }
+        // L'icone d'accueil iOS/iPadOS vient de apple-touch-icon (le manifest
+        // n'est lu que partiellement par Safari). On l'emet TOUJOURS, jamais
+        // conditionnee a un champ que l'equipe peut laisser vide : Icone du site
+        // si elle est definie (override webmaster ponctuel), sinon l'icone OPAC
+        // embarquee, la meme que le manifest -> icone identique sur Android et
+        // Apple. Le PNG est opaque (logo sur fond blanc) : pas de fond noir
+        // ajoute par iOS, et les marges evitent que l'arrondi iOS rogne le logo.
+        $site_icon = function_exists( 'get_site_icon_url' ) ? get_site_icon_url( 180 ) : '';
+        $apple     = $site_icon ? $site_icon : OPAC_CUSTOM_URL . 'assets/img/icon-192.png';
+        echo '<link rel="apple-touch-icon" href="' . esc_url( $apple ) . '" />' . "\n";
     }
 
     /**
@@ -170,19 +174,29 @@ class OPAC_PWA {
     }
 
     /**
-     * Icone de l'application : image fournie par l'equipe (logo OPAC sur fond
-     * blanc, carre), posee dans le plugin. Unique entree du manifest, c'est donc
-     * elle que le navigateur utilise a l'installation, quelle que soit la taille
-     * demandee (il la redimensionne). Purpose "any" : les marges blanches de
-     * l'image sont conservees, rien n'est rogne. Le favicon (Icone du site) est
-     * distinct et n'est pas modifie.
+     * Icones de l'application, generees depuis l'image fournie par l'equipe
+     * (assets/img/icon-pwa.jpg, logo OPAC sur fond blanc carre) vers PNG. Chrome
+     * (Android) attend du PNG aux tailles 192 et 512 : le JPEG unique 1254 ne
+     * suffisait pas, l'icone d'accueil ne s'affichait pas cote Android. Purpose
+     * "any" : image sur fond blanc, marges conservees, rien n'est rogne. Le
+     * favicon (Icone du site) reste distinct et n'est pas modifie.
+     *
+     * Les PNG sont commit dans le plugin : penser a les deployer (SFTP) avec le
+     * reste, sinon le manifest reference des fichiers absents (404) et Android
+     * n'a pas d'icone.
      */
     private static function manifest_icons() {
         return [
             [
-                'src'     => OPAC_CUSTOM_URL . 'assets/img/icon-pwa.jpg',
-                'sizes'   => '1254x1254',
-                'type'    => 'image/jpeg',
+                'src'     => OPAC_CUSTOM_URL . 'assets/img/icon-192.png',
+                'sizes'   => '192x192',
+                'type'    => 'image/png',
+                'purpose' => 'any',
+            ],
+            [
+                'src'     => OPAC_CUSTOM_URL . 'assets/img/icon-512.png',
+                'sizes'   => '512x512',
+                'type'    => 'image/png',
                 'purpose' => 'any',
             ],
         ];
