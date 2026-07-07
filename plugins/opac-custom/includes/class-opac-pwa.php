@@ -50,6 +50,7 @@ class OPAC_PWA {
         add_action( 'init', [ __CLASS__, 'maybe_flush' ], 11 );
         add_action( 'template_redirect', [ __CLASS__, 'maybe_serve' ] );
         add_action( 'wp_head', [ __CLASS__, 'render_head' ], 2 );
+        add_filter( 'site_icon_meta_tags', [ __CLASS__, 'override_site_icon_apple_touch' ] );
         add_action( 'wp_enqueue_scripts', [ __CLASS__, 'enqueue_registration' ] );
     }
 
@@ -105,16 +106,40 @@ class OPAC_PWA {
         echo '<meta name="apple-mobile-web-app-status-bar-style" content="default" />' . "\n";
         echo '<meta name="apple-mobile-web-app-title" content="OPAC" />' . "\n";
 
-        // L'icone d'accueil iOS/iPadOS vient de apple-touch-icon (le manifest
-        // n'est lu que partiellement par Safari). On l'emet TOUJOURS, jamais
-        // conditionnee a un champ que l'equipe peut laisser vide : Icone du site
-        // si elle est definie (override webmaster ponctuel), sinon l'icone OPAC
-        // embarquee, la meme que le manifest -> icone identique sur Android et
-        // Apple. Le PNG est opaque (logo sur fond blanc) : pas de fond noir
-        // ajoute par iOS, et les marges evitent que l'arrondi iOS rogne le logo.
-        $site_icon = function_exists( 'get_site_icon_url' ) ? get_site_icon_url( 180 ) : '';
-        $apple     = $site_icon ? $site_icon : OPAC_CUSTOM_URL . 'assets/img/icon-192.png';
-        echo '<link rel="apple-touch-icon" href="' . esc_url( $apple ) . '" />' . "\n";
+        // L'icone d'accueil iOS/iPadOS vient de apple-touch-icon (Safari ne lit
+        // le manifest que partiellement). On force l'icone PWA embarquee
+        // (icon-192.png), identique au manifest : meme icone sur Android et iOS.
+        // On n'utilise PAS l'Icone du site (badge favicon distinct, souvent rond)
+        // qui donnerait une icone differente. WordPress core emet lui aussi un
+        // apple-touch-icon depuis l'Icone du site (wp_site_icon, priorite 99, donc
+        // APRES nous) ; sans attribut sizes, iOS prend la derniere balise, donc le
+        // favicon ecraserait l'icone PWA. On neutralise celle de core via le filtre
+        // site_icon_meta_tags (voir override_site_icon_apple_touch) : il ne reste
+        // qu'un apple-touch-icon = icon-192.png. PNG opaque (fond blanc) : pas de
+        // fond noir iOS, marges = pas de rognage par l'arrondi.
+        echo '<link rel="apple-touch-icon" href="' . esc_url( OPAC_CUSTOM_URL . 'assets/img/icon-192.png' ) . '" />' . "\n";
+    }
+
+    /**
+     * Neutralise l'apple-touch-icon genere par WordPress core depuis l'Icone du
+     * site (wp_site_icon, priorite 99). Cette balise (badge favicon) est emise
+     * APRES la notre ; avec deux apple-touch-icon sans attribut sizes, iOS retient
+     * la derniere, donc le favicon ecraserait l'icone PWA (symptome : "un rond"
+     * sur l'ecran d'accueil au lieu du logo carre). On retire l'entree
+     * apple-touch-icon de core ; les rel="icon" (favicon d'onglet) et la tuile
+     * Windows (msapplication-TileImage) restent inchangees. Notre balise
+     * render_head (icon-192.png) reste alors seule.
+     *
+     * @param string[] $meta_tags Balises HTML generees par wp_site_icon.
+     * @return string[]
+     */
+    public static function override_site_icon_apple_touch( $meta_tags ) {
+        if ( ! is_array( $meta_tags ) ) {
+            return $meta_tags;
+        }
+        return array_values( array_filter( $meta_tags, static function ( $tag ) {
+            return false === strpos( (string) $tag, 'apple-touch-icon' );
+        } ) );
     }
 
     /**
