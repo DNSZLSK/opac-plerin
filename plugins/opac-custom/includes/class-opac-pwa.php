@@ -107,17 +107,16 @@ class OPAC_PWA {
         echo '<meta name="apple-mobile-web-app-title" content="OPAC" />' . "\n";
 
         // L'icone d'accueil iOS/iPadOS vient de apple-touch-icon (Safari ne lit
-        // le manifest que partiellement). On force l'icone PWA embarquee
-        // (icon-192.png), identique au manifest : meme icone sur Android et iOS.
-        // On n'utilise PAS l'Icone du site (badge favicon distinct, souvent rond)
+        // le manifest que partiellement). On pointe l'image fournie par l'equipe
+        // (icon-pwa.jpg), telle quelle, la meme que le manifest : meme icone sur
+        // Android et iOS. On n'utilise PAS l'Icone du site (badge favicon distinct)
         // qui donnerait une icone differente. WordPress core emet lui aussi un
         // apple-touch-icon depuis l'Icone du site (wp_site_icon, priorite 99, donc
         // APRES nous) ; sans attribut sizes, iOS prend la derniere balise, donc le
-        // favicon ecraserait l'icone PWA. On neutralise celle de core via le filtre
+        // favicon ecraserait la notre. On neutralise celle de core via le filtre
         // site_icon_meta_tags (voir override_site_icon_apple_touch) : il ne reste
-        // qu'un apple-touch-icon = icon-192.png. PNG opaque (fond blanc) : pas de
-        // fond noir iOS, marges = pas de rognage par l'arrondi.
-        echo '<link rel="apple-touch-icon" href="' . esc_url( OPAC_CUSTOM_URL . 'assets/img/icon-192.png' ) . '" />' . "\n";
+        // qu'un apple-touch-icon = icon-pwa.jpg.
+        echo '<link rel="apple-touch-icon" href="' . esc_url( OPAC_CUSTOM_URL . 'assets/img/icon-pwa.jpg' ) . '" />' . "\n";
     }
 
     /**
@@ -128,7 +127,7 @@ class OPAC_PWA {
      * sur l'ecran d'accueil au lieu du logo carre). On retire l'entree
      * apple-touch-icon de core ; les rel="icon" (favicon d'onglet) et la tuile
      * Windows (msapplication-TileImage) restent inchangees. Notre balise
-     * render_head (icon-192.png) reste alors seule.
+     * render_head (icon-pwa.jpg) reste alors seule.
      *
      * @param string[] $meta_tags Balises HTML generees par wp_site_icon.
      * @return string[]
@@ -199,29 +198,23 @@ class OPAC_PWA {
     }
 
     /**
-     * Icones de l'application, generees depuis l'image fournie par l'equipe
-     * (assets/img/icon-pwa.jpg, logo OPAC sur fond blanc carre) vers PNG. Chrome
-     * (Android) attend du PNG aux tailles 192 et 512 : le JPEG unique 1254 ne
-     * suffisait pas, l'icone d'accueil ne s'affichait pas cote Android. Purpose
-     * "any" : image sur fond blanc, marges conservees, rien n'est rogne. Le
-     * favicon (Icone du site) reste distinct et n'est pas modifie.
+     * Icone de l'application : le fichier fourni par l'equipe, tel quel
+     * (assets/img/icon-pwa.jpg, logo OPAC 4 lettres sur fond blanc, carre).
+     * Unique entree du manifest, utilisee telle quelle (le navigateur la
+     * redimensionne au besoin). Purpose "any" : rien n'est rogne. Le favicon
+     * (Icone du site) reste distinct.
      *
-     * Les PNG sont commit dans le plugin : penser a les deployer (SFTP) avec le
-     * reste, sinon le manifest reference des fichiers absents (404) et Android
-     * n'a pas d'icone.
+     * IMPORTANT deploiement : ce fichier DOIT etre present ET servi par le
+     * serveur (pousser assets/img/ en SFTP). S'il manque ou est bloque, le
+     * manifest pointe vers un 404 et aucune icone ne s'affiche (Android, et iOS
+     * via apple-touch-icon).
      */
     private static function manifest_icons() {
         return [
             [
-                'src'     => OPAC_CUSTOM_URL . 'assets/img/icon-192.png',
-                'sizes'   => '192x192',
-                'type'    => 'image/png',
-                'purpose' => 'any',
-            ],
-            [
-                'src'     => OPAC_CUSTOM_URL . 'assets/img/icon-512.png',
-                'sizes'   => '512x512',
-                'type'    => 'image/png',
+                'src'     => OPAC_CUSTOM_URL . 'assets/img/icon-pwa.jpg',
+                'sizes'   => '1254x1254',
+                'type'    => 'image/jpeg',
                 'purpose' => 'any',
             ],
         ];
