@@ -358,54 +358,42 @@ class OPAC_Blocks {
 
     /**
      * Bandeau "Installer l'app OPAC" (footer, mobile/tablette). Rendu masque :
-     * c'est opac-pwa.js (plugin) qui le revele selon la plateforme, Android via
-     * beforeinstallprompt (le bouton declenche l'invite native) ou iOS via une
-     * instruction (Apple interdit l'install programmatique). Reste masque si
-     * l'app tourne deja en standalone, et jamais affiche >= 1024px (CSS).
-     * Reprend l'aesthetic manuscrit du bloc don (Caveat + fleche + accent).
+     * c'est opac-pwa.js (plugin) qui le revele selon la plateforme, Android
+     * Chromium via beforeinstallprompt (le bouton declenche l'invite native),
+     * iOS et Firefox Android via une instruction manuelle (pas d'install
+     * programmatique chez eux). Reste masque si l'app tourne deja en
+     * standalone, et jamais affiche >= 1024px (CSS). Texte manuscrit (Caveat)
+     * comme le bloc don.
      */
     public static function render_pwa_install( $attrs, $content, $block ) {
         $label = esc_html__( 'Installer l\'app OPAC', 'opac-custom' );
-        $arrow = self::install_arrow_svg();
 
-        // Deux variantes d'instruction iOS. Sur iPhone, seul Safari peut
-        // installer une PWA (restriction Apple), donc les deux renvoient vers
-        // Safari : "safari" (Safari, ou navigateur non identifie comme Brave qui
-        // se deguise en Safari) mentionne Safari dans le pas-a-pas ; "other"
-        // (Chrome/Firefox/Edge... identifies) dit d'ouvrir dans Safari. Le JS
-        // choisit via data-ios (safari par defaut).
-        $hint_safari = esc_html__( 'iPhone : dans Safari, Partager puis « Sur l\'écran d\'accueil »', 'opac-custom' );
-        $hint_other  = esc_html__( 'iPhone : ouvrez ce site dans Safari pour l\'installer', 'opac-custom' );
+        // Instructions manuelles, une par plateforme sans invite native ; le JS
+        // pose data-hint sur le conteneur, le CSS n'affiche que la bonne ligne.
+        // iOS : formulation unique et courte, valable depuis Safari comme depuis
+        // les navigateurs tiers (seul Safari installe une PWA, restriction
+        // Apple). Firefox Android : pas de beforeinstallprompt, l'install passe
+        // par le menu du navigateur.
+        $hint_ios     = esc_html__( 'Ouvrir dans Safari → Partager → Sur l\'écran d\'accueil', 'opac-custom' );
+        $hint_firefox = esc_html__( 'Menu ⋮ puis Installer', 'opac-custom' );
 
-        // Le JS revele une variante (bouton Android OU instruction iOS) via
-        // data-mode + .is-visible, et selectionne le bon hint iOS via data-ios.
+        // Le JS revele une variante (bouton Android OU instruction manuelle)
+        // via data-mode + .is-visible.
         return sprintf(
             '<div class="opac-pwa-install">'
                 . '<button type="button" class="opac-pwa-install-btn">'
-                    . '<span class="opac-pwa-install-text">%1$s</span>%2$s'
+                    . '<span class="opac-pwa-install-text">%1$s</span>'
                 . '</button>'
-                . '<span class="opac-pwa-install-ios">'
-                    . '<span class="opac-pwa-install-text">%1$s</span>%2$s'
-                    . '<span class="opac-pwa-install-hint" data-ios="safari">%3$s</span>'
-                    . '<span class="opac-pwa-install-hint" data-ios="other">%4$s</span>'
+                . '<span class="opac-pwa-install-manual">'
+                    . '<span class="opac-pwa-install-text">%1$s</span>'
+                    . '<span class="opac-pwa-install-hint" data-hint="ios">%2$s</span>'
+                    . '<span class="opac-pwa-install-hint" data-hint="firefox">%3$s</span>'
                 . '</span>'
             . '</div>',
             $label,
-            $arrow, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG statique
-            $hint_safari,
-            $hint_other
+            $hint_ios,
+            $hint_firefox
         );
-    }
-
-    /**
-     * Fleche manuscrite du bandeau d'install (meme trait que le bloc don).
-     * Decorative, masquee aux lecteurs d'ecran.
-     */
-    private static function install_arrow_svg() {
-        return '<svg class="opac-pwa-install-arrow" width="40" height="26" viewBox="0 0 46 30" fill="none" aria-hidden="true" focusable="false">'
-            . '<path d="M2 13 C 15 5, 29 9, 39 16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>'
-            . '<path d="M31 10 L 41 16 L 32 22" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>'
-        . '</svg>';
     }
 
     /**

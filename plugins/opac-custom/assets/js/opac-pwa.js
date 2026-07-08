@@ -18,9 +18,10 @@
 
 /* ------------------------------------------------------------------
  * Bandeau "Installer l'app" (footer, mobile/tablette). Revele
- * .opac-pwa-install selon la plateforme : Android via beforeinstallprompt
- * (le bouton declenche l'invite native), iOS via une instruction (Apple
- * interdit l'install programmatique). Masque si l'app tourne deja en
+ * .opac-pwa-install selon la plateforme : Android Chromium via
+ * beforeinstallprompt (le bouton declenche l'invite native), iOS et
+ * Firefox Android via une instruction manuelle (data-hint), faute
+ * d'install programmatique chez eux. Masque si l'app tourne deja en
  * standalone. Best-effort : si rien ne matche, le bandeau reste masque.
  * ------------------------------------------------------------------ */
 (function () {
@@ -32,8 +33,9 @@
                      window.navigator.standalone === true;
     if (standalone) { return; }
 
-    function reveal(mode) {
+    function reveal(mode, hint) {
         box.setAttribute('data-mode', mode);
+        if (hint) { box.setAttribute('data-hint', hint); }
         box.classList.add('is-visible');
     }
 
@@ -43,16 +45,17 @@
                 (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 
     if (isIOS) {
-        // Pas d'install programmatique sur iOS : on montre l'instruction. Seul
-        // Safari installe une PWA (restriction Apple). Les navigateurs tiers
-        // identifiables (Chrome=CriOS, Firefox=FxiOS, Edge=EdgiOS, Opera=OPiOS,
-        // app Google=GSA, DuckDuckGo) recoivent "ouvrez dans Safari". Brave se
-        // deguise en Safari (pas de token propre) : il tombe dans "safari", dont
-        // le message mentionne deja Safari, donc l'utilisateur est quand meme
-        // oriente correctement.
-        var iosOther = /CriOS|FxiOS|EdgiOS|OPiOS|GSA|DuckDuckGo/i.test(ua);
-        box.setAttribute('data-ios', iosOther ? 'other' : 'safari');
-        reveal('ios');
+        // Pas d'install programmatique sur iOS : instruction "passer par
+        // Safari", seul autorise a installer une PWA (restriction Apple).
+        // La formulation vaut aussi depuis Chrome/Firefox/Brave iOS.
+        reveal('manual', 'ios');
+        return;
+    }
+
+    // Firefox Android n'emet jamais beforeinstallprompt : l'install passe par
+    // le menu du navigateur, on affiche l'instruction correspondante.
+    if (/Android/i.test(ua) && /Firefox\//.test(ua)) {
+        reveal('manual', 'firefox');
         return;
     }
 

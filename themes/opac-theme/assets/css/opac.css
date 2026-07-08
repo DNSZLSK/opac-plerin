@@ -751,13 +751,14 @@ a.opac-card-link:hover,
  * Bandeau "Installer l'app OPAC" (footer), MOBILE/TABLETTE uniquement.
  * Rendu par le bloc serveur opac/pwa-install, masque par defaut : c'est
  * opac-pwa.js (plugin) qui pose .is-visible + data-mode selon la plateforme
- * (Android : bouton beforeinstallprompt ; iOS : instruction Partager). Reste
- * masque si l'app tourne deja en standalone, et jamais >= 1024px (desktop).
- * Reprend l'aesthetic manuscrit du bloc don (Caveat + fleche + accent).
+ * (Android Chromium : bouton beforeinstallprompt ; iOS / Firefox Android :
+ * instruction manuelle, choisie via data-hint). Reste masque si l'app tourne
+ * deja en standalone, et jamais >= 1024px (desktop). Texte manuscrit (Caveat)
+ * comme le bloc don.
  * ---------------------------------------------------------------- */
 .opac-pwa-install { display: none; }
 .opac-pwa-install-btn,
-.opac-pwa-install-ios {
+.opac-pwa-install-manual {
     display: none; /* revelees par data-mode sous 1024px (voir MQ) */
     align-items: center;
     gap: 4px;
@@ -767,7 +768,7 @@ a.opac-card-link:hover,
     font: inherit;
     cursor: pointer;
 }
-.opac-pwa-install-ios { flex-direction: column; cursor: default; }
+.opac-pwa-install-manual { flex-direction: column; cursor: default; }
 
 @media (max-width: 1023px) {
     /* Revele uniquement sous 1024px : au-dela, .opac-pwa-install garde
@@ -775,10 +776,11 @@ a.opac-card-link:hover,
     .opac-pwa-install.is-visible {
         display: block;
         margin-top: var(--wp--preset--spacing--20, 16px);
+        padding-bottom: 14px; /* respiration avant le bord bas du footer */
         text-align: center;
     }
-    .opac-pwa-install.is-visible[data-mode="android"] .opac-pwa-install-btn { display: inline-flex; }
-    .opac-pwa-install.is-visible[data-mode="ios"]     .opac-pwa-install-ios { display: inline-flex; }
+    .opac-pwa-install.is-visible[data-mode="android"] .opac-pwa-install-btn    { display: inline-flex; }
+    .opac-pwa-install.is-visible[data-mode="manual"]  .opac-pwa-install-manual { display: inline-flex; }
 }
 
 .opac-pwa-install-text {
@@ -789,16 +791,15 @@ a.opac-card-link:hover,
     color: var(--opac-accent);
     transform: rotate(-3deg);
 }
-.opac-pwa-install-arrow { color: var(--opac-accent); flex-shrink: 0; }
 .opac-pwa-install-btn:hover .opac-pwa-install-text,
 .opac-pwa-install-btn:focus-visible .opac-pwa-install-text { text-decoration: underline; }
 .opac-pwa-install-hint {
-    display: none; /* une seule variante affichee selon data-ios (pose par le JS) */
-    font-size: 12px;
+    display: none; /* une seule instruction affichee selon data-hint (pose par le JS) */
+    font-size: 11px; /* discret et court : tient sur une ligne en mobile */
     color: var(--wp--preset--color--muted, #6b6b6b);
 }
-.opac-pwa-install[data-ios="safari"] .opac-pwa-install-hint[data-ios="safari"],
-.opac-pwa-install[data-ios="other"]  .opac-pwa-install-hint[data-ios="other"] {
+.opac-pwa-install[data-hint="ios"]     .opac-pwa-install-hint[data-hint="ios"],
+.opac-pwa-install[data-hint="firefox"] .opac-pwa-install-hint[data-hint="firefox"] {
     display: block;
 }
 
@@ -2257,6 +2258,13 @@ body {
 @media (max-width: 880px) {
     .opac-contact-grid {
         grid-template-columns: 1fr;
+    }
+    /* Cartes infos toutes a pleine largeur (retour test iPhone : largeurs
+       inegales). border-box obligatoire : pas de reset global dans le theme,
+       sinon padding 18px + bordure debordent du conteneur. */
+    .opac-contact-sidebar .opac-info-card {
+        width: 100%;
+        box-sizing: border-box;
     }
 }
 
