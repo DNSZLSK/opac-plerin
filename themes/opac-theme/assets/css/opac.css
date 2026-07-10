@@ -1532,8 +1532,8 @@ body {
 }
 
 .opac-animateur-avatar {
-    width: 48px;
-    height: 48px;
+    width: 96px;
+    height: 96px;
     border-radius: 50%;
     background: var(--opac-accent-light);
     color: var(--opac-accent);
@@ -1541,7 +1541,7 @@ body {
     align-items: center;
     justify-content: center;
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 16px;
+    font-size: 32px;
     font-weight: 500;
     flex-shrink: 0;
 }
@@ -2081,14 +2081,14 @@ body {
 }
 
 .opac-person-avatar {
-    width: 56px;
-    height: 56px;
+    width: 96px;
+    height: 96px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--wp--preset--font-family--display, Georgia, serif);
-    font-size: 18px;
+    font-size: 32px;
     font-weight: 500;
     color: var(--opac-card);
     line-height: 1;
