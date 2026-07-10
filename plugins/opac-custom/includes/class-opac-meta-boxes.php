@@ -144,7 +144,7 @@ class OPAC_Meta_Boxes {
                 return [
                     [ 'key' => '_thumbnail', 'type' => 'image', 'label' => __( 'Photo', 'opac-custom' ), 'desc' => __( 'Optionnelle. Si vous ajoutez une photo, elle remplace l\'avatar à initiales. Sans photo, un avatar coloré avec les initiales s\'affiche automatiquement.', 'opac-custom' ) ],
                     [ 'key' => 'opac_role', 'type' => 'text', 'label' => __( 'Rôle / fonction', 'opac-custom' ), 'desc' => __( 'Ex : Céramique, Présidente, Secrétaire.', 'opac-custom' ) ],
-                    [ 'key' => 'opac_person_type', 'type' => 'taxonomy', 'taxonomy' => 'opac_person_type', 'label' => __( 'Type', 'opac-custom' ), 'desc' => __( 'Détermine la grille où la personne apparaît sur la page Association.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_person_type', 'type' => 'taxonomy', 'taxonomy' => 'opac_person_type', 'label' => __( 'Rôles', 'opac-custom' ), 'desc' => __( 'Cochez un ou plusieurs rôles : la personne apparaît dans chaque section correspondante de la page Association.', 'opac-custom' ) ],
                 ];
         }
         return [];
@@ -210,7 +210,13 @@ class OPAC_Meta_Boxes {
         }
 
         echo '<tr>';
-        echo '<th scope="row"><label for="' . esc_attr( $control_id ) . '">' . esc_html( $label ) . '</label></th>';
+        // Un groupe de checkboxes (taxonomy) n'a pas de controle unique a cibler :
+        // libelle en texte simple plutot qu'un label[for] qui pointe dans le vide.
+        if ( 'taxonomy' === $type ) {
+            echo '<th scope="row">' . esc_html( $label ) . '</th>';
+        } else {
+            echo '<th scope="row"><label for="' . esc_attr( $control_id ) . '">' . esc_html( $label ) . '</label></th>';
+        }
         echo '<td>';
 
         switch ( $type ) {
@@ -270,7 +276,7 @@ class OPAC_Meta_Boxes {
                 break;
 
             case 'taxonomy':
-                self::render_taxonomy_select( $post, $field['taxonomy'], $control_id );
+                self::render_taxonomy_checkboxes( $post, $field['taxonomy'], $control_id );
                 break;
 
             case 'image':
@@ -299,24 +305,30 @@ class OPAC_Meta_Boxes {
         echo '</td></tr>';
     }
 
-    private static function render_taxonomy_select( $post, $taxonomy, $control_id ) {
+    private static function render_taxonomy_checkboxes( $post, $taxonomy, $control_id ) {
         $terms   = get_terms( [ 'taxonomy' => $taxonomy, 'hide_empty' => false ] );
         $current = wp_get_object_terms( $post->ID, $taxonomy, [ 'fields' => 'ids' ] );
-        $current_id = ( ! is_wp_error( $current ) && ! empty( $current ) ) ? (int) $current[0] : 0;
+        $current = is_wp_error( $current ) ? [] : array_map( 'intval', $current );
 
-        echo '<select id="' . esc_attr( $control_id ) . '" name="' . esc_attr( $control_id ) . '">';
-        echo '<option value="0">' . esc_html__( '— Choisir —', 'opac-custom' ) . '</option>';
-        if ( ! is_wp_error( $terms ) ) {
-            foreach ( $terms as $term ) {
-                printf(
-                    '<option value="%d"%s>%s</option>',
-                    (int) $term->term_id,
-                    selected( $current_id, $term->term_id, false ),
-                    esc_html( $term->name )
-                );
-            }
+        if ( is_wp_error( $terms ) || empty( $terms ) ) {
+            echo '<p class="description">' . esc_html__( 'Aucun type disponible.', 'opac-custom' ) . '</p>';
+            return;
         }
-        echo '</select>';
+
+        // Cases a cocher (et non un select) : une personne peut cumuler des roles,
+        // ex. Bureau + Conseil d'administration, et apparait alors dans chaque
+        // section correspondante de la page Association.
+        echo '<fieldset class="opac-tax-checkboxes">';
+        foreach ( $terms as $term ) {
+            printf(
+                '<label><input type="checkbox" name="%1$s[]" value="%2$d"%3$s /> %4$s</label>',
+                esc_attr( $control_id ),
+                (int) $term->term_id,
+                checked( in_array( (int) $term->term_id, $current, true ), true, false ),
+                esc_html( $term->name )
+            );
+        }
+        echo '</fieldset>';
     }
 
     private static function render_image_field( $post, $control_id ) {
@@ -375,8 +387,9 @@ class OPAC_Meta_Boxes {
 
             if ( 'taxonomy' === $type ) {
                 $taxonomy = $field['taxonomy'];
-                $term_id  = isset( $_POST[ 'opac_tax_' . $taxonomy ] ) ? absint( $_POST[ 'opac_tax_' . $taxonomy ] ) : 0;
-                wp_set_object_terms( $post_id, $term_id > 0 ? [ $term_id ] : [], $taxonomy, false );
+                $raw_ids  = isset( $_POST[ 'opac_tax_' . $taxonomy ] ) ? (array) wp_unslash( $_POST[ 'opac_tax_' . $taxonomy ] ) : [];
+                $term_ids = array_values( array_unique( array_filter( array_map( 'absint', $raw_ids ) ) ) );
+                wp_set_object_terms( $post_id, $term_ids, $taxonomy, false );
                 continue;
             }
 
