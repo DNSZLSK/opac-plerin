@@ -112,10 +112,17 @@ class OPAC_CPTs {
                 'menu_name' => __( 'Équipe', 'opac-custom' ),
             ],
             'description' => __( 'Membres de l\'équipe : pédagogique, administrative, bureau, conseil d\'administration.', 'opac-custom' ),
-            'public' => true,
+            // Pas de page publique individuelle (aucun single template) : on coupe
+            // la route front (le permalien menait nulle part) et on masque le lien
+            // permalien dans l'editeur (is_post_type_viewable => false), tout en
+            // gardant l'UI admin. Meme posture que opac_inscription plus bas.
+            'public' => false,
+            'show_ui' => true,
+            'show_in_menu' => true,
             'show_in_rest' => true,
             'has_archive' => false,
-            'rewrite' => [ 'slug' => 'equipe', 'with_front' => false ],
+            'exclude_from_search' => true,
+            'publicly_queryable' => false,
             // Sans 'editor' : edition via le formulaire OPAC_Meta_Boxes (pas de Gutenberg).
             'supports' => [ 'title', 'thumbnail' ],
             'menu_icon' => 'dashicons-groups',
