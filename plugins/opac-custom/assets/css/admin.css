@@ -90,6 +90,19 @@
     margin-top: 4px;
 }
 
+/* Champ Roles (personne) : cases a cocher empilees. Une personne peut cumuler
+ * des roles (ex. Bureau + Conseil d'administration) et apparait alors dans
+ * chaque section correspondante de la page Association. */
+.opac-tax-checkboxes {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+.opac-tax-checkboxes label {
+    display: block;
+    margin: 2px 0;
+}
+
 /* Selecteur d'image integre (remplace la boite native en sidebar).
  * L'apercu suit la convention globale opac-img-frame : hauteur fixe +
  * overflow hidden + object-fit cover (photos d'origines variees). */

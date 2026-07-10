@@ -81,8 +81,6 @@ Vérifier que `/ateliers/`, `/ephemeres/`, `/agenda/`, `/association/`, `/contac
 Avant la mise en prod :
 - Supprimer les 3 inscriptions demo seedées par M7 (`/wp-admin/edit.php?post_type=opac_inscription`)
 - Vérifier que les 10 ateliers, 5 stages, 8 events, 15 personnes correspondent bien à la réalité Plérin (à valider avec Katell + Laurence)
-- Supprimer le term orphelin `conseil-administration` si non utilisé
-
 ## 7. Référencement et indexation
 
 Le SEO technique est codé dans le plugin (`OPAC_SEO`, `class-opac-seo.php`) : meta description, Open Graph, Twitter Card, JSON-LD Schema.org, sitemap. Rien à installer. Restent 3 réglages qui vivent en base (donc non transportés par SFTP) ou hors site, à faire une fois en prod :
