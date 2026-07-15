@@ -99,9 +99,16 @@ class OPAC_PWA {
         echo '<link rel="manifest" href="' . esc_url( home_url( '/' . self::MANIFEST_PATH ) ) . '" />' . "\n";
         echo '<meta name="theme-color" content="' . esc_attr( self::THEME_COLOR ) . '" />' . "\n";
 
+        // Balise standard (Android/Chromium). Le mode standalone vient en realite
+        // du manifest (display:standalone) ; cette balise ne sert qu'a lever
+        // l'avertissement de depreciation de Chrome sur apple-mobile-web-app-capable.
+        echo '<meta name="mobile-web-app-capable" content="yes" />' . "\n";
+
         // iOS ne supporte le manifest que partiellement : ces balises assurent
         // l'icone d'accueil et le mode plein ecran a l'installation manuelle
-        // (Partager, puis « Sur l'ecran d'accueil »).
+        // (Partager, puis « Sur l'ecran d'accueil »). On garde volontairement
+        // apple-mobile-web-app-capable malgre l'avertissement Chrome : iOS s'appuie
+        // encore dessus (les startup images notamment en dependent).
         echo '<meta name="apple-mobile-web-app-capable" content="yes" />' . "\n";
         echo '<meta name="apple-mobile-web-app-status-bar-style" content="default" />' . "\n";
         echo '<meta name="apple-mobile-web-app-title" content="OPAC" />' . "\n";
@@ -307,8 +314,12 @@ self.addEventListener('fetch', function (event) {
     event.respondWith((async function () {
       try {
         const fresh = await fetch(req);
-        const cache = await caches.open(PAGES_CACHE);
-        cache.put(req, fresh.clone());
+        // Ne cache que les reponses valides (200-299) : evite de figer une
+        // 404/500 qui serait resservie hors-ligne.
+        if (fresh.ok) {
+          const cache = await caches.open(PAGES_CACHE);
+          cache.put(req, fresh.clone());
+        }
         return fresh;
       } catch (e) {
         const cache = await caches.open(PAGES_CACHE);
