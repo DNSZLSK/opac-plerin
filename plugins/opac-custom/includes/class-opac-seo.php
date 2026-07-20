@@ -121,9 +121,15 @@ class OPAC_SEO {
         $url = self::current_url();
 
         if ( is_front_page() || is_home() ) {
+            // Annee de fondation lue depuis les Reglages (comme build_organization) :
+            // le panel reste la source unique des coordonnees et infos de l'asso.
+            $founding = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_org_founding_year' ) : 1980;
             return [
                 'title'       => get_bloginfo( 'name' ) . ' - ' . get_bloginfo( 'description' ),
-                'description' => 'Association culturelle de Plérin fondée en 1980. Ateliers d\'expression artistique, sorties, expositions et événements ouverts à tous.',
+                'description' => sprintf(
+                    'Association culturelle de Plérin fondée en %d. Ateliers d\'expression artistique, sorties, expositions et événements ouverts à tous.',
+                    $founding > 0 ? $founding : 1980
+                ),
                 'url'         => $url,
                 'og_type'     => 'website',
             ];
@@ -201,9 +207,22 @@ class OPAC_SEO {
         }
 
         if ( is_page( 'contact' ) ) {
+            // Coordonnees composees depuis les Reglages : si Katell change le
+            // telephone, l'email, l'adresse ou les horaires, la description suit.
+            if ( class_exists( 'OPAC_Settings' ) ) {
+                $desc = sprintf(
+                    'Contactez l\'Association OPAC : %s, %s, ou rendez-vous au secrétariat %s. %s.',
+                    OPAC_Settings::get( 'opac_org_phone_accueil' ),
+                    OPAC_Settings::get( 'opac_org_email' ),
+                    OPAC_Settings::full_address(),
+                    OPAC_Settings::get( 'opac_org_hours' )
+                );
+            } else {
+                $desc = 'Contactez l\'Association OPAC : 02 96 74 53 08, contact@opacplerin.fr, ou rendez-vous au secrétariat 10A rue fleurie, 22190 Plérin, du lundi au vendredi 14h15 à 17h45.';
+            }
             return [
                 'title'       => 'Nous contacter - ' . get_bloginfo( 'name' ),
-                'description' => 'Contactez l\'Association OPAC : 02 96 74 53 08, contact@opacplerin.fr, ou rendez-vous au secrétariat 10A rue fleurie, 22190 Plérin, du lundi au vendredi 14h15 à 17h45.',
+                'description' => $desc,
                 'url'         => $url,
                 'og_type'     => 'website',
             ];
@@ -252,14 +271,38 @@ class OPAC_SEO {
             'telephone'     => $tel_clean,
             'email'         => $has_settings ? OPAC_Settings::get( 'opac_org_email' ) : 'contact@opacplerin.fr',
             'foundingDate'  => (string) $founding,
-            'address'       => [
-                '@type'           => 'PostalAddress',
-                'streetAddress'   => $has_settings ? OPAC_Settings::get( 'opac_org_address_street' ) : '10A rue fleurie',
-                'postalCode'      => $has_settings ? OPAC_Settings::get( 'opac_org_address_postal' ) : '22190',
-                'addressLocality' => $has_settings ? OPAC_Settings::get( 'opac_org_address_city' )   : 'Plérin',
-                'addressCountry'  => 'FR',
-            ],
+            'address'       => self::postal_address(),
             'areaServed'    => $has_settings ? OPAC_Settings::get( 'opac_org_address_city' ) : 'Plérin',
+        ];
+    }
+
+    /**
+     * PostalAddress Schema.org de l'association, lue depuis OPAC > Reglages
+     * (fallback sur les coordonnees connues si le plugin de reglages manque).
+     * Source unique de l'adresse pour Organization, Course et Event : avant ce
+     * helper, Course/Event dupliquaient l'adresse en dur et ne suivaient pas
+     * un changement fait dans le panel.
+     */
+    private static function postal_address() {
+        $has_settings = class_exists( 'OPAC_Settings' );
+        return [
+            '@type'           => 'PostalAddress',
+            'streetAddress'   => $has_settings ? OPAC_Settings::get( 'opac_org_address_street' ) : '10A rue fleurie',
+            'postalCode'      => $has_settings ? OPAC_Settings::get( 'opac_org_address_postal' ) : '22190',
+            'addressLocality' => $has_settings ? OPAC_Settings::get( 'opac_org_address_city' )   : 'Plérin',
+            'addressCountry'  => 'FR',
+        ];
+    }
+
+    /**
+     * Place Schema.org "locaux de l'association" (nom + adresse depuis les
+     * Reglages), utilisee comme lieu des Course et lieu par defaut des Event.
+     */
+    private static function org_place() {
+        return [
+            '@type'   => 'Place',
+            'name'    => class_exists( 'OPAC_Settings' ) ? OPAC_Settings::get( 'opac_org_name' ) : 'Association OPAC',
+            'address' => self::postal_address(),
         ];
     }
 
@@ -306,17 +349,7 @@ class OPAC_SEO {
         $data['hasCourseInstance'] = [
             '@type'      => 'CourseInstance',
             'courseMode' => 'Onsite',
-            'location'   => [
-                '@type'   => 'Place',
-                'name'    => 'Association OPAC',
-                'address' => [
-                    '@type'           => 'PostalAddress',
-                    'streetAddress'   => '10A rue fleurie',
-                    'postalCode'      => '22190',
-                    'addressLocality' => 'Plérin',
-                    'addressCountry'  => 'FR',
-                ],
-            ],
+            'location'   => self::org_place(),
         ];
 
         return $data;
@@ -364,28 +397,20 @@ class OPAC_SEO {
 
         $lieu = (string) get_post_meta( $post_id, 'opac_lieu', true );
         if ( $lieu ) {
+            // Lieu saisi sur la fiche : nom libre, localite depuis les Reglages.
+            $city = class_exists( 'OPAC_Settings' ) ? OPAC_Settings::get( 'opac_org_address_city' ) : 'Plérin';
             $data['location'] = [
                 '@type' => 'Place',
                 'name'  => $lieu,
                 'address' => [
                     '@type'           => 'PostalAddress',
-                    'addressLocality' => 'Plérin',
+                    'addressLocality' => $city,
                     'addressCountry'  => 'FR',
                 ],
             ];
         } else {
-            // Lieu par defaut = locaux OPAC.
-            $data['location'] = [
-                '@type'   => 'Place',
-                'name'    => 'Association OPAC',
-                'address' => [
-                    '@type'           => 'PostalAddress',
-                    'streetAddress'   => '10A rue fleurie',
-                    'postalCode'      => '22190',
-                    'addressLocality' => 'Plérin',
-                    'addressCountry'  => 'FR',
-                ],
-            ];
+            // Lieu par defaut = locaux OPAC (adresse des Reglages).
+            $data['location'] = self::org_place();
         }
 
         return $data;

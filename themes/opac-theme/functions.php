@@ -123,6 +123,14 @@ add_shortcode( 'opac_year', static function () {
     return esc_html( wp_date( 'Y' ) );
 } );
 
+// Année de fondation lue depuis OPAC > Réglages (source unique, comme le
+// JSON-LD Organization). Fallback 1980 si le plugin est absent ou le champ
+// vide : le © du footer reste toujours renseigné.
+add_shortcode( 'opac_founding_year', static function () {
+    $year = class_exists( 'OPAC_Settings' ) ? (int) OPAC_Settings::get( 'opac_org_founding_year' ) : 0;
+    return esc_html( (string) ( $year > 0 ? $year : 1980 ) );
+} );
+
 // Override du séparateur de document title : middle dot à la place
 // de l'en dash que WordPress utilise par défaut. Cohérent avec
 // le séparateur du footer copyright et avec la règle typographique
