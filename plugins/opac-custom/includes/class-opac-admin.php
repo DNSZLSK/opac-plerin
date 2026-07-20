@@ -484,10 +484,13 @@ class OPAC_Admin {
         echo '</td></tr>';
 
         // Date : lecture seule (definie automatiquement a l'enregistrement si vide).
+        // Stockee en heure locale du site (current_time('mysql')) : on la parse
+        // dans le fuseau du site. strtotime() l'interpreterait en UTC (PHP tourne
+        // en UTC sous WP) et wp_date() reconvertirait vers Paris : +1h/+2h a tort.
         $date_html = '';
         if ( '' !== $date ) {
-            $ts = strtotime( $date );
-            $date_html = $ts ? esc_html( wp_date( 'j F Y à H:i', $ts ) ) : esc_html( $date );
+            $dt = date_create_immutable( $date, wp_timezone() );
+            $date_html = $dt ? esc_html( wp_date( 'j F Y à H:i', $dt->getTimestamp() ) ) : esc_html( $date );
         } else {
             $date_html = '<em>' . esc_html__( 'Définie à l\'enregistrement', 'opac-custom' ) . '</em>';
         }
@@ -1039,9 +1042,11 @@ class OPAC_Admin {
      * Saison academique : 1er septembre N -> 1er septembre N+1.
      */
     private static function previous_season_window() {
-        $now   = current_time( 'timestamp' );
-        $year  = (int) wp_date( 'Y', $now );
-        $month = (int) wp_date( 'n', $now );
+        // wp_date() sans timestamp = maintenant, deja formate dans le fuseau du
+        // site. Lui passer current_time('timestamp') appliquerait l'offset deux
+        // fois (decalage possible a quelques heures de la bascule de saison).
+        $year  = (int) wp_date( 'Y' );
+        $month = (int) wp_date( 'n' );
         $season_start = ( $month >= 9 ) ? $year : $year - 1;
         $current = sprintf( '%04d-09-01 00:00:00', $season_start );
         $prev    = sprintf( '%04d-09-01 00:00:00', $season_start - 1 );
