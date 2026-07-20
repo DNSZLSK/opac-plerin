@@ -110,10 +110,10 @@ class OPAC_Inscriptions {
             $commune = '';
         }
         // Adhesion derivee cote serveur (plus de valeur auto-declaree) :
-        // mineur -> 'mineur' ; sinon CP 22190 -> 'plerinais' ; sinon 'exterieur'.
+        // mineur -> 'mineur' ; sinon CP de Plerin -> 'plerinais' ; sinon 'exterieur'.
         if ( $mineur ) {
             $adhesion = 'mineur';
-        } elseif ( '22190' === $code_postal ) {
+        } elseif ( OPAC_Settings::PLERIN_POSTAL === $code_postal ) {
             $adhesion = 'plerinais';
         } else {
             $adhesion = 'exterieur';
@@ -265,8 +265,8 @@ class OPAC_Inscriptions {
         if ( $commune ) {
             update_post_meta( $post_id, 'opac_insc_commune', $commune );
         }
-        // Flag Plerinais (code postal 22190) pour le tri prioritaire en admin.
-        if ( '22190' === $code_postal ) {
+        // Flag Plerinais (CP de Plerin) pour le tri prioritaire en admin.
+        if ( OPAC_Settings::PLERIN_POSTAL === $code_postal ) {
             $est_plerinais = 1;
         } else {
             $est_plerinais = 0;
@@ -954,7 +954,12 @@ class OPAC_Inscriptions {
         }
     }
 
-    private static function inscription_url() {
+    /**
+     * URL de la page d'inscription (par slug, repli sur l'URL canonique).
+     * Public : source unique aussi pour le bouton « S'inscrire »
+     * (OPAC_Blocks::render_inscription_button), qui dupliquait cette logique.
+     */
+    public static function inscription_url() {
         $page = get_page_by_path( 'inscription' );
         if ( $page ) {
             return get_permalink( $page );

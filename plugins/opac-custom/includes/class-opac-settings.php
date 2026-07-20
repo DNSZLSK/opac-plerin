@@ -25,6 +25,16 @@ class OPAC_Settings {
     const TIMEZONE_FLAG   = 'opac_site_timezone_set';
     const SITE_TIMEZONE   = 'Europe/Paris';
 
+    /**
+     * Code postal de Plérin : determine le statut « Plérinais » d'une
+     * inscription (tarif d'adhésion réduit, priorité en liste d'attente).
+     * Constante (et non l'option opac_org_address_postal) : c'est le CP de la
+     * commune, une règle métier stable, pas l'adresse du local de l'asso.
+     * Source unique pour le formulaire public, la fiche admin et l'estimation
+     * d'adhésion côté navigateur, auparavant dupliqué en dur à 5 endroits.
+     */
+    const PLERIN_POSTAL   = '22190';
+
     public static function register() {
         add_action( 'admin_menu', [ __CLASS__, 'add_menu_page' ] );
         add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );

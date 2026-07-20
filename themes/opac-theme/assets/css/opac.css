@@ -1510,11 +1510,8 @@ body {
     background-color: var(--opac-bg);
 }
 
-/* Section gallery : vignettes (cf. .opac-gallery-carousel / .opac-gallery-track plus bas) */
-.opac-gallery-item {
-    height: 100px !important;
-    border-radius: 8px;
-}
+/* Section gallery : vignettes dimensionnees dans la section « Image frames »
+   ci-dessous (.opac-gallery-item), carrousel plus bas (.opac-gallery-carousel). */
 
 /* Section animateur (card flex) */
 .opac-animateur {
