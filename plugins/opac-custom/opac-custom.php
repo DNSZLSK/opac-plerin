@@ -7,7 +7,7 @@
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Author: DNSZLSK
- * Author URI: https://opacplerin.fr
+ * Author URI: https://kewin.io
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: opac-custom
