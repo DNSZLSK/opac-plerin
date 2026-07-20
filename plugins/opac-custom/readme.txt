@@ -34,6 +34,14 @@ Plugin développé spécifiquement pour `opacplerin.fr` (Association OPAC, Offic
 
 Chaque CPT a ses méta fields enregistrés via `register_post_meta` avec `show_in_rest: true` pour exploitation depuis le block editor. Inscriptions : meta non exposés en REST (données personnelles).
 
+= Modules =
+
+* Formulaires publics contact + inscription (nonce, honeypot, rate-limit), pipeline de validation admin (Valider / Refuser / Liste d'attente) avec emails transactionnels à templates éditables.
+* Créneaux structurés par atelier (jour, horaires, tarif, capacité), comptage des places, liste d'attente automatique et promotion au désistement.
+* Panel « OPAC Réglages » : coordonnées, tarifs d'adhésion, saison, hero, templates d'emails, pages légales (éditeur visuel).
+* Blocs serveur et block bindings pour les templates FSE (listes agenda/éphémères, grille équipe, galerie, boutons d'inscription...).
+* SEO (meta description, Open Graph, JSON-LD Schema.org), PWA (manifest + service worker network-first), durcissement sécurité, conformité RGPD (purge automatique, export/effacement natifs).
+
 == Installation ==
 
 1. Copier le dossier `opac-custom` dans `wp-content/plugins/`.
@@ -48,13 +56,6 @@ Chaque CPT a ses méta fields enregistrés via `register_post_meta` avec `show_i
 
 == Changelog ==
 
-= 0.1.0 - 2026-05-27 =
-* Squelette initial : CPTs, taxonomies, meta fields, dashboard widget « Inscriptions en attente ».
-* Colonnes custom dans la liste des ateliers (animateur, tarif annuel, places) et des inscriptions (email, atelier, statut).
-* Seeding automatique des termes par défaut à l'activation.
-
-== Roadmap ==
-
-* M3 - Templates atelier (single + archive) côté thème.
-* M7 - Module Inscriptions : formulaire frontend, validation admin avec actions Valider/Refuser/Liste d'attente, emails transactionnels.
-* M8 - JSON-LD Schema.org (Organization, Course, Event) injecté depuis le plugin.
+= 0.1.0 =
+* Version initiale livrée pour la refonte opacplerin.fr : CPTs, taxonomies, meta fields, et l'ensemble des modules décrits ci-dessus (inscriptions, réglages, blocs serveur, SEO, PWA, sécurité, RGPD).
+* L'historique détaillé des évolutions est porté par le dépôt git du projet.

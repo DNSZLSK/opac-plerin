@@ -6,9 +6,10 @@
  * sans toucher au code : coordonnees asso, tarifs adhesion, hero homepage,
  * stats, templates emails inscription, sujets dropdown contact.
  *
- * Toutes les options sont lues via get_option('opac_<key>') ailleurs dans
- * le plugin et les templates (refactor M10). Le seeder mu-plugin populate
- * les valeurs initiales = aucun changement visuel a l'activation.
+ * Toutes les options sont lues via OPAC_Settings::get('opac_<key>') ailleurs
+ * dans le plugin et les templates. Chaque option porte un default dans
+ * options_schema() : aucun seed necessaire, aucun changement visuel a
+ * l'activation.
  *
  * @package OPAC\Custom
  */

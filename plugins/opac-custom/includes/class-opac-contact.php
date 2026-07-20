@@ -12,8 +12,8 @@
  * - Honeypot : champ off-screen "opac_hp_website" qui doit rester vide
  *   (bots remplissent tous les champs visibles, le honeypot piege ceux-la)
  * - Sanitize chaque champ (sanitize_text_field, sanitize_email, sanitize_textarea_field)
- *
- * Pas de rate-limit cote app (a faire par Cloudflare/.htaccess en M9 securite).
+ * - Rate-limit transient (60 s par IP + email) contre la double soumission,
+ *   aligne sur le formulaire d'inscription (cf. handle_submit).
  *
  * @package OPAC\Custom
  */

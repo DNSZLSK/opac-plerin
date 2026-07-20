@@ -168,11 +168,6 @@ class OPAC_Security {
     }
 
     /**
-     * Bloque l'endpoint /wp-json/wp/v2/users qui leakait les noms d'utilisateur
-     * admin. Endpoint reste accessible pour les utilisateurs logges (utile pour
-     * Site Editor) mais 401/403 pour les anonymes.
-     */
-    /**
      * Anti brute-force login : transient WP par IP, max 5 tentatives
      * sur 15 minutes. Au-dela, retourne une erreur a authenticate()
      * AVANT que WP teste le mot de passe (bloque l'attaque sans
@@ -240,6 +235,11 @@ class OPAC_Security {
         return $translation;
     }
 
+    /**
+     * Bloque l'endpoint /wp-json/wp/v2/users qui leakait les noms d'utilisateur
+     * admin. Endpoint reste accessible pour les utilisateurs logges (utile pour
+     * Site Editor) mais 401/403 pour les anonymes.
+     */
     public static function restrict_rest_users( $endpoints ) {
         if ( isset( $endpoints['/wp/v2/users'] ) ) {
             foreach ( $endpoints['/wp/v2/users'] as $i => $endpoint ) {
