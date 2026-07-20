@@ -687,13 +687,13 @@ class OPAC_Admin {
 
         // Flag Plerinais recalcule depuis le code postal corrige (cf. handle_submit).
         $cp = isset( $_POST['opac_insc_code_postal'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_insc_code_postal'] ) ) : '';
-        update_post_meta( $post_id, 'opac_insc_plerinais', '22190' === $cp ? 1 : 0 );
+        update_post_meta( $post_id, 'opac_insc_plerinais', OPAC_Settings::PLERIN_POSTAL === $cp ? 1 : 0 );
 
         // Adhesion : valeur choisie si valide, sinon deduite du code postal.
         $allowed_adh = OPAC_Labels::adhesion_keys();
         $adhesion = isset( $_POST['opac_insc_adhesion'] ) ? sanitize_key( wp_unslash( $_POST['opac_insc_adhesion'] ) ) : '';
         if ( ! in_array( $adhesion, $allowed_adh, true ) ) {
-            $adhesion = ( '22190' === $cp ) ? 'plerinais' : 'exterieur';
+            $adhesion = ( OPAC_Settings::PLERIN_POSTAL === $cp ) ? 'plerinais' : 'exterieur';
         }
         update_post_meta( $post_id, 'opac_insc_adhesion', $adhesion );
 
@@ -932,7 +932,7 @@ class OPAC_Admin {
         $commune     = (string) get_post_meta( $post_id, 'opac_insc_commune', true );
         $adhesion    = (string) get_post_meta( $post_id, 'opac_insc_adhesion', true );
 
-        $is_plerinais = ( '1' === (string) $plerinais || '22190' === $code_postal );
+        $is_plerinais = ( '1' === (string) $plerinais || OPAC_Settings::PLERIN_POSTAL === $code_postal );
 
         if ( $is_plerinais ) {
             echo '<span class="opac-badge opac-badge-plerinais">' . esc_html__( 'Plérinais', 'opac-custom' ) . '</span>';

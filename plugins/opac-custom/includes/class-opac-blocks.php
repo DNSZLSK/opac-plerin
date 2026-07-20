@@ -1322,8 +1322,8 @@ class OPAC_Blocks {
             return '';
         }
 
-        $inscription_page = get_page_by_path( 'inscription' );
-        $base_url = $inscription_page ? get_permalink( $inscription_page ) : home_url( '/inscription/' );
+        // Resolution centralisee (meme logique que le formulaire d'inscription).
+        $base_url = OPAC_Inscriptions::inscription_url();
         $href     = add_query_arg( $param, $post_id, $base_url );
 
         $label   = isset( $attrs['label'] )   ? (string) $attrs['label']   : __( 'S\'inscrire', 'opac-custom' );
@@ -1645,7 +1645,7 @@ class OPAC_Blocks {
                 . ' data-plerinais="' . esc_attr( $tarif_p ) . '"'
                 . ' data-exterieur="' . esc_attr( $tarif_e ) . '"'
                 . ' data-mineur="' . esc_attr( $tarif_m ) . '"'
-                . ' data-cp="22190"'
+                . ' data-cp="' . esc_attr( OPAC_Settings::PLERIN_POSTAL ) . '"'
                 . ' data-prefix="' . esc_attr__( 'Adhésion annuelle estimée :', 'opac-custom' ) . '"'
                 . ' data-suffix="' . esc_attr__( 'à confirmer au secrétariat', 'opac-custom' ) . '"'
                 . ' data-lp="' . esc_attr__( 'Plérinais', 'opac-custom' ) . '"'
