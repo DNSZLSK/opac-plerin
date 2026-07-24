@@ -833,7 +833,7 @@ class OPAC_Blocks {
             $period_class = ( ! is_wp_error( $periods ) && ! empty( $periods ) )
                 ? ' opac-period-' . sanitize_html_class( $periods[0] ) : '';
 
-            $public = (string) get_post_meta( $id, 'opac_public', true );
+            $public = OPAC_Bindings::resolve_public( $id );
             $desc   = (string) get_post_meta( $id, 'opac_description_courte', true );
 
             // Tag de statut + bouton via les blocs date-aware (contexte postId
@@ -1178,7 +1178,19 @@ class OPAC_Blocks {
             return '';
         }
 
-        $name = trim( (string) get_post_meta( $post_id, 'opac_animator', true ) );
+        // Animateur lié à une fiche Équipe (opac_animator_id) : source unique,
+        // nom et photo pris directement sur la fiche. À défaut (intervenant
+        // ponctuel hors équipe, ou fiche d'avant le picker), saisie libre
+        // opac_animator + tentative de correspondance de nom pour la photo.
+        $linked_id = (int) get_post_meta( $post_id, 'opac_animator_id', true );
+        $person    = $linked_id > 0 ? get_post( $linked_id ) : null;
+        if ( $person && 'opac_person' === $person->post_type && 'publish' === $person->post_status ) {
+            $name      = get_the_title( $person );
+            $person_id = (int) $person->ID;
+        } else {
+            $name      = trim( (string) get_post_meta( $post_id, 'opac_animator', true ) );
+            $person_id = ( '' !== $name ) ? self::find_person_by_name( $name ) : 0;
+        }
 
         // Champ vide (rare : l'animateur est une info fixe) : placeholder neutre
         // plutot qu'un avatar vide ou une section orpheline.
@@ -1193,12 +1205,8 @@ class OPAC_Blocks {
             $name_html = esc_html( $name );
         }
 
-        // Photo : on reutilise l'image mise en avant d'une fiche personne dont le
-        // nom correspond (le prof a deja une fiche pour la grille d'equipe), pour
-        // ne pas faire ressaisir l'image sur chaque atelier/stage. Sinon, initiales.
         // Meme helper que la grille d'equipe (render_avatar), sans rotation couleur.
-        $person_id = ( '' !== $name ) ? self::find_person_by_name( $name ) : 0;
-        $avatar    = self::render_avatar( $name, $initials, $person_id, 'opac-animateur-avatar', false );
+        $avatar = self::render_avatar( $name, $initials, $person_id, 'opac-animateur-avatar', false );
 
         return '<div class="opac-animateur has-card-background-color has-background">'
             . $avatar

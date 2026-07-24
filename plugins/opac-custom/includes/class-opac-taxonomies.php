@@ -11,6 +11,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OPAC_Taxonomies {
 
+    /**
+     * Version du schéma de termes. Incrémenter quand on ajoute une taxonomie
+     * seedée ou qu'on change un libellé par défaut : maybe_upgrade() rejoue
+     * alors le seed (idempotent) sur les installs déjà activées, sans exiger
+     * une réactivation manuelle du plugin.
+     */
+    const DB_VERSION = 2;
+
     public static function register() {
         // Périodes des stages (Automne, Hiver, Printemps, Été).
         register_taxonomy( 'opac_period', 'opac_stage', [
@@ -42,7 +50,26 @@ class OPAC_Taxonomies {
             'rewrite' => [ 'slug' => 'categorie-evenement', 'with_front' => false ],
         ] );
 
-        // Types de personne (Pédagogique, Administrative, Bureau, CA).
+        // Public visé (Tous publics, Adultes, Ados, Enfants, Familles), partagé
+        // par les ateliers à l'année et les éphémères. Vocabulaire contrôlé,
+        // extensible par l'équipe : remplace la saisie libre (source de "Adultes"
+        // / "adulte" / "ADULTES" incohérents). La tranche d'âge précise reste
+        // libre via la meta opac_public_precision, composée à l'affichage.
+        register_taxonomy( 'opac_audience', [ 'opac_atelier', 'opac_stage' ], [
+            'labels' => [
+                'name' => __( 'Publics', 'opac-custom' ),
+                'singular_name' => __( 'Public', 'opac-custom' ),
+                'add_new_item' => __( 'Ajouter un public', 'opac-custom' ),
+                'menu_name' => __( 'Publics', 'opac-custom' ),
+            ],
+            'public' => false,
+            'show_ui' => true,
+            'show_in_rest' => true,
+            'hierarchical' => false,
+            'show_admin_column' => true,
+        ] );
+
+        // Types de personne (Animateurs, Administrative, Bureau, CA).
         register_taxonomy( 'opac_person_type', 'opac_person', [
             'labels' => [
                 'name' => __( 'Types de personne', 'opac-custom' ),
@@ -92,10 +119,17 @@ class OPAC_Taxonomies {
                 'partenaire' => 'Partenaire',
             ],
             'opac_person_type' => [
-                'pedagogique' => 'Équipe pédagogique',
+                'pedagogique' => 'Animateurs',
                 'administrative' => 'Équipe administrative',
                 'bureau' => 'Bureau',
                 'conseil-administration' => 'Conseil d\'administration',
+            ],
+            'opac_audience' => [
+                'tous-publics' => 'Tous publics',
+                'adultes' => 'Adultes',
+                'ados' => 'Ados',
+                'enfants' => 'Enfants',
+                'familles' => 'Familles',
             ],
             'opac_inscription_status' => [
                 'en-attente' => 'En attente',
@@ -112,5 +146,30 @@ class OPAC_Taxonomies {
                 }
             }
         }
+    }
+
+    /**
+     * Migration légère jouée sur admin_init : met à niveau les installs déjà
+     * activées quand DB_VERSION change (nouveaux termes seedés, libellés par
+     * défaut modifiés), sans réactivation manuelle. Idempotente et sans effet
+     * une fois à jour (option opac_tax_db_version).
+     */
+    public static function maybe_upgrade() {
+        if ( (int) get_option( 'opac_tax_db_version', 0 ) >= self::DB_VERSION ) {
+            return;
+        }
+
+        // Crée les termes manquants (ex. opac_audience introduit en v2).
+        self::seed_default_terms();
+
+        // Renomme l'ancien défaut "Équipe pédagogique" en "Animateurs" (v2),
+        // uniquement s'il porte encore l'ancien libellé : on n'écrase pas un
+        // renommage volontaire de l'équipe.
+        $term = get_term_by( 'slug', 'pedagogique', 'opac_person_type' );
+        if ( $term && ! is_wp_error( $term ) && 'Équipe pédagogique' === $term->name ) {
+            wp_update_term( $term->term_id, 'opac_person_type', [ 'name' => 'Animateurs' ] );
+        }
+
+        update_option( 'opac_tax_db_version', self::DB_VERSION );
     }
 }
