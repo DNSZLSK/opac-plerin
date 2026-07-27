@@ -17,11 +17,13 @@
  *   reecriture) avec l'en-tete Service-Worker-Allowed: / . Un SW ne controle
  *   que son propre chemin, il DOIT donc etre servi depuis la racine.
  * - Cache fige : le nom des caches embarque une version derivee du filemtime
- *   des assets du theme. OPAC_Security::strip_ver_param retire le ?ver= des
- *   URLs ; sans cette cle, le service worker figerait opac.css/opac.js et un
- *   Ctrl+Shift+R ne suffirait plus (il faudrait vider les donnees du site). La
- *   version change des qu'un asset change -> le SW est reinstalle et purge les
- *   anciens caches a l'activation.
+ *   des assets du theme (cache_version()). Sans cette cle, le service worker
+ *   figerait opac.css/opac.js et un Ctrl+Shift+R ne suffirait plus (il
+ *   faudrait vider les donnees du site). La version change des qu'un asset
+ *   change -> le SW est reinstalle et purge les anciens caches a l'activation.
+ *   En complement, OPAC_Security::obfuscate_ver_param remet un ?ver= opaque
+ *   sur les URLs d'assets : le cache HTTP du navigateur est buste lui aussi,
+ *   pour les visiteurs qui n'ont pas (encore) de service worker.
  * - POST : le handler fetch ne traite que les GET. Les envois d'inscription et
  *   de contact (POST vers /wp-admin/admin-post.php) filent au reseau, intacts.
  * - Admin : /wp-admin/, wp-login, wp-json, admin-ajax, cron sont ignores.

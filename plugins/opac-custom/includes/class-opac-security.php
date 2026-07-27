@@ -40,8 +40,8 @@ class OPAC_Security {
         // Masque la version WP partout (meta generator + ?ver= sur assets).
         remove_action( 'wp_head', 'wp_generator' );
         add_filter( 'the_generator', '__return_empty_string' );
-        add_filter( 'style_loader_src', [ __CLASS__, 'strip_ver_param' ], 9999 );
-        add_filter( 'script_loader_src', [ __CLASS__, 'strip_ver_param' ], 9999 );
+        add_filter( 'style_loader_src', [ __CLASS__, 'obfuscate_ver_param' ], 9999 );
+        add_filter( 'script_loader_src', [ __CLASS__, 'obfuscate_ver_param' ], 9999 );
 
         // Desactive XMLRPC (brute-force attack surface).
         add_filter( 'xmlrpc_enabled', '__return_false' );
@@ -150,16 +150,48 @@ class OPAC_Security {
     }
 
     /**
-     * Supprime le query arg ?ver=X.Y de tous les enqueues (entropie crawler
-     * + obfuscation version WP/plugin). Le cache-busting fonctionne deja via
-     * filemtime() dans le theme (opac_asset_version) et via la version
-     * du plugin pour les assets opac-custom.
+     * Remplace la VALEUR du query arg ?ver=X.Y par un jeton opaque derive du
+     * sel du site (wp_hash). Deux objectifs tenus en meme temps :
+     *
+     * - Securite : la version exacte de WP / du plugin n'est plus lisible dans
+     *   les URLs d'assets (entropie crawler, exploits cibles). C'est
+     *   l'intention d'origine, elle est preservee.
+     * - Cache-busting : le jeton change des que la version source change
+     *   (filemtime via opac_asset_version() pour le theme, numero de version
+     *   pour WP et le plugin), donc le navigateur retelecharge le fichier
+     *   modifie de lui-meme.
+     *
+     * L'implementation precedente SUPPRIMAIT le ?ver=. La version etait bien
+     * masquee, mais le cache-busting disparaissait avec.
+     *
+     * En pratique ca ne genait pas le developpement : en local, nginx (Local
+     * by Flywheel) sert les .css/.js en "no-cache, must-revalidate", donc le
+     * navigateur revalide a chaque rafraichissement ; sur la demo OVH, le
+     * max-age plafonne a 900 s, soit 15 min de CSS perime apres un deploiement.
+     * Le vrai enjeu est ailleurs : sans cache-busting, impossible de monter le
+     * max-age (cf. wp-content/.htaccess) sans figer le site pendant un an.
      */
-    public static function strip_ver_param( $src ) {
+    public static function obfuscate_ver_param( $src ) {
         if ( strpos( $src, 'ver=' ) === false ) {
             return $src;
         }
-        return remove_query_arg( 'ver', $src );
+
+        $query = wp_parse_url( $src, PHP_URL_QUERY );
+        if ( empty( $query ) ) {
+            return $src;
+        }
+
+        $args = [];
+        wp_parse_str( $query, $args );
+        // strpos() ci-dessus matche aussi ?driver=... : on ne touche a rien
+        // tant qu'un vrai arg "ver" non vide n'est pas present.
+        if ( ! isset( $args['ver'] ) || '' === $args['ver'] ) {
+            return $src;
+        }
+
+        $token = substr( wp_hash( (string) $args['ver'] ), 0, 8 );
+
+        return add_query_arg( 'ver', $token, $src );
     }
 
     public static function remove_xmlrpc_header( $headers ) {
