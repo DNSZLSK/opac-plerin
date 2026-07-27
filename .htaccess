@@ -1,0 +1,93 @@
+# OPAC Plerin - Performance : cache navigateur des assets statiques.
+#
+# Constat mesure sur demo.opacplerin.fr (2026-07-27) : OVH sert tout le
+# statique en "Cache-Control: max-age=900" (15 min) et ne met AUCUN en-tete
+# de cache sur les .woff2. Resultat, toute visite espacee de plus d'un quart
+# d'heure retelechargeait l'integralite de la page, soit ~1,1 Mo d'images et
+# 168 Ko de polices. Le temps de generation PHP, lui, est sain (~0,29 s de
+# TTFB stable sur 10 mesures), ce n'est pas la qu'est le probleme.
+#
+# PREREQUIS, ne pas dissocier des deux : ce fichier ne serait PAS sur sans
+# cache-busting. Il est assure par OPAC_Security::obfuscate_ver_param(), qui
+# remet sur chaque asset enqueue par WordPress un ?ver= opaque derive du
+# filemtime (theme) ou du numero de version (WP, plugin). Sans lui, une modif
+# de opac.css resterait invisible pendant un an.
+#
+# Place dans wp-content/ et non a la racine : c'est le repertoire versionne
+# (le repo git commence ici), et il couvre exactement ce qui compte, a savoir
+# uploads/, themes/ et plugins/. Apache lit les .htaccess de chaque niveau du
+# chemin, la regle s'applique donc a tout ce qui est servi en dessous.
+#
+# Le HTML n'est volontairement pas cache ici : les pages doivent rester
+# fraiches (saison, places restantes, agenda).
+
+# --- Methode principale : mod_headers (par extension, donc independante de
+# --- la table MIME du serveur, qui ne connait pas toujours woff2).
+<IfModule mod_headers.c>
+
+    # Medias. Un upload WordPress est immuable : reuploader un fichier de
+    # meme nom cree "nom-1.jpg" au lieu d'ecraser. Le contenu derriere une
+    # URL d'upload ne change donc jamais -> "immutable" est legitime, le
+    # navigateur ne revalidera meme pas.
+    <FilesMatch "\.(jpe?g|png|gif|webp|avif|svg|ico)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    # CSS / JS. Bustes par le ?ver= (cf. prerequis ci-dessus), donc surs en
+    # cache long. Pas de "immutable" ici : en cas de pepin de versioning, une
+    # revalidation reste possible.
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=31536000"
+    </FilesMatch>
+
+    # Polices. Elles sont referencees en dur dans le CSS (@font-face genere
+    # depuis theme.json), donc SANS ?ver= : elles n'ont aucun cache-busting.
+    # 30 jours et pas un an, volontairement : si une police est un jour
+    # remplacee sous le meme nom de fichier, le site se repare seul en un
+    # mois au lieu de rester casse chez les visiteurs pendant un an. Le gain
+    # est quasi identique (un visiteur qui revient dans le mois ne les
+    # retelecharge pas), le risque est borne.
+    <FilesMatch "\.(woff2?|ttf|otf|eot)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+
+</IfModule>
+
+# --- Repli si mod_headers est absent : mod_expires. Depend de la table MIME
+# --- du serveur, d'ou le AddType explicite pour les polices.
+<IfModule !mod_headers.c>
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    ExpiresByType image/jpeg    "access plus 1 year"
+    ExpiresByType image/png     "access plus 1 year"
+    ExpiresByType image/gif     "access plus 1 year"
+    ExpiresByType image/webp    "access plus 1 year"
+    ExpiresByType image/avif    "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon  "access plus 1 year"
+
+    ExpiresByType text/css                  "access plus 1 year"
+    ExpiresByType application/javascript    "access plus 1 year"
+    ExpiresByType text/javascript           "access plus 1 year"
+
+    <IfModule mod_mime.c>
+        AddType font/woff2 .woff2
+        AddType font/woff  .woff
+    </IfModule>
+    ExpiresByType font/woff2 "access plus 30 days"
+    ExpiresByType font/woff  "access plus 30 days"
+</IfModule>
+</IfModule>
+
+# Pour nginx (si l'hebergement change un jour), equivalent a ajouter au
+# server block :
+#   location ~* /wp-content/.*\.(jpe?g|png|gif|webp|avif|svg|ico)$ {
+#       add_header Cache-Control "public, max-age=31536000, immutable";
+#   }
+#   location ~* /wp-content/.*\.(css|js)$ {
+#       add_header Cache-Control "public, max-age=31536000";
+#   }
+#   location ~* /wp-content/.*\.(woff2?|ttf|otf|eot)$ {
+#       add_header Cache-Control "public, max-age=2592000";
+#   }
