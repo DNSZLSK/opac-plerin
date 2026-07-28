@@ -60,59 +60,106 @@ class OPAC_Admin {
         add_action( 'save_post_opac_inscription', [ __CLASS__, 'save_inscription_details' ], 10, 2 );
         add_filter( 'wp_insert_post_data', [ __CLASS__, 'inject_inscription_title' ], 10, 2 );
 
-        // Pages legales : contenu gere dans OPAC > Reglages > Pages legales. On
-        // verrouille leur edition (pas d'editeur, message de renvoi) et on bloque
-        // leur suppression, pour eviter qu'une manipulation casse l'URL/le contenu.
-        // load-post.php est declenche apres admin_init, donc apres ce boot().
-        add_action( 'load-post.php', [ __CLASS__, 'legal_lock_editor' ] );
-        add_filter( 'map_meta_cap', [ __CLASS__, 'legal_protect_delete' ], 10, 4 );
-        add_filter( 'page_row_actions', [ __CLASS__, 'legal_page_row_actions' ], 10, 2 );
     }
 
     /**
-     * Vrai si $post_id est l'une des pages legales gerees via les Reglages
-     * (match par slug sur OPAC_Settings::legal_pages()).
+     * Verrous des pages legales : leur contenu est gere dans OPAC > Reglages >
+     * Pages legales, et l'editeur de pages ne doit offrir aucun moyen de les
+     * modifier ou de les supprimer.
+     *
+     * Enregistre au chargement du plugin, et non dans boot() : boot() est
+     * accroche a admin_init, qui ne se declenche pas sur les requetes REST. Or
+     * « Apparence > Editeur > Pages » (thème FSE) enregistre justement en REST,
+     * sans passer ni par admin_init ni par load-post.php. Un verrou pose dans
+     * boot() est donc absent du chemin d'ecriture le plus accessible.
+     *
+     * Les hooks purement admin de la liste (redirection, notice, actions de
+     * ligne) sont inoffensifs hors admin : ils ne se declenchent jamais.
+     */
+    public static function boot_legal_guards() {
+        add_filter( 'map_meta_cap', [ __CLASS__, 'legal_protect_caps' ], 10, 4 );
+        add_filter( 'wp_insert_post_data', [ __CLASS__, 'legal_protect_slug' ], 10, 2 );
+        // wp_trash_post() et wp_delete_post() ne verifient aucune capacite :
+        // le refus de delete_post ferme les chemins d'interface, pas l'API.
+        add_filter( 'pre_trash_post', [ __CLASS__, 'legal_block_removal' ], 10, 2 );
+        add_filter( 'pre_delete_post', [ __CLASS__, 'legal_block_removal' ], 10, 2 );
+        add_action( 'load-post.php', [ __CLASS__, 'legal_redirect_to_settings' ] );
+        add_filter( 'page_row_actions', [ __CLASS__, 'legal_page_row_actions' ], 10, 2 );
+        add_action( 'admin_notices', [ __CLASS__, 'legal_redirect_notice' ] );
+    }
+
+    /** Meta posee sur les pages legales, marqueur independant du slug. */
+    const LEGAL_MARKER = '_opac_legal_key';
+
+    /**
+     * Vrai si $post_id est l'une des pages legales gerees via les Reglages.
+     *
+     * Le marqueur de meta fait foi et resiste a un changement de slug. Le match
+     * par slug reste en second (pages creees avant le marqueur) et retro-pose la
+     * meta au passage, pour que la reconnaissance ne dependent plus de l'URL.
      */
     private static function is_legal_page( $post_id ) {
         $post = get_post( $post_id );
-        if ( ! $post || 'page' !== $post->post_type ) {
+        if ( ! $post || 'page' !== $post->post_type || ! class_exists( 'OPAC_Settings' ) ) {
             return false;
         }
-        return class_exists( 'OPAC_Settings' )
-            && array_key_exists( $post->post_name, OPAC_Settings::legal_pages() );
+
+        if ( '' !== (string) get_post_meta( $post->ID, self::LEGAL_MARKER, true ) ) {
+            return true;
+        }
+
+        if ( array_key_exists( $post->post_name, OPAC_Settings::legal_pages() ) ) {
+            update_post_meta( $post->ID, self::LEGAL_MARKER, $post->post_name );
+            return true;
+        }
+
+        return false;
     }
 
     /**
-     * Sur l'ecran d'edition d'une page legale : retire l'editeur (Gutenberg comme
-     * classique) et affiche un message renvoyant vers OPAC > Reglages, ou le
-     * contenu se modifie reellement. Le post_content n'etant pas rendu, toute
-     * saisie ici serait de toute facon sans effet.
+     * Ouvrir une page legale dans l'editeur classique renvoie vers les Reglages,
+     * ou le contenu se modifie reellement. La redirection est posee sur
+     * load-post.php, donc avant que WordPress ne verifie edit_post et n'affiche
+     * un « vous n'avez pas l'autorisation » brut : Katell atterrit au bon
+     * endroit, pas sur un mur.
      */
-    public static function legal_lock_editor() {
+    public static function legal_redirect_to_settings() {
         $post_id = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0;
         if ( ! $post_id || ! self::is_legal_page( $post_id ) ) {
             return;
         }
-        remove_post_type_support( 'page', 'editor' );
-        add_action( 'edit_form_after_title', [ __CLASS__, 'legal_editor_notice' ] );
+        wp_safe_redirect( add_query_arg(
+            [ 'page' => OPAC_Settings::PAGE_SLUG, 'opac_legal_lock' => 1 ],
+            admin_url( 'admin.php' )
+        ) );
+        exit;
     }
 
-    public static function legal_editor_notice() {
-        $url = admin_url( 'admin.php?page=' . OPAC_Settings::PAGE_SLUG );
+    /** Explique la redirection une fois arrive dans les Reglages. */
+    public static function legal_redirect_notice() {
+        if ( empty( $_GET['opac_legal_lock'] ) ) {
+            return;
+        }
         printf(
-            '<div class="notice notice-info inline" style="margin:1em 0"><p>%s <a href="%s">%s</a></p></div>',
-            esc_html__( 'Le contenu de cette page se modifie dans OPAC > Réglages > Pages légales.', 'opac-custom' ),
-            esc_url( $url ),
-            esc_html__( 'Ouvrir les Réglages →', 'opac-custom' )
+            '<div class="notice notice-info is-dismissible"><p>%s</p></div>',
+            esc_html__( 'Le contenu des pages légales se modifie ici, dans la section « Pages légales » ci-dessous, et non dans l\'éditeur de pages.', 'opac-custom' )
         );
     }
 
     /**
-     * Empeche la suppression (corbeille incluse) des pages legales : le lien
-     * « Corbeille » disparait et l'URL ne peut pas etre cassee par erreur.
+     * Verrouille edition et suppression des pages legales au niveau des
+     * capacites : c'est le point de passage commun a tous les chemins d'ecriture
+     * de WordPress (editeur classique, « Apparence > Editeur » du theme FSE,
+     * Modification rapide, REST API). Un verrou pose sur un seul ecran laisse
+     * les autres ouverts.
+     *
+     * Sans consequence sur le contenu affiche : il vit dans les options
+     * (OPAC_Settings), le post_content de ces pages n'est jamais lu. Et sans
+     * consequence sur leur creation : ensure_legal_pages() passe par
+     * wp_insert_post(), qui ne verifie aucune capacite.
      */
-    public static function legal_protect_delete( $caps, $cap, $user_id, $args ) {
-        if ( 'delete_post' !== $cap || empty( $args[0] ) ) {
+    public static function legal_protect_caps( $caps, $cap, $user_id, $args ) {
+        if ( ! in_array( $cap, [ 'edit_post', 'delete_post' ], true ) || empty( $args[0] ) ) {
             return $caps;
         }
         if ( self::is_legal_page( (int) $args[0] ) ) {
@@ -122,17 +169,68 @@ class OPAC_Admin {
     }
 
     /**
+     * Bloque corbeille et suppression definitive d'une page legale au niveau de
+     * l'API, la ou le refus de capacite ne porte pas : wp_trash_post() et
+     * wp_delete_post() s'executent sans verifier les capacites de l'appelant.
+     * Retourner false court-circuite l'operation, qui rend alors false comme si
+     * elle avait echoue.
+     *
+     * Les templates page-<slug>.html et les liens du footer pointent ces quatre
+     * pages : les perdre casserait les mentions legales du site, obligation
+     * legale et non simple contenu.
+     */
+    public static function legal_block_removal( $check, $post ) {
+        if ( $post && self::is_legal_page( is_object( $post ) ? $post->ID : (int) $post ) ) {
+            return false;
+        }
+        return $check;
+    }
+
+    /**
+     * Ceinture et bretelles sur le slug : meme si une ecriture contourne les
+     * capacites (WP-CLI, script, autre extension), le permalien d'une page
+     * legale ne change pas. Il porte les templates page-<slug>.html et les liens
+     * du footer : le casser casserait les quatre pages d'un coup.
+     *
+     * Ne s'applique qu'aux mises a jour : a la creation, ensure_legal_pages()
+     * pose justement le slug attendu.
+     */
+    public static function legal_protect_slug( $data, $postarr ) {
+        if ( empty( $postarr['ID'] ) || 'page' !== $data['post_type'] ) {
+            return $data;
+        }
+        $post_id = (int) $postarr['ID'];
+        if ( ! self::is_legal_page( $post_id ) ) {
+            return $data;
+        }
+        $existing = get_post( $post_id );
+        if ( $existing && $existing->post_name !== $data['post_name'] ) {
+            $data['post_name'] = $existing->post_name;
+        }
+        return $data;
+    }
+
+    /**
      * Actions de ligne des pages legales dans la liste « Pages » : retire la
-     * « Modification rapide » (qui permettrait de changer le slug, donc de casser
-     * l'URL) et la « Corbeille » (suppression deja bloquee par map_meta_cap, on
-     * retire aussi le lien pour la clarte). « Modifier » reste, mais ouvre l'ecran
-     * verrouille qui renvoie vers les Reglages.
+     * « Modification rapide » et la « Corbeille » (toutes deux deja bloquees par
+     * map_meta_cap, on retire aussi les liens pour la clarte), et remplace
+     * « Modifier » par un lien explicite vers les Reglages. WordPress retire de
+     * lui-meme son propre lien « Modifier » puisque edit_post est refuse : sans
+     * ce remplacement, la ligne n'offrirait plus aucun chemin vers le contenu.
      */
     public static function legal_page_row_actions( $actions, $post ) {
         if ( ! $post || ! self::is_legal_page( $post->ID ) ) {
             return $actions;
         }
-        unset( $actions['inline hide-if-no-js'], $actions['trash'], $actions['delete'] );
+        unset( $actions['inline hide-if-no-js'], $actions['trash'], $actions['delete'], $actions['edit'] );
+        $actions = [ 'opac_legal_edit' => sprintf(
+            '<a href="%s">%s</a>',
+            esc_url( add_query_arg(
+                [ 'page' => OPAC_Settings::PAGE_SLUG, 'opac_legal_lock' => 1 ],
+                admin_url( 'admin.php' )
+            ) ),
+            esc_html__( 'Modifier le contenu (Réglages)', 'opac-custom' )
+        ) ] + $actions;
         return $actions;
     }
 
