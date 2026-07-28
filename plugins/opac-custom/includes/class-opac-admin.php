@@ -63,9 +63,7 @@ class OPAC_Admin {
     }
 
     /**
-     * Verrous des pages legales : leur contenu est gere dans OPAC > Reglages >
-     * Pages legales, et l'editeur de pages ne doit offrir aucun moyen de les
-     * modifier ou de les supprimer.
+     * Verrous des pages dont le contenu n'est pas edite dans l'editeur de pages.
      *
      * Enregistre au chargement du plugin, et non dans boot() : boot() est
      * accroche a admin_init, qui ne se declenche pas sur les requetes REST. Or
@@ -76,20 +74,101 @@ class OPAC_Admin {
      * Les hooks purement admin de la liste (redirection, notice, actions de
      * ligne) sont inoffensifs hors admin : ils ne se declenchent jamais.
      */
-    public static function boot_legal_guards() {
-        add_filter( 'map_meta_cap', [ __CLASS__, 'legal_protect_caps' ], 10, 4 );
-        add_filter( 'wp_insert_post_data', [ __CLASS__, 'legal_protect_slug' ], 10, 2 );
+    public static function boot_page_guards() {
+        add_filter( 'map_meta_cap', [ __CLASS__, 'protect_locked_pages_caps' ], 10, 4 );
+        add_filter( 'wp_insert_post_data', [ __CLASS__, 'protect_locked_page_slug' ], 10, 2 );
         // wp_trash_post() et wp_delete_post() ne verifient aucune capacite :
         // le refus de delete_post ferme les chemins d'interface, pas l'API.
-        add_filter( 'pre_trash_post', [ __CLASS__, 'legal_block_removal' ], 10, 2 );
-        add_filter( 'pre_delete_post', [ __CLASS__, 'legal_block_removal' ], 10, 2 );
-        add_action( 'load-post.php', [ __CLASS__, 'legal_redirect_to_settings' ] );
-        add_filter( 'page_row_actions', [ __CLASS__, 'legal_page_row_actions' ], 10, 2 );
-        add_action( 'admin_notices', [ __CLASS__, 'legal_redirect_notice' ] );
+        add_filter( 'pre_trash_post', [ __CLASS__, 'block_locked_page_removal' ], 10, 2 );
+        add_filter( 'pre_delete_post', [ __CLASS__, 'block_locked_page_removal' ], 10, 2 );
+        add_action( 'load-post.php', [ __CLASS__, 'redirect_locked_page_editor' ] );
+        add_filter( 'page_row_actions', [ __CLASS__, 'locked_page_row_actions' ], 10, 2 );
+        add_action( 'admin_notices', [ __CLASS__, 'locked_page_notice' ] );
     }
 
     /** Meta posee sur les pages legales, marqueur independant du slug. */
     const LEGAL_MARKER = '_opac_legal_key';
+
+    /**
+     * Vrai si la page est verrouillee, c'est-a-dire si l'editeur de pages n'a
+     * aucune prise reelle sur ce qui s'affiche.
+     *
+     * Critere unique et auto-entretenu : le template qui rend la page ne
+     * contient pas de bloc `wp:post-content`. Dans ce cas le post_content n'est
+     * jamais lu, et laisser la page modifiable revient a offrir un formulaire
+     * qui n'ecrit nulle part. C'est le cas des 4 pages legales (contenu dans les
+     * Reglages) comme de Contact, Inscription et Association (composees par des
+     * blocs serveur du plugin).
+     *
+     * L'interet de deduire plutot que de lister : une page ajoutee plus tard
+     * avec son propre template se verrouille seule, et si on ajoute un jour un
+     * `wp:post-content` a l'un de ces templates, la page redevient modifiable
+     * sans qu'il y ait quoi que ce soit a defaire ici.
+     */
+    private static function is_locked_page( $post_id ) {
+        $post = get_post( $post_id );
+        if ( ! $post || 'page' !== $post->post_type ) {
+            return false;
+        }
+        return self::template_hides_content( $post );
+    }
+
+    /**
+     * Vrai si le template qui rend $post n'affiche pas son post_content.
+     *
+     * Resolution volontairement calquee sur la hierarchie de WordPress, via
+     * get_block_template() qui rend aussi bien un template de fichier qu'une
+     * version personnalisee stockee en base (une retouche dans l'editeur de site
+     * doit etre prise en compte, sinon le verrou se baserait sur un fichier qui
+     * n'est plus celui qui s'affiche).
+     *
+     * En cas de doute (aucun template resolu, theme non-bloc), on rend false :
+     * un verrou qui se trompe doit laisser passer, jamais bloquer tout le site.
+     * Resultat mis en cache par requete : map_meta_cap est appele en rafale sur
+     * la liste des pages.
+     */
+    private static function template_hides_content( $post ) {
+        static $cache = [];
+        if ( isset( $cache[ $post->ID ] ) ) {
+            return $cache[ $post->ID ];
+        }
+
+        // Avant init, le type wp_template n'est pas encore enregistre : la
+        // resolution rendrait un faux negatif. On repond false sans le mettre en
+        // cache, pour que la vraie reponse soit calculee au premier appel utile.
+        if ( ! did_action( 'init' ) ) {
+            return false;
+        }
+
+        if ( ! function_exists( 'get_block_template' ) || ! wp_is_block_theme() ) {
+            return $cache[ $post->ID ] = false;
+        }
+
+        // Hierarchie des pages, du plus specifique au plus general. Un template
+        // choisi a la main sur la fiche (_wp_page_template) prime sur tout.
+        $candidates = [];
+        $chosen     = (string) get_post_meta( $post->ID, '_wp_page_template', true );
+        if ( '' !== $chosen && 'default' !== $chosen ) {
+            $candidates[] = $chosen;
+        }
+        $candidates = array_merge( $candidates, [
+            'page-' . $post->post_name,
+            'page-' . $post->ID,
+            'page',
+            'singular',
+            'index',
+        ] );
+
+        $stylesheet = get_stylesheet();
+        foreach ( $candidates as $slug ) {
+            $template = get_block_template( $stylesheet . '//' . $slug, 'wp_template' );
+            if ( $template && isset( $template->content ) ) {
+                return $cache[ $post->ID ] = ( false === strpos( $template->content, 'wp:post-content' ) );
+            }
+        }
+
+        return $cache[ $post->ID ] = false;
+    }
 
     /**
      * Vrai si $post_id est l'une des pages legales gerees via les Reglages.
@@ -117,70 +196,89 @@ class OPAC_Admin {
     }
 
     /**
-     * Ouvrir une page legale dans l'editeur classique renvoie vers les Reglages,
-     * ou le contenu se modifie reellement. La redirection est posee sur
-     * load-post.php, donc avant que WordPress ne verifie edit_post et n'affiche
-     * un « vous n'avez pas l'autorisation » brut : Katell atterrit au bon
-     * endroit, pas sur un mur.
+     * Ouvrir une page verrouillee dans l'editeur classique redirige, au lieu de
+     * laisser WordPress afficher son « vous n'avez pas l'autorisation » brut. La
+     * redirection est posee sur load-post.php, donc avant la verification de
+     * edit_post.
+     *
+     * Destination selon ce qu'on peut honnetement proposer : une page legale a
+     * un vrai ecran d'edition dans les Reglages, on y envoie. Les autres pages
+     * verrouillees (Contact, Inscription, Association) n'en ont pas, leur
+     * contenu vient des blocs du plugin et des Reglages : on revient a la liste
+     * avec une explication, plutot qu'un lien qui promettrait un ecran
+     * d'edition inexistant.
      */
-    public static function legal_redirect_to_settings() {
+    public static function redirect_locked_page_editor() {
         $post_id = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0;
-        if ( ! $post_id || ! self::is_legal_page( $post_id ) ) {
+        if ( ! $post_id || ! self::is_locked_page( $post_id ) ) {
             return;
         }
-        wp_safe_redirect( add_query_arg(
-            [ 'page' => OPAC_Settings::PAGE_SLUG, 'opac_legal_lock' => 1 ],
-            admin_url( 'admin.php' )
-        ) );
+        if ( self::is_legal_page( $post_id ) ) {
+            $url = add_query_arg(
+                [ 'page' => OPAC_Settings::PAGE_SLUG, 'opac_page_lock' => 'legal' ],
+                admin_url( 'admin.php' )
+            );
+        } else {
+            $url = add_query_arg(
+                [ 'post_type' => 'page', 'opac_page_lock' => 'composee' ],
+                admin_url( 'edit.php' )
+            );
+        }
+        wp_safe_redirect( $url );
         exit;
     }
 
-    /** Explique la redirection une fois arrive dans les Reglages. */
-    public static function legal_redirect_notice() {
-        if ( empty( $_GET['opac_legal_lock'] ) ) {
+    /** Explique la redirection une fois arrive a destination. */
+    public static function locked_page_notice() {
+        $type = isset( $_GET['opac_page_lock'] ) ? sanitize_key( wp_unslash( $_GET['opac_page_lock'] ) ) : '';
+        if ( 'legal' === $type ) {
+            $message = __( 'Le contenu des pages légales se modifie ici, dans la section « Pages légales » ci-dessous, et non dans l\'éditeur de pages.', 'opac-custom' );
+        } elseif ( 'composee' === $type ) {
+            $message = __( 'Cette page est composée par la mise en page du site : son contenu ne se modifie pas dans l\'éditeur de pages. Les informations qu\'elle affiche (coordonnées, équipe, partenaires, formulaires) se règlent dans OPAC > Réglages.', 'opac-custom' );
+        } else {
             return;
         }
         printf(
             '<div class="notice notice-info is-dismissible"><p>%s</p></div>',
-            esc_html__( 'Le contenu des pages légales se modifie ici, dans la section « Pages légales » ci-dessous, et non dans l\'éditeur de pages.', 'opac-custom' )
+            esc_html( $message )
         );
     }
 
     /**
-     * Verrouille edition et suppression des pages legales au niveau des
+     * Verrouille edition et suppression des pages concernees au niveau des
      * capacites : c'est le point de passage commun a tous les chemins d'ecriture
      * de WordPress (editeur classique, « Apparence > Editeur » du theme FSE,
      * Modification rapide, REST API). Un verrou pose sur un seul ecran laisse
      * les autres ouverts.
      *
-     * Sans consequence sur le contenu affiche : il vit dans les options
-     * (OPAC_Settings), le post_content de ces pages n'est jamais lu. Et sans
-     * consequence sur leur creation : ensure_legal_pages() passe par
-     * wp_insert_post(), qui ne verifie aucune capacite.
+     * Sans consequence sur ce qui s'affiche : par definition, ces pages sont
+     * celles dont le post_content n'est jamais rendu. Et sans consequence sur
+     * leur creation : ensure_legal_pages() passe par wp_insert_post(), qui ne
+     * verifie aucune capacite.
      */
-    public static function legal_protect_caps( $caps, $cap, $user_id, $args ) {
+    public static function protect_locked_pages_caps( $caps, $cap, $user_id, $args ) {
         if ( ! in_array( $cap, [ 'edit_post', 'delete_post' ], true ) || empty( $args[0] ) ) {
             return $caps;
         }
-        if ( self::is_legal_page( (int) $args[0] ) ) {
+        if ( self::is_locked_page( (int) $args[0] ) ) {
             $caps[] = 'do_not_allow';
         }
         return $caps;
     }
 
     /**
-     * Bloque corbeille et suppression definitive d'une page legale au niveau de
-     * l'API, la ou le refus de capacite ne porte pas : wp_trash_post() et
-     * wp_delete_post() s'executent sans verifier les capacites de l'appelant.
+     * Bloque corbeille et suppression definitive d'une page verrouillee au
+     * niveau de l'API, la ou le refus de capacite ne porte pas : wp_trash_post()
+     * et wp_delete_post() s'executent sans verifier les capacites de l'appelant.
      * Retourner false court-circuite l'operation, qui rend alors false comme si
      * elle avait echoue.
      *
-     * Les templates page-<slug>.html et les liens du footer pointent ces quatre
-     * pages : les perdre casserait les mentions legales du site, obligation
-     * legale et non simple contenu.
+     * Ces pages portent les templates page-<slug>.html, la navigation et les
+     * liens du footer : en perdre une casse une section entiere du site, et pour
+     * les legales une obligation legale.
      */
-    public static function legal_block_removal( $check, $post ) {
-        if ( $post && self::is_legal_page( is_object( $post ) ? $post->ID : (int) $post ) ) {
+    public static function block_locked_page_removal( $check, $post ) {
+        if ( $post && self::is_locked_page( is_object( $post ) ? $post->ID : (int) $post ) ) {
             return false;
         }
         return $check;
@@ -189,18 +287,21 @@ class OPAC_Admin {
     /**
      * Ceinture et bretelles sur le slug : meme si une ecriture contourne les
      * capacites (WP-CLI, script, autre extension), le permalien d'une page
-     * legale ne change pas. Il porte les templates page-<slug>.html et les liens
-     * du footer : le casser casserait les quatre pages d'un coup.
+     * verrouillee ne change pas.
+     *
+     * Ce n'est pas cosmetique : c'est le slug qui designe le template
+     * page-<slug>.html. Renommer « contact » revient a lui retirer sa mise en
+     * page, et la page se verrouille justement parce qu'elle en a une.
      *
      * Ne s'applique qu'aux mises a jour : a la creation, ensure_legal_pages()
      * pose justement le slug attendu.
      */
-    public static function legal_protect_slug( $data, $postarr ) {
+    public static function protect_locked_page_slug( $data, $postarr ) {
         if ( empty( $postarr['ID'] ) || 'page' !== $data['post_type'] ) {
             return $data;
         }
         $post_id = (int) $postarr['ID'];
-        if ( ! self::is_legal_page( $post_id ) ) {
+        if ( ! self::is_locked_page( $post_id ) ) {
             return $data;
         }
         $existing = get_post( $post_id );
@@ -211,27 +312,37 @@ class OPAC_Admin {
     }
 
     /**
-     * Actions de ligne des pages legales dans la liste « Pages » : retire la
-     * « Modification rapide » et la « Corbeille » (toutes deux deja bloquees par
-     * map_meta_cap, on retire aussi les liens pour la clarte), et remplace
-     * « Modifier » par un lien explicite vers les Reglages. WordPress retire de
-     * lui-meme son propre lien « Modifier » puisque edit_post est refuse : sans
-     * ce remplacement, la ligne n'offrirait plus aucun chemin vers le contenu.
+     * Actions de ligne des pages verrouillees dans la liste « Pages » : retire
+     * la « Modification rapide » et la « Corbeille » (toutes deux deja bloquees
+     * par map_meta_cap, on retire aussi les liens pour la clarte). WordPress
+     * retire de lui-meme son propre lien « Modifier » puisque edit_post est
+     * refuse : sans remplacement, la ligne n'offrirait plus aucune indication.
+     *
+     * Une page legale gagne un lien vers les Reglages, ou son texte se modifie
+     * vraiment. Une page composee gagne une simple mention : il n'y a nulle part
+     * ou l'envoyer, et un lien vers un ecran qui ne gere pas cette page serait
+     * plus trompeur qu'utile.
      */
-    public static function legal_page_row_actions( $actions, $post ) {
-        if ( ! $post || ! self::is_legal_page( $post->ID ) ) {
+    public static function locked_page_row_actions( $actions, $post ) {
+        if ( ! $post || ! self::is_locked_page( $post->ID ) ) {
             return $actions;
         }
         unset( $actions['inline hide-if-no-js'], $actions['trash'], $actions['delete'], $actions['edit'] );
-        $actions = [ 'opac_legal_edit' => sprintf(
-            '<a href="%s">%s</a>',
-            esc_url( add_query_arg(
-                [ 'page' => OPAC_Settings::PAGE_SLUG, 'opac_legal_lock' => 1 ],
-                admin_url( 'admin.php' )
-            ) ),
-            esc_html__( 'Modifier le contenu (Réglages)', 'opac-custom' )
-        ) ] + $actions;
-        return $actions;
+
+        if ( self::is_legal_page( $post->ID ) ) {
+            $first = sprintf(
+                '<a href="%s">%s</a>',
+                esc_url( add_query_arg(
+                    [ 'page' => OPAC_Settings::PAGE_SLUG, 'opac_page_lock' => 'legal' ],
+                    admin_url( 'admin.php' )
+                ) ),
+                esc_html__( 'Modifier le contenu (Réglages)', 'opac-custom' )
+            );
+        } else {
+            $first = '<span class="opac-page-locked">' . esc_html__( 'Mise en page du site (non modifiable)', 'opac-custom' ) . '</span>';
+        }
+
+        return [ 'opac_page_lock' => $first ] + $actions;
     }
 
     public static function enqueue_admin_assets( $hook ) {
