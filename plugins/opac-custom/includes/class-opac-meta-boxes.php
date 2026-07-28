@@ -104,11 +104,12 @@ class OPAC_Meta_Boxes {
             case 'opac_atelier':
                 return [
                     [ 'key' => '_thumbnail', 'type' => 'image', 'label' => __( 'Image mise en avant', 'opac-custom' ), 'desc' => __( 'Photo affichée sur la fiche et les listings.', 'opac-custom' ) ],
-                    [ 'key' => 'opac_animator', 'type' => 'text', 'label' => __( 'Animateur', 'opac-custom' ) ],
+                    [ 'key' => 'opac_animator_id', 'type' => 'person_select', 'role' => 'pedagogique', 'fallback_key' => 'opac_animator', 'label' => __( 'Animateur', 'opac-custom' ), 'desc' => __( 'Choisissez un animateur dans la liste (section « Animateurs » de l\'Équipe). « Autre / saisie libre » permet de saisir un intervenant ponctuel hors équipe. Laisser vide si l\'atelier n\'a pas d\'animateur nommé.', 'opac-custom' ) ],
                     [ 'key' => 'opac_description_courte', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Description courte', 'opac-custom' ), 'desc' => __( 'Affichée sur les cartes (accueil, listing des ateliers).', 'opac-custom' ) ],
                     [ 'key' => 'opac_tagline', 'type' => 'textarea', 'rows' => 4, 'label' => __( 'Description longue', 'opac-custom' ), 'desc' => __( 'Affichée en haut de la fiche détaillée de l\'atelier.', 'opac-custom' ) ],
                     [ 'key' => 'opac_tarif_annuel', 'type' => 'number', 'label' => __( 'Tarif annuel (€)', 'opac-custom' ) ],
-                    [ 'key' => 'opac_public', 'type' => 'text', 'label' => __( 'Public', 'opac-custom' ), 'desc' => __( 'Ex : Adultes, Enfants 6-10 ans, Tous publics.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_audience', 'type' => 'audience_select', 'taxonomy' => 'opac_audience', 'label' => __( 'Public', 'opac-custom' ), 'desc' => __( 'Catégorie de public visée. Gérez la liste depuis le menu Publics.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_public_precision', 'type' => 'text', 'label' => __( 'Précision d\'âge', 'opac-custom' ), 'desc' => __( 'Optionnel. Ex : 6-10 ans, à partir de 8 ans. Affiché à côté de la catégorie (ex : « Enfants 6-10 ans »).', 'opac-custom' ) ],
                     [ 'key' => 'opac_places_dispo', 'type' => 'select', 'options' => self::places_options(), 'label' => __( 'Places', 'opac-custom' ) ],
                     [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale', 'opac-custom' ), 'desc' => __( 'Encart optionnel sur la fiche (ex : matériel à prévoir). Laisser vide pour masquer.', 'opac-custom' ) ],
                     [ 'key' => 'opac_show_gallery', 'type' => 'checkbox', 'label' => __( 'Afficher les réalisations', 'opac-custom' ), 'desc' => __( 'Décochez pour masquer la section Réalisations même si des photos sont liées. La section se masque de toute façon quand aucune photo n\'est liée.', 'opac-custom' ) ],
@@ -122,10 +123,11 @@ class OPAC_Meta_Boxes {
                     [ 'key' => 'opac_date_debut', 'type' => 'date', 'label' => __( 'Date de début', 'opac-custom' ) ],
                     [ 'key' => 'opac_date_fin', 'type' => 'date', 'label' => __( 'Date de fin', 'opac-custom' ) ],
                     [ 'key' => 'opac_tarif_seance', 'type' => 'number', 'label' => __( 'Tarif séance (€)', 'opac-custom' ) ],
-                    [ 'key' => 'opac_animator', 'type' => 'text', 'label' => __( 'Animateur', 'opac-custom' ) ],
-                    [ 'key' => 'opac_public', 'type' => 'text', 'label' => __( 'Public', 'opac-custom' ), 'desc' => __( 'Ex : Adultes, Enfants 6-10 ans, Tous publics.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_animator_id', 'type' => 'person_select', 'role' => 'pedagogique', 'fallback_key' => 'opac_animator', 'label' => __( 'Animateur', 'opac-custom' ), 'desc' => __( 'Choisissez un animateur dans la liste (section « Animateurs » de l\'Équipe). « Autre / saisie libre » permet de saisir un intervenant ponctuel hors équipe. Laisser vide si l\'éphémère n\'a pas d\'animateur nommé.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_audience', 'type' => 'audience_select', 'taxonomy' => 'opac_audience', 'label' => __( 'Public', 'opac-custom' ), 'desc' => __( 'Catégorie de public visée. Gérez la liste depuis le menu Publics.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_public_precision', 'type' => 'text', 'label' => __( 'Précision d\'âge', 'opac-custom' ), 'desc' => __( 'Optionnel. Ex : 6-10 ans, à partir de 8 ans. Affiché à côté de la catégorie.', 'opac-custom' ) ],
                     [ 'key' => 'opac_lieu', 'type' => 'text', 'label' => __( 'Lieu', 'opac-custom' ) ],
-                    [ 'key' => 'opac_period', 'type' => 'taxonomy', 'taxonomy' => 'opac_period', 'label' => __( 'Période', 'opac-custom' ), 'desc' => __( 'Classe l\'éphémère dans l\'onglet correspondant de la page éphémères.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_period', 'type' => 'taxonomy', 'taxonomy' => 'opac_period', 'label' => __( 'Période', 'opac-custom' ), 'desc' => __( 'Classe l\'éphémère dans l\'onglet correspondant de la page éphémères. Pré-cochée automatiquement selon la date de début, corrigez si besoin.', 'opac-custom' ) ],
                     [ 'key' => 'opac_places_dispo', 'type' => 'select', 'options' => self::places_options(), 'label' => __( 'Places', 'opac-custom' ) ],
                     [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale', 'opac-custom' ), 'desc' => __( 'Encart optionnel sur la fiche. Laisser vide pour masquer.', 'opac-custom' ) ],
                 ];
@@ -181,6 +183,8 @@ class OPAC_Meta_Boxes {
         remove_meta_box( 'tagsdiv-opac_period', 'opac_stage', 'side' );
         remove_meta_box( 'tagsdiv-opac_event_cat', 'opac_event', 'side' );
         remove_meta_box( 'tagsdiv-opac_person_type', 'opac_person', 'side' );
+        remove_meta_box( 'tagsdiv-opac_audience', 'opac_atelier', 'side' );
+        remove_meta_box( 'tagsdiv-opac_audience', 'opac_stage', 'side' );
     }
 
     public static function render_box( $post ) {
@@ -200,6 +204,8 @@ class OPAC_Meta_Boxes {
 
         // Identifiant du controle pour le label[for].
         if ( 'taxonomy' === $type ) {
+            $control_id = 'opac_tax_' . $field['taxonomy'];
+        } elseif ( 'audience_select' === $type ) {
             $control_id = 'opac_tax_' . $field['taxonomy'];
         } elseif ( 'image' === $type ) {
             $control_id = 'opac_thumbnail_id';
@@ -279,6 +285,14 @@ class OPAC_Meta_Boxes {
                 self::render_taxonomy_checkboxes( $post, $field['taxonomy'], $control_id );
                 break;
 
+            case 'person_select':
+                self::render_person_select( $post, $field );
+                break;
+
+            case 'audience_select':
+                self::render_audience_select( $post, $field );
+                break;
+
             case 'image':
                 self::render_image_field( $post, $control_id );
                 break;
@@ -318,17 +332,133 @@ class OPAC_Meta_Boxes {
         // Cases a cocher (et non un select) : une personne peut cumuler des roles,
         // ex. Bureau + Conseil d'administration, et apparait alors dans chaque
         // section correspondante de la page Association.
+        // data-term-slug : permet à admin-fiche.js de pré-cocher la bonne période
+        // à partir de la date de début (mapping mois -> slug), sans dépendre des
+        // term_id (qui varient d'une install à l'autre).
         echo '<fieldset class="opac-tax-checkboxes">';
         foreach ( $terms as $term ) {
             printf(
-                '<label><input type="checkbox" name="%1$s[]" value="%2$d"%3$s /> %4$s</label>',
+                '<label><input type="checkbox" name="%1$s[]" value="%2$d" data-term-slug="%3$s"%4$s /> %5$s</label>',
                 esc_attr( $control_id ),
                 (int) $term->term_id,
+                esc_attr( $term->slug ),
                 checked( in_array( (int) $term->term_id, $current, true ), true, false ),
                 esc_html( $term->name )
             );
         }
         echo '</fieldset>';
+    }
+
+    /**
+     * Déroulant d'animateur : liste les personnes de l'Équipe portant le rôle
+     * demandé (terme opac_person_type, ex. "pedagogique"/Animateurs), plus une
+     * entrée « Autre / saisie libre » qui révèle un champ texte pour un
+     * intervenant ponctuel hors équipe. Stocke l'ID choisi dans $field['key']
+     * (opac_animator_id) ; le nom résolu à l'affichage. La saisie libre est
+     * conservée dans la meta $field['fallback_key'] (opac_animator).
+     */
+    private static function render_person_select( $post, $field ) {
+        $key          = $field['key'];
+        $fallback_key = isset( $field['fallback_key'] ) ? $field['fallback_key'] : 'opac_animator';
+        $role         = isset( $field['role'] ) ? $field['role'] : '';
+
+        $current_id    = (int) get_post_meta( $post->ID, $key, true );
+        $fallback_text = (string) get_post_meta( $post->ID, $fallback_key, true );
+
+        // Mode courant : personne liée, saisie libre (texte présent sans ID,
+        // couvre aussi les fiches créées avant le picker), ou rien.
+        if ( $current_id > 0 ) {
+            $mode = 'person';
+        } elseif ( '' !== $fallback_text ) {
+            $mode = 'libre';
+        } else {
+            $mode = 'none';
+        }
+
+        $people = $role ? get_posts( [
+            'post_type'      => 'opac_person',
+            'post_status'    => 'publish',
+            'numberposts'    => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+            'tax_query'      => [ [
+                'taxonomy' => 'opac_person_type',
+                'field'    => 'slug',
+                'terms'    => $role,
+            ] ],
+            'suppress_filters' => false,
+        ] ) : [];
+
+        $ids = array_map( static function ( $p ) { return (int) $p->ID; }, $people );
+
+        echo '<select id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" class="opac-person-select">';
+        echo '<option value="">' . esc_html__( '— Choisir —', 'opac-custom' ) . '</option>';
+        foreach ( $people as $p ) {
+            printf(
+                '<option value="%d"%s>%s</option>',
+                (int) $p->ID,
+                selected( $current_id, (int) $p->ID, false ),
+                esc_html( get_the_title( $p ) )
+            );
+        }
+        // Personne liée mais absente de la liste (rôle retiré, ou dépubliée) :
+        // on préserve la sélection au lieu de la perdre silencieusement.
+        if ( $current_id > 0 && ! in_array( $current_id, $ids, true ) ) {
+            $lost = get_post( $current_id );
+            if ( $lost && 'opac_person' === $lost->post_type ) {
+                printf(
+                    '<option value="%d" selected>%s</option>',
+                    (int) $current_id,
+                    esc_html( get_the_title( $lost ) )
+                );
+            }
+        }
+        printf(
+            '<option value="__libre__"%s>%s</option>',
+            selected( 'libre', $mode, false ),
+            esc_html__( 'Autre / saisie libre…', 'opac-custom' )
+        );
+        echo '</select>';
+
+        // Champ texte révélé par admin-fiche.js quand « Autre » est choisi.
+        // Rendu visible d'entrée si on est déjà en mode libre (fallback JS off).
+        printf(
+            '<p class="opac-animator-libre js-opac-animator-libre"%s><input type="text" name="%s" value="%s" class="regular-text" placeholder="%s" /></p>',
+            'libre' === $mode ? '' : ' style="display:none"',
+            esc_attr( $fallback_key ),
+            esc_attr( $fallback_text ),
+            esc_attr__( 'Nom de l\'intervenant', 'opac-custom' )
+        );
+    }
+
+    /**
+     * Déroulant simple à choix unique sur une taxonomie (ici le Public visé) :
+     * remplace la saisie libre par un vocabulaire contrôlé et extensible. La
+     * précision d'âge éventuelle est un champ texte séparé (opac_public_precision).
+     */
+    private static function render_audience_select( $post, $field ) {
+        $taxonomy = $field['taxonomy'];
+        $terms    = get_terms( [ 'taxonomy' => $taxonomy, 'hide_empty' => false ] );
+        $current  = wp_get_object_terms( $post->ID, $taxonomy, [ 'fields' => 'ids' ] );
+        $current  = ( is_wp_error( $current ) || empty( $current ) ) ? 0 : (int) $current[0];
+
+        if ( is_wp_error( $terms ) || empty( $terms ) ) {
+            echo '<p class="description">' . esc_html__( 'Aucun public disponible.', 'opac-custom' ) . '</p>';
+            return;
+        }
+
+        $name = 'opac_tax_' . $taxonomy;
+        echo '<select id="' . esc_attr( $name ) . '" name="' . esc_attr( $name ) . '">';
+        echo '<option value="">' . esc_html__( '— Choisir —', 'opac-custom' ) . '</option>';
+        foreach ( $terms as $term ) {
+            printf(
+                '<option value="%d"%s>%s</option>',
+                (int) $term->term_id,
+                selected( $current, (int) $term->term_id, false ),
+                esc_html( $term->name )
+            );
+        }
+        echo '</select>';
     }
 
     private static function render_image_field( $post, $control_id ) {
@@ -390,6 +520,42 @@ class OPAC_Meta_Boxes {
                 $raw_ids  = isset( $_POST[ 'opac_tax_' . $taxonomy ] ) ? (array) wp_unslash( $_POST[ 'opac_tax_' . $taxonomy ] ) : [];
                 $term_ids = array_values( array_unique( array_filter( array_map( 'absint', $raw_ids ) ) ) );
                 wp_set_object_terms( $post_id, $term_ids, $taxonomy, false );
+                continue;
+            }
+
+            // Déroulant à choix unique sur une taxonomie (Public).
+            if ( 'audience_select' === $type ) {
+                $taxonomy = $field['taxonomy'];
+                $raw_id   = isset( $_POST[ 'opac_tax_' . $taxonomy ] ) ? absint( wp_unslash( $_POST[ 'opac_tax_' . $taxonomy ] ) ) : 0;
+                $valid    = ( $raw_id > 0 && ! is_wp_error( get_term( $raw_id, $taxonomy ) ) && get_term( $raw_id, $taxonomy ) );
+                wp_set_object_terms( $post_id, $valid ? [ $raw_id ] : [], $taxonomy, false );
+                continue;
+            }
+
+            // Déroulant animateur : ID de personne, ou saisie libre en fallback.
+            if ( 'person_select' === $type ) {
+                $fallback_key = isset( $field['fallback_key'] ) ? $field['fallback_key'] : 'opac_animator';
+                $choice       = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
+
+                if ( '__libre__' === $choice ) {
+                    // Intervenant hors équipe : on garde le texte, pas d'ID.
+                    $text = isset( $_POST[ $fallback_key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $fallback_key ] ) ) : '';
+                    update_post_meta( $post_id, $key, 0 );
+                    update_post_meta( $post_id, $fallback_key, $text );
+                    continue;
+                }
+
+                $person_id = absint( $choice );
+                if ( $person_id > 0 && 'opac_person' === get_post_type( $person_id ) ) {
+                    // Personne liée : l'ID fait foi, on vide le texte libre pour
+                    // que le nom soit toujours résolu depuis la fiche (source unique).
+                    update_post_meta( $post_id, $key, $person_id );
+                    update_post_meta( $post_id, $fallback_key, '' );
+                } else {
+                    // Aucun animateur.
+                    update_post_meta( $post_id, $key, 0 );
+                    update_post_meta( $post_id, $fallback_key, '' );
+                }
                 continue;
             }
 
@@ -483,5 +649,15 @@ class OPAC_Meta_Boxes {
             'title'  => __( 'Choisir une image', 'opac-custom' ),
             'button' => __( 'Utiliser cette image', 'opac-custom' ),
         ] );
+
+        // Comportements de la fiche : saisie libre d'animateur révélée à la
+        // demande, et pré-sélection de la période d'un éphémère d'après sa date.
+        wp_enqueue_script(
+            'opac-admin-fiche',
+            OPAC_CUSTOM_URL . 'assets/js/admin-fiche.js',
+            [],
+            OPAC_CUSTOM_VERSION,
+            true
+        );
     }
 }

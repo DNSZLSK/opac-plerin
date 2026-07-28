@@ -107,6 +107,12 @@ class OPAC_Bindings {
                 $labels = OPAC_Labels::places();
                 return isset( $labels[ $value ] ) ? $labels[ $value ] : '';
 
+            case 'opac_animator':
+                return self::resolve_animator( $post_id );
+
+            case 'opac_public':
+                return self::resolve_public( $post_id );
+
             // Champs ajoutes en M3 : descriptifs longs pour la page single.
             // Pas de transformation, le rendu (line-breaks pour creneaux)
             // est gere cote CSS via white-space: pre-line.
@@ -143,6 +149,12 @@ class OPAC_Bindings {
             case 'opac_tarif_seance':
                 return OPAC_Labels::tarif_seance( $value );
 
+            case 'opac_animator':
+                return self::resolve_animator( $post_id );
+
+            case 'opac_public':
+                return self::resolve_public( $post_id );
+
             case 'opac_date_debut':
             case 'opac_date_fin':
                 if ( ! $value ) {
@@ -172,6 +184,45 @@ class OPAC_Bindings {
             default:
                 return is_scalar( $value ) ? (string) $value : '';
         }
+    }
+
+    /**
+     * Nom de l'animateur affiché. Source unique : la fiche Équipe liée
+     * (opac_animator_id) fait foi et son titre est résolu à la volée, donc
+     * jamais périmé si la personne est renommée. À défaut d'ID (intervenant
+     * ponctuel hors équipe, ou fiche créée avant le picker), on retombe sur la
+     * saisie libre opac_animator. Chaîne vide si aucun animateur.
+     *
+     * Publique : réutilisée par les listes rendues en PHP (blocs serveur) et la
+     * colonne admin, pour une seule logique de résolution.
+     */
+    public static function resolve_animator( $post_id ) {
+        $person_id = (int) get_post_meta( $post_id, 'opac_animator_id', true );
+        if ( $person_id > 0 ) {
+            $person = get_post( $person_id );
+            if ( $person && 'opac_person' === $person->post_type && 'publish' === $person->post_status ) {
+                return get_the_title( $person );
+            }
+        }
+        return (string) get_post_meta( $post_id, 'opac_animator', true );
+    }
+
+    /**
+     * Public affiché : catégorie (terme opac_audience) éventuellement affinée
+     * par une précision d'âge libre (opac_public_precision), ex. "Enfants" +
+     * "6-10 ans" => "Enfants 6-10 ans". Sans catégorie assignée, on retombe sur
+     * l'ancienne saisie libre opac_public (fiches d'avant la taxonomie).
+     *
+     * Publique : réutilisée par les listes rendues en PHP (blocs serveur).
+     */
+    public static function resolve_public( $post_id ) {
+        $terms = wp_get_object_terms( $post_id, 'opac_audience', [ 'fields' => 'all' ] );
+        if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
+            $name      = $terms[0]->name;
+            $precision = trim( (string) get_post_meta( $post_id, 'opac_public_precision', true ) );
+            return '' !== $precision ? $name . ' ' . $precision : $name;
+        }
+        return (string) get_post_meta( $post_id, 'opac_public', true );
     }
 
     /**

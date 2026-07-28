@@ -225,7 +225,8 @@ class OPAC_Admin {
     public static function atelier_column_content( $column, $post_id ) {
         switch ( $column ) {
             case 'opac_animator':
-                echo esc_html( get_post_meta( $post_id, 'opac_animator', true ) );
+                $animator = OPAC_Bindings::resolve_animator( $post_id );
+                echo $animator ? esc_html( $animator ) : '-';
                 break;
             case 'opac_tarif_annuel':
                 $tarif = (int) get_post_meta( $post_id, 'opac_tarif_annuel', true );

@@ -49,7 +49,9 @@ class OPAC_Meta {
     private static function register_atelier_meta() {
         register_post_meta( 'opac_atelier', 'opac_tarif_annuel', self::args_int() );
         register_post_meta( 'opac_atelier', 'opac_animator', self::args_string() );
+        register_post_meta( 'opac_atelier', 'opac_animator_id', self::args_int() );
         register_post_meta( 'opac_atelier', 'opac_public', self::args_string() );
+        register_post_meta( 'opac_atelier', 'opac_public_precision', self::args_string() );
         register_post_meta( 'opac_atelier', 'opac_places_dispo', self::args_string() );
         register_post_meta( 'opac_atelier', 'opac_description_courte', self::args_string() );
 
@@ -100,7 +102,9 @@ class OPAC_Meta {
         register_post_meta( 'opac_stage', 'opac_date_fin', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_tarif_seance', self::args_int() );
         register_post_meta( 'opac_stage', 'opac_animator', self::args_string() );
+        register_post_meta( 'opac_stage', 'opac_animator_id', self::args_int() );
         register_post_meta( 'opac_stage', 'opac_public', self::args_string() );
+        register_post_meta( 'opac_stage', 'opac_public_precision', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_places_dispo', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_lieu', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_description_courte', self::args_string() );

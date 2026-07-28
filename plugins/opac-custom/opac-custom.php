@@ -54,6 +54,7 @@ OPAC_PWA::register();
 OPAC_Security::register();
 OPAC_Settings::register();
 OPAC_RGPD::register();
+add_action( 'admin_init', [ 'OPAC_Taxonomies', 'maybe_upgrade' ] );
 add_action( 'admin_init', [ 'OPAC_Admin', 'boot' ] );
 add_action( 'admin_init', [ 'OPAC_Meta_Boxes', 'boot' ] );
 add_action( 'wp_dashboard_setup', [ 'OPAC_Admin', 'register_dashboard_widget' ] );
@@ -62,6 +63,7 @@ register_activation_hook( __FILE__, static function () {
     OPAC_CPTs::register();
     OPAC_Taxonomies::register();
     OPAC_Taxonomies::seed_default_terms();
+    update_option( 'opac_tax_db_version', OPAC_Taxonomies::DB_VERSION );
     OPAC_Settings::ensure_legal_pages();
     OPAC_RGPD::maybe_schedule();
     flush_rewrite_rules();
