@@ -54,6 +54,9 @@ OPAC_PWA::register();
 OPAC_Security::register();
 OPAC_Settings::register();
 OPAC_RGPD::register();
+// Hors admin_init : les verrous des pages legales doivent aussi couvrir les
+// ecritures REST (editeur de site du theme FSE), qui ne passent pas par admin_init.
+OPAC_Admin::boot_legal_guards();
 add_action( 'admin_init', [ 'OPAC_Taxonomies', 'maybe_upgrade' ] );
 add_action( 'admin_init', [ 'OPAC_Admin', 'boot' ] );
 add_action( 'admin_init', [ 'OPAC_Meta_Boxes', 'boot' ] );

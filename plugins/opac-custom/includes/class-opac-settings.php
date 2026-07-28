@@ -157,14 +157,17 @@ class OPAC_Settings {
      * que les templates page-<slug>.html et les liens du footer se resolvent. Le
      * contenu vit dans les Reglages (le post_content de la page n'est jamais lu) ;
      * la page n'est qu'un point d'ancrage d'URL. Idempotent : une page deja
-     * presente (meme slug) n'est pas touchee.
+     * presente (meme slug) est laissee telle quelle, on lui pose seulement le
+     * marqueur qui la fait reconnaitre comme page legale (cf. OPAC_Admin).
      */
     public static function ensure_legal_pages() {
         foreach ( self::legal_pages() as $slug => $info ) {
-            if ( get_page_by_path( $slug ) ) {
+            $existing = get_page_by_path( $slug );
+            if ( $existing ) {
+                update_post_meta( $existing->ID, OPAC_Admin::LEGAL_MARKER, $slug );
                 continue;
             }
-            wp_insert_post( [
+            $page_id = wp_insert_post( [
                 'post_type'      => 'page',
                 'post_status'    => 'publish',
                 'post_name'      => $slug,
@@ -173,6 +176,11 @@ class OPAC_Settings {
                 'comment_status' => 'closed',
                 'ping_status'    => 'closed',
             ] );
+            // Marqueur pose des la creation : le verrou d'edition ne repose plus
+            // sur le slug, donc il tient meme si le permalien change un jour.
+            if ( $page_id && ! is_wp_error( $page_id ) ) {
+                update_post_meta( $page_id, OPAC_Admin::LEGAL_MARKER, $slug );
+            }
         }
     }
 
