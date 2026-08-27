@@ -1218,10 +1218,32 @@ a.opac-card-link:hover,
     display: flex;
     flex-direction: column;
     gap: 14px;
+    /* Enfant de la grille .opac-detail : sans min-width:0, un texte long sans
+       espace (URL collée dans une note) force la largeur mini de la colonne
+       au-delà de sa piste et fait déborder toute la fiche. */
+    min-width: 0;
 }
 
 .opac-detail-content > * {
     margin: 0;
+}
+
+/* Wrapping garanti des champs libres de la fiche détaillée (atelier, éphémère,
+   événement partagent .opac-detail). Pendant de .opac-card p pour le listing :
+   une URL de 300 caractères ou l'ancre cliquable qu'elle devient passent à la
+   ligne au lieu de casser la mise en page. min-width:0 sur les cellules de la
+   grille .opac-info-grid pour qu'elles puissent rétrécir. */
+.opac-detail-notice,
+.opac-detail-tagline,
+.opac-info-value,
+.opac-info-label,
+.opac-creneaux-list {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.opac-info-item {
+    min-width: 0;
 }
 
 .opac-detail-title {
@@ -1488,6 +1510,14 @@ body {
     font-size: 12px;
     line-height: 1.5;
     margin: 0;
+}
+
+/* Lien autolinké dans la note (make_clickable) : souligné pour qu'il se voie
+   comme un lien. On garde la couleur du texte de la note (contraste déjà validé
+   sur teal-clair) plutôt qu'une couleur de lien qui jurerait dans l'encart. */
+.opac-detail-notice a {
+    color: inherit;
+    text-decoration: underline;
 }
 
 /* Si le meta opac_notice est vide, le binding renvoie '' et la <p> reste

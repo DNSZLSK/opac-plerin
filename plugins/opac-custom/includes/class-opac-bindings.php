@@ -113,12 +113,18 @@ class OPAC_Bindings {
             case 'opac_public':
                 return self::resolve_public( $post_id );
 
+            // Note speciale : autolink des URLs / emails. Le contenu lie d'un
+            // wp:paragraph est injecte via wp_kses_post() (cf. WP_Block::replace_html),
+            // donc les <a> generes par make_clickable sont conserves et filtres.
+            // Une secretaire y colle parfois un lien : autant le rendre cliquable.
+            case 'opac_notice':
+                return is_scalar( $value ) ? make_clickable( (string) $value ) : '';
+
             // Champs ajoutes en M3 : descriptifs longs pour la page single.
             // Pas de transformation, le rendu (line-breaks pour creneaux)
             // est gere cote CSS via white-space: pre-line.
             case 'opac_tagline':
             case 'opac_creneaux_text':
-            case 'opac_notice':
                 return is_scalar( $value ) ? (string) $value : '';
 
             default:
@@ -180,6 +186,11 @@ class OPAC_Bindings {
                     (string) get_post_meta( $post_id, 'opac_date_debut', true ),
                     (string) get_post_meta( $post_id, 'opac_date_fin', true )
                 );
+
+            // Note speciale : autolink (cf. get_atelier_meta, meme raison). Le <a>
+            // survit au wp_kses_post() applique au rendu du paragraphe lie.
+            case 'opac_notice':
+                return is_scalar( $value ) ? make_clickable( (string) $value ) : '';
 
             default:
                 return is_scalar( $value ) ? (string) $value : '';
