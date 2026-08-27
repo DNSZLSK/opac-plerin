@@ -54,6 +54,10 @@ class OPAC_Admin {
         add_action( 'add_meta_boxes', [ __CLASS__, 'atelier_creneaux_meta_box' ] );
         add_action( 'save_post_opac_atelier', [ __CLASS__, 'save_atelier_creneaux' ], 10, 2 );
 
+        // Ephemeres : meta box d'edition des seances datees (modele hybride).
+        add_action( 'add_meta_boxes', [ __CLASS__, 'stage_seances_meta_box' ] );
+        add_action( 'save_post_opac_stage', [ __CLASS__, 'save_stage_seances' ], 10, 2 );
+
         // Inscriptions : fiche editable (consultation + saisie manuelle) remplacant
         // les champs bruts. Le titre [Atelier] Prenom Nom est compose a l'insert.
         add_action( 'add_meta_boxes', [ __CLASS__, 'inscription_details_meta_box' ] );
@@ -642,12 +646,20 @@ class OPAC_Admin {
         );
         echo '<p class="description">' . esc_html__( 'Créneaux de l\'atelier sélectionné. Vide si l\'atelier n\'a pas encore de créneaux (à définir sur la fiche de l\'atelier).', 'opac-custom' ) . '</p>';
 
-        // Carte { atelier_id => [ {v:id|libelle, t:libelle affiché}, ... ] }.
+        // Carte { cible_id => [ {v:id|libelle, t:libelle affiché}, ... ] }.
+        // Ateliers a l'annee (creneaux) ET ephemeres (seances datees) : une
+        // inscription saisie a la main sur l'un ou l'autre propose ses options.
         $creneaux_map = [];
         foreach ( get_posts( [ 'post_type' => 'opac_atelier', 'post_status' => 'publish', 'posts_per_page' => -1 ] ) as $a ) {
             $opts = self::atelier_creneau_options( $a->ID );
             if ( ! empty( $opts ) ) {
                 $creneaux_map[ (string) $a->ID ] = $opts;
+            }
+        }
+        foreach ( get_posts( [ 'post_type' => 'opac_stage', 'post_status' => 'publish', 'posts_per_page' => -1 ] ) as $s ) {
+            $opts = self::stage_seance_options( $s->ID );
+            if ( ! empty( $opts ) ) {
+                $creneaux_map[ (string) $s->ID ] = $opts;
             }
         }
         ?>
@@ -807,6 +819,34 @@ class OPAC_Admin {
         return $opts;
     }
 
+    /**
+     * Options de seances d'un ephemere pour le select de la fiche inscription
+     * (saisie manuelle admin). Value = id de seance (comptage des places),
+     * libelle = date + horaires + tarif eventuel. Vide si aucune seance datee.
+     *
+     * @return array<int,array{v:string,t:string}>
+     */
+    private static function stage_seance_options( $stage_id ) {
+        $struct = get_post_meta( $stage_id, 'opac_stage_seances', true );
+        if ( ! is_array( $struct ) || empty( $struct ) ) {
+            return [];
+        }
+        $opts = [];
+        foreach ( $struct as $s ) {
+            if ( ! is_array( $s ) || empty( $s['id'] ) ) {
+                continue;
+            }
+            $label = OPAC_Calendar::seance_label( $s );
+            if ( '' === $label ) {
+                continue;
+            }
+            $tarif = isset( $s['tarif'] ) ? (int) $s['tarif'] : 0;
+            $text  = $tarif > 0 ? $label . ' (' . OPAC_Labels::euros( $tarif ) . ')' : $label;
+            $opts[] = [ 'v' => (string) $s['id'], 't' => $text ];
+        }
+        return $opts;
+    }
+
     /** Ligne en lecture seule de la fiche inscription : libelle + valeur (HTML deja echappe). */
     private static function insc_detail_row( $label, $value_html ) {
         if ( '' === $value_html ) {
@@ -860,16 +900,31 @@ class OPAC_Admin {
         $creneau_id    = '';
         $creneau_tarif = 0;
         if ( $atelier_id && '' !== $choice ) {
-            $struct = get_post_meta( $atelier_id, 'opac_creneaux', true );
-            if ( ! is_array( $struct ) || empty( $struct ) ) {
-                $struct = self::parse_creneaux_text( (string) get_post_meta( $atelier_id, 'opac_creneaux_text', true ) );
+            // Check explicite par type (symetrique du front handle_submit) :
+            // atelier a l'annee = creneaux hebdomadaires (ou ancien texte parse) ;
+            // ephemere = seances datees. Tout autre type : aucune resolution.
+            $cible_type = get_post_type( $atelier_id );
+            $struct     = [];
+            $labeller   = null;
+            if ( 'opac_atelier' === $cible_type ) {
+                $struct = get_post_meta( $atelier_id, 'opac_creneaux', true );
+                if ( ! is_array( $struct ) || empty( $struct ) ) {
+                    $struct = self::parse_creneaux_text( (string) get_post_meta( $atelier_id, 'opac_creneaux_text', true ) );
+                }
+                $labeller = [ 'OPAC_Calendar', 'creneau_label' ];
+            } elseif ( 'opac_stage' === $cible_type ) {
+                $struct   = get_post_meta( $atelier_id, 'opac_stage_seances', true );
+                $labeller = [ 'OPAC_Calendar', 'seance_label' ];
             }
-            foreach ( $struct as $c ) {
+            if ( ! is_array( $struct ) ) {
+                $struct = [];
+            }
+            foreach ( ( $labeller ? $struct : [] ) as $c ) {
                 if ( ! is_array( $c ) ) {
                     continue;
                 }
                 $cid   = isset( $c['id'] ) ? (string) $c['id'] : '';
-                $label = OPAC_Calendar::creneau_label( $c );
+                $label = call_user_func( $labeller, $c );
                 if ( ( '' !== $cid && $cid === $choice ) || ( '' === $cid && $label === $choice ) ) {
                     $creneau_label = $label;
                     if ( '' !== $cid ) {
@@ -1689,6 +1744,176 @@ class OPAC_Admin {
             delete_post_meta( $post_id, 'opac_creneaux' );
         } else {
             update_post_meta( $post_id, 'opac_creneaux', $clean );
+        }
+    }
+
+    /* --------------------------------------------------------------------- *
+     * Ephemeres : seances datees (modele hybride)
+     * --------------------------------------------------------------------- */
+
+    /**
+     * Meta box d'edition des seances datees sur l'ephemere. Optionnelle : un
+     * ephemere one-shot garde ses champs Date de debut / Date de fin ; une liste
+     * de seances ne sert que quand l'atelier se tient sur plusieurs dates, avec
+     * une capacite par date. Meme mecanique repetable que les creneaux d'atelier.
+     */
+    public static function stage_seances_meta_box() {
+        add_meta_box(
+            'opac_stage_seances',
+            __( 'Séances (dates) - optionnel', 'opac-custom' ),
+            [ __CLASS__, 'render_stage_seances_box' ],
+            'opac_stage',
+            'normal',
+            'high'
+        );
+    }
+
+    public static function render_stage_seances_box( $post ) {
+        wp_nonce_field( 'opac_stage_seances', 'opac_stage_seances_nonce' );
+        $seances = get_post_meta( $post->ID, 'opac_stage_seances', true );
+        if ( ! is_array( $seances ) ) {
+            $seances = [];
+        }
+        ?>
+        <p class="description">
+            <?php esc_html_e( 'Laissez vide si l\'atelier a lieu sur une seule période : les champs « Date de début » et « Date de fin » de la fiche suffisent. Renseignez une ligne par séance si l\'atelier se tient sur plusieurs dates ; le visiteur choisira alors sa séance à l\'inscription. Tarif et capacité par séance (capacité 0 = pas de limite).', 'opac-custom' ); ?>
+        </p>
+        <p class="description">
+            <?php esc_html_e( 'La « Date de début » de la fiche pilote l\'affichage sur la carte et l\'onglet de période : renseignez-la même si vous détaillez des séances.', 'opac-custom' ); ?>
+        </p>
+        <table class="widefat opac-creneaux-editor">
+            <thead>
+                <tr>
+                    <th><?php esc_html_e( 'Date', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Début', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Fin', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Tarif (€)', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Capacité', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Note', 'opac-custom' ); ?></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="opac-seances-rows">
+                <?php
+                $i = 0;
+                foreach ( $seances as $row ) {
+                    echo self::seance_row_html( (string) $i, is_array( $row ) ? $row : [] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                    $i++;
+                }
+                ?>
+            </tbody>
+        </table>
+        <p><button type="button" class="button" id="opac-seances-add"><?php esc_html_e( '+ Ajouter une séance', 'opac-custom' ); ?></button></p>
+        <script type="text/template" id="opac-seances-tpl"><?php echo self::seance_row_html( '__i__', [] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></script>
+        <script>
+        (function(){
+            var add=document.getElementById('opac-seances-add'),
+                rows=document.getElementById('opac-seances-rows'),
+                tpl=document.getElementById('opac-seances-tpl');
+            if(!add||!rows||!tpl){return;}
+            var n=rows.children.length;
+            add.addEventListener('click',function(){
+                var tmp=document.createElement('tbody');
+                tmp.innerHTML=tpl.innerHTML.replace(/__i__/g,'n'+(n++)).trim();
+                if(tmp.firstElementChild){rows.appendChild(tmp.firstElementChild);}
+            });
+            rows.addEventListener('click',function(e){
+                var b=e.target.closest('.opac-creneau-del');
+                if(b){e.preventDefault();var tr=b.closest('tr');if(tr){tr.parentNode.removeChild(tr);}}
+            });
+        })();
+        </script>
+        <?php
+    }
+
+    /**
+     * Markup d'une ligne de l'editeur de seances. Reutilise pour les lignes
+     * existantes (index numerique) et le template JS (index '__i__'). Meme
+     * structure que creneau_row_html mais avec une saisie de date.
+     */
+    private static function seance_row_html( $index, $row ) {
+        $id       = isset( $row['id'] ) ? (string) $row['id'] : '';
+        $date     = isset( $row['date'] ) ? (string) $row['date'] : '';
+        $debut    = isset( $row['debut'] ) ? (string) $row['debut'] : '';
+        $fin      = isset( $row['fin'] ) ? (string) $row['fin'] : '';
+        $tarif    = isset( $row['tarif'] ) && '' !== $row['tarif'] ? (int) $row['tarif'] : '';
+        $capacite = isset( $row['capacite'] ) && '' !== $row['capacite'] ? (int) $row['capacite'] : '';
+        $note     = isset( $row['note'] ) ? (string) $row['note'] : '';
+        $base     = 'opac_stage_seances[' . $index . ']';
+
+        ob_start();
+        ?>
+        <tr>
+            <td>
+                <input type="hidden" name="<?php echo esc_attr( $base ); ?>[id]" value="<?php echo esc_attr( $id ); ?>" />
+                <input type="date" name="<?php echo esc_attr( $base ); ?>[date]" value="<?php echo esc_attr( $date ); ?>" />
+            </td>
+            <td><input type="time" name="<?php echo esc_attr( $base ); ?>[debut]" value="<?php echo esc_attr( $debut ); ?>" /></td>
+            <td><input type="time" name="<?php echo esc_attr( $base ); ?>[fin]" value="<?php echo esc_attr( $fin ); ?>" /></td>
+            <td><input type="number" min="0" step="1" class="small-text" name="<?php echo esc_attr( $base ); ?>[tarif]" value="<?php echo esc_attr( $tarif ); ?>" /></td>
+            <td><input type="number" min="0" step="1" class="small-text" name="<?php echo esc_attr( $base ); ?>[capacite]" value="<?php echo esc_attr( $capacite ); ?>" /></td>
+            <td><input type="text" name="<?php echo esc_attr( $base ); ?>[note]" value="<?php echo esc_attr( $note ); ?>" /></td>
+            <td><button type="button" class="button-link opac-creneau-del" aria-label="<?php esc_attr_e( 'Retirer la séance', 'opac-custom' ); ?>">&times;</button></td>
+        </tr>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Sauvegarde des seances datees. Ignore les lignes sans date, attribue un
+     * id stable (prefixe 's', preserve a l'edition) pour le comptage des places.
+     */
+    public static function save_stage_seances( $post_id, $post ) {
+        if ( ! isset( $_POST['opac_stage_seances_nonce'] )
+            || ! wp_verify_nonce( wp_unslash( $_POST['opac_stage_seances_nonce'] ), 'opac_stage_seances' ) ) {
+            return;
+        }
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+            return;
+        }
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        $raw = ( isset( $_POST['opac_stage_seances'] ) && is_array( $_POST['opac_stage_seances'] ) )
+            ? wp_unslash( $_POST['opac_stage_seances'] )
+            : [];
+        $clean = [];
+        foreach ( $raw as $row ) {
+            if ( ! is_array( $row ) ) {
+                continue;
+            }
+            $date = isset( $row['date'] ) ? sanitize_text_field( $row['date'] ) : '';
+            // Une seance sans date valide (Y-m-d reel) est ignoree : c'est la date
+            // qui la distingue et sert au libelle.
+            if ( ! preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m )
+                || ! checkdate( (int) $m[2], (int) $m[3], (int) $m[1] ) ) {
+                continue;
+            }
+            $id = isset( $row['id'] ) ? sanitize_key( $row['id'] ) : '';
+            if ( '' === $id ) {
+                $id = uniqid( 's', false );
+            }
+            $clean[] = [
+                'id'       => $id,
+                'date'     => $date,
+                'debut'    => isset( $row['debut'] ) ? sanitize_text_field( $row['debut'] ) : '',
+                'fin'      => isset( $row['fin'] ) ? sanitize_text_field( $row['fin'] ) : '',
+                'tarif'    => isset( $row['tarif'] ) ? absint( $row['tarif'] ) : 0,
+                'capacite' => isset( $row['capacite'] ) ? absint( $row['capacite'] ) : 0,
+                'note'     => isset( $row['note'] ) ? sanitize_text_field( $row['note'] ) : '',
+            ];
+        }
+
+        // Tri chronologique : l'ordre de saisie n'a pas a decider de l'affichage.
+        usort( $clean, static function ( $a, $b ) {
+            return strcmp( $a['date'] . $a['debut'], $b['date'] . $b['debut'] );
+        } );
+
+        if ( empty( $clean ) ) {
+            delete_post_meta( $post_id, 'opac_stage_seances' );
+        } else {
+            update_post_meta( $post_id, 'opac_stage_seances', $clean );
         }
     }
 }
