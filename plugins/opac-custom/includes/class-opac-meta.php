@@ -111,6 +111,33 @@ class OPAC_Meta {
         register_post_meta( 'opac_stage', 'opac_card_color', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_tagline', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_notice', self::args_string() );
+
+        // Seances datees optionnelles (modele hybride) : un ephemere peut se
+        // tenir sur plusieurs dates, chacune avec sa capacite. Meme structure
+        // que opac_creneaux de l'atelier, mais 'date' (Y-m-d) au lieu de 'jour'.
+        // Vide => on retombe sur la plage opac_date_debut/opac_date_fin.
+        register_post_meta( 'opac_stage', 'opac_stage_seances', [
+            'type' => 'array',
+            'single' => true,
+            'show_in_rest' => [
+                'schema' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'id' => [ 'type' => 'string' ],
+                            'date' => [ 'type' => 'string' ],
+                            'debut' => [ 'type' => 'string' ],
+                            'fin' => [ 'type' => 'string' ],
+                            'tarif' => [ 'type' => 'integer' ],
+                            'capacite' => [ 'type' => 'integer' ],
+                            'note' => [ 'type' => 'string' ],
+                        ],
+                    ],
+                ],
+            ],
+            'auth_callback' => [ __CLASS__, 'auth_can_edit' ],
+        ] );
     }
 
     private static function register_event_meta() {

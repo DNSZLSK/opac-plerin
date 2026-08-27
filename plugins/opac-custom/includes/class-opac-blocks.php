@@ -172,6 +172,14 @@ class OPAC_Blocks {
             'supports'        => [ 'html' => false ],
         ] );
 
+        register_block_type( 'opac/seances-list', [
+            'api_version'     => 3,
+            'render_callback' => [ __CLASS__, 'render_seances_list' ],
+            'uses_context'    => [ 'postId', 'postType' ],
+            'attributes'      => [],
+            'supports'        => [ 'html' => false ],
+        ] );
+
         register_block_type( 'opac/ephemeres-list', [
             'api_version'     => 3,
             'render_callback' => [ __CLASS__, 'render_ephemeres_list' ],
@@ -936,6 +944,63 @@ class OPAC_Blocks {
     }
 
     /**
+     * Liste des seances datees d'un ephemere (modele hybride). Lit
+     * opac_stage_seances (date/debut/fin/tarif/capacite). Chaine vide si aucune
+     * seance : la fiche retombe alors sur l'affichage de la plage de dates.
+     * Reutilise le meme markup / CSS que la liste des creneaux d'atelier.
+     */
+    public static function render_seances_list( $attrs, $content, $block ) {
+        $post_id = isset( $block->context['postId'] ) ? (int) $block->context['postId'] : (int) get_the_ID();
+        if ( ! $post_id ) {
+            return '';
+        }
+
+        $seances = get_post_meta( $post_id, 'opac_stage_seances', true );
+        if ( ! is_array( $seances ) || empty( $seances ) ) {
+            return '';
+        }
+
+        $items = '';
+        foreach ( $seances as $s ) {
+            if ( ! is_array( $s ) ) {
+                continue;
+            }
+            $line = OPAC_Calendar::seance_label( $s );
+            if ( '' === $line ) {
+                continue;
+            }
+            $tarif      = isset( $s['tarif'] ) ? (int) $s['tarif'] : 0;
+            $tarif_html = $tarif > 0
+                ? ' <span class="opac-creneau-tarif">' . esc_html( OPAC_Labels::euros( $tarif ) ) . '</span>'
+                : '';
+            $note = ( isset( $s['note'] ) && '' !== $s['note'] )
+                ? ' <span class="opac-creneau-note">' . esc_html( (string) $s['note'] ) . '</span>'
+                : '';
+            $state_html = '';
+            $cap = isset( $s['capacite'] ) ? (int) $s['capacite'] : 0;
+            if ( $cap > 0 && ! empty( $s['id'] ) && class_exists( 'OPAC_Inscriptions' ) ) {
+                $left = $cap - OPAC_Inscriptions::count_validees( $post_id, (string) $s['id'] );
+                if ( $left <= 0 ) {
+                    $state_html = ' <span class="opac-creneau-state is-full">' . esc_html__( 'Complet', 'opac-custom' ) . '</span>';
+                } elseif ( $left <= 2 ) {
+                    $state_html = ' <span class="opac-creneau-state is-few">' . esc_html__( 'Dernières places', 'opac-custom' ) . '</span>';
+                }
+            }
+            $items .= '<li><span class="opac-creneau-when">' . esc_html( $line ) . '</span>' . $tarif_html . $state_html . $note . '</li>';
+        }
+        if ( '' === $items ) {
+            return '';
+        }
+        // Encadre titre + liste, produit par le bloc lui-meme : sur un ephemere
+        // one-shot (aucune seance) le bloc rend '' et aucune boite vide
+        // n'apparait, contrairement a un wrapper statique dans le template.
+        return '<div class="wp-block-group opac-creneaux has-card-background-color has-background">'
+            . '<p class="opac-creneaux-title has-muted-color has-text-color">' . esc_html__( 'Séances', 'opac-custom' ) . '</p>'
+            . '<ul class="opac-creneaux-items opac-seances-items">' . $items . '</ul>'
+            . '</div>';
+    }
+
+    /**
      * Breadcrumb pour les pages single CPT : "Accueil / <Archive label> / <Post title>".
      * Le label de l'archive est lookup'e dynamiquement depuis la declaration
      * du CPT (post_type_object->labels->name) pour rester en sync.
@@ -1445,6 +1510,7 @@ class OPAC_Blocks {
         $hidden_inputs = '';
         $creneaux_lines = [];
         $creneaux_struct = [];
+        $seances_struct = [];
 
         if ( $atelier_id && get_post_type( $atelier_id ) === 'opac_atelier' ) {
             $titre  = get_the_title( $atelier_id );
@@ -1477,6 +1543,13 @@ class OPAC_Blocks {
         } elseif ( $stage_id && get_post_type( $stage_id ) === 'opac_stage' ) {
             $titre = get_the_title( $stage_id );
             $tarif = (int) get_post_meta( $stage_id, 'opac_tarif_seance', true );
+            // Seances datees (modele hybride) : si l'ephemere en a, le visiteur
+            // choisit sa seance (comme un creneau d'atelier). Sinon inscription
+            // globale a l'atelier (comportement historique).
+            $s_struct = get_post_meta( $stage_id, 'opac_stage_seances', true );
+            if ( is_array( $s_struct ) ) {
+                $seances_struct = $s_struct;
+            }
             $context_html = sprintf(
                 '<div class="opac-form-context">'
                     . '<div class="opac-form-context-label">%s</div>'
@@ -1604,6 +1677,30 @@ class OPAC_Blocks {
             $out .= '<option value="">' . esc_html__( 'Sélectionner un créneau...', 'opac-custom' ) . '</option>';
             foreach ( $creneaux_lines as $line ) {
                 $out .= '<option value="' . esc_attr( $line ) . '">' . esc_html( $line ) . '</option>';
+            }
+            $out .= '</select></div>';
+        }
+
+        // Seances datees pour un ephemere : meme mecanique que les creneaux
+        // structures (value = id, tarif affiche, etat complet). Reutilise le champ
+        // opac_creneau_id (resolu cote serveur contre opac_stage_seances).
+        if ( $stage_id && count( $seances_struct ) > 0 ) {
+            $out .= '<div class="opac-form-row"><label for="opac-seance">' . esc_html__( 'Séance choisie', 'opac-custom' ) . ' *</label>';
+            $out .= '<select class="opac-form-input" id="opac-seance" name="opac_creneau_id" required>';
+            $out .= '<option value="">' . esc_html__( 'Sélectionner une séance...', 'opac-custom' ) . '</option>';
+            foreach ( $seances_struct as $s ) {
+                if ( ! is_array( $s ) || empty( $s['id'] ) ) {
+                    continue;
+                }
+                $tarif_s = isset( $s['tarif'] ) ? (int) $s['tarif'] : 0;
+                $opt     = OPAC_Calendar::seance_label( $s );
+                if ( $tarif_s > 0 ) {
+                    $opt .= ' (' . OPAC_Labels::euros( $tarif_s ) . ')';
+                }
+                if ( class_exists( 'OPAC_Inscriptions' ) && OPAC_Inscriptions::creneau_is_full( $stage_id, $s ) ) {
+                    $opt .= ' - ' . __( 'Complet (liste d\'attente)', 'opac-custom' );
+                }
+                $out .= '<option value="' . esc_attr( (string) $s['id'] ) . '">' . esc_html( $opt ) . '</option>';
             }
             $out .= '</select></div>';
         }

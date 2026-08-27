@@ -212,17 +212,30 @@ class OPAC_Inscriptions {
             $adhesion = '';
         }
 
-        // Resolution du creneau structure (palier 2) : si un id de creneau est
-        // soumis et que l'atelier le possede, on enregistre l'id + le tarif du
-        // creneau et un libelle lisible. Sinon on garde le creneau texte.
+        // Resolution du creneau / seance structure (palier 2) : si un id est
+        // soumis et que la cible le possede, on enregistre l'id + le tarif et un
+        // libelle lisible. Sinon on garde le creneau texte. Atelier a l'annee =
+        // creneaux hebdomadaires (opac_creneaux) ; ephemere = seances datees
+        // (opac_stage_seances, modele hybride) : meme id/capacite/comptage.
         $creneau_tarif = 0;
         $auto_waitlist = false;
-        if ( 'opac_atelier' === $cible_type && '' !== $creneau_id ) {
-            $struct = get_post_meta( $cible_id, 'opac_creneaux', true );
-            if ( is_array( $struct ) ) {
+        if ( '' !== $creneau_id ) {
+            // Check explicite par type (pas de else catch-all) : si un jour un
+            // autre CPT devient inscriptible avec un creneau_id, on ne tente pas
+            // de le resoudre contre une meta qu'il ne possede pas.
+            $struct   = [];
+            $labeller = null;
+            if ( 'opac_atelier' === $cible_type ) {
+                $struct   = get_post_meta( $cible_id, 'opac_creneaux', true );
+                $labeller = [ 'OPAC_Calendar', 'creneau_label' ];
+            } elseif ( 'opac_stage' === $cible_type ) {
+                $struct   = get_post_meta( $cible_id, 'opac_stage_seances', true );
+                $labeller = [ 'OPAC_Calendar', 'seance_label' ];
+            }
+            if ( $labeller && is_array( $struct ) ) {
                 foreach ( $struct as $c ) {
                     if ( is_array( $c ) && isset( $c['id'] ) && (string) $c['id'] === $creneau_id ) {
-                        $creneau = OPAC_Calendar::creneau_label( $c );
+                        $creneau = call_user_func( $labeller, $c );
                         if ( isset( $c['tarif'] ) ) {
                             $creneau_tarif = (int) $c['tarif'];
                         } else {

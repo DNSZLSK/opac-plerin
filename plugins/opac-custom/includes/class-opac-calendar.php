@@ -109,4 +109,34 @@ class OPAC_Calendar {
         );
         return trim( $jour . ' ' . $h );
     }
+
+    /**
+     * Libelle lisible d'une seance datee d'un atelier ephemere :
+     * "12 avril 2026, 14h30 - 17h30". $s = tableau (date en Y-m-d, debut, fin).
+     * Mois en minuscules (milieu de phrase). Date absente ou invalide : on
+     * retombe sur les seuls horaires (jamais de date fantaisie).
+     *
+     * Parse la date par decoupage direct de la chaine Y-m-d (pas de strtotime),
+     * pour rester pur et independant du fuseau : un libelle de date n'a pas a
+     * subir de conversion horaire.
+     */
+    public static function seance_label( $s ) {
+        if ( ! is_array( $s ) ) {
+            return '';
+        }
+        $date       = isset( $s['date'] ) ? (string) $s['date'] : '';
+        $date_label = '';
+        if ( preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m ) ) {
+            $mois       = self::month( (int) $m[2], 'lower' );
+            $date_label = trim( (int) $m[3] . ' ' . $mois . ' ' . $m[1] );
+        }
+        $h = self::format_horaire(
+            isset( $s['debut'] ) ? $s['debut'] : '',
+            isset( $s['fin'] ) ? $s['fin'] : ''
+        );
+        if ( '' === $date_label ) {
+            return $h;
+        }
+        return '' !== $h ? $date_label . ', ' . $h : $date_label;
+    }
 }
