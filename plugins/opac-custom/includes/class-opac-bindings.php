@@ -115,10 +115,10 @@ class OPAC_Bindings {
 
             // Note speciale : autolink des URLs / emails. Le contenu lie d'un
             // wp:paragraph est injecte via wp_kses_post() (cf. WP_Block::replace_html),
-            // donc les <a> generes par make_clickable sont conserves et filtres.
+            // donc les <a> generes sont conserves et filtres.
             // Une secretaire y colle parfois un lien : autant le rendre cliquable.
             case 'opac_notice':
-                return is_scalar( $value ) ? make_clickable( (string) $value ) : '';
+                return is_scalar( $value ) ? self::autolink_notice( (string) $value ) : '';
 
             // Champs ajoutes en M3 : descriptifs longs pour la page single.
             // Pas de transformation, le rendu (line-breaks pour creneaux)
@@ -190,7 +190,7 @@ class OPAC_Bindings {
             // Note speciale : autolink (cf. get_atelier_meta, meme raison). Le <a>
             // survit au wp_kses_post() applique au rendu du paragraphe lie.
             case 'opac_notice':
-                return is_scalar( $value ) ? make_clickable( (string) $value ) : '';
+                return is_scalar( $value ) ? self::autolink_notice( (string) $value ) : '';
 
             default:
                 return is_scalar( $value ) ? (string) $value : '';
@@ -331,6 +331,45 @@ class OPAC_Bindings {
             default:
                 return is_scalar( $value ) ? (string) $value : '';
         }
+    }
+
+    /**
+     * Autolink d'une note libre : URLs et emails cliquables (make_clickable),
+     * puis ouverture des liens http(s) dans un nouvel onglet (target="_blank"
+     * + rel="noopener noreferrer" pour la securite). Les mailto: sont laisses
+     * dans l'onglet courant. Le rel existant (nofollow pose par make_clickable)
+     * est complete sans doublon. La sortie repasse par wp_kses_post() au rendu
+     * du paragraphe lie, qui autorise a[href|rel|target] : rien n'est perdu.
+     */
+    private static function autolink_notice( $value ) {
+        $html = make_clickable( $value );
+        return preg_replace_callback(
+            '/<a\s+href="([^"]*)"([^>]*)>/i',
+            static function ( $m ) {
+                $href  = $m[1];
+                $attrs = $m[2];
+                // Nouvel onglet uniquement pour les liens web (pas mailto/tel).
+                if ( ! preg_match( '#^https?://#i', $href ) ) {
+                    return $m[0];
+                }
+                if ( preg_match( '/target=/i', $attrs ) ) {
+                    return $m[0]; // deja un target, on ne double pas
+                }
+                if ( preg_match( '/rel="([^"]*)"/i', $attrs, $rm ) ) {
+                    $rel = $rm[1];
+                    foreach ( [ 'noopener', 'noreferrer' ] as $token ) {
+                        if ( false === strpos( $rel, $token ) ) {
+                            $rel .= ' ' . $token;
+                        }
+                    }
+                    $attrs = preg_replace( '/rel="[^"]*"/i', 'rel="' . trim( $rel ) . '"', $attrs );
+                } else {
+                    $attrs .= ' rel="noopener noreferrer"';
+                }
+                return '<a href="' . $href . '"' . $attrs . ' target="_blank">';
+            },
+            $html
+        );
     }
 
     /**
