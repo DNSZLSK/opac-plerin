@@ -50,6 +50,9 @@ class OPAC_Meta {
         register_post_meta( 'opac_atelier', 'opac_tarif_annuel', self::args_int() );
         register_post_meta( 'opac_atelier', 'opac_animator', self::args_string() );
         register_post_meta( 'opac_atelier', 'opac_animator_id', self::args_int() );
+        // Legacy : opac_public (saisie libre) n'est plus ecrit depuis le passage
+        // du Public a la taxonomie opac_audience. Conserve en lecture seule pour
+        // le fallback des fiches d'avant la taxonomie (cf. OPAC_Bindings::resolve_public).
         register_post_meta( 'opac_atelier', 'opac_public', self::args_string() );
         register_post_meta( 'opac_atelier', 'opac_public_precision', self::args_string() );
         register_post_meta( 'opac_atelier', 'opac_places_dispo', self::args_string() );
@@ -103,6 +106,8 @@ class OPAC_Meta {
         register_post_meta( 'opac_stage', 'opac_tarif_seance', self::args_int() );
         register_post_meta( 'opac_stage', 'opac_animator', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_animator_id', self::args_int() );
+        // Legacy : cf. note sur opac_public dans register_atelier_meta (fallback
+        // des fiches d'avant la taxonomie opac_audience).
         register_post_meta( 'opac_stage', 'opac_public', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_public_precision', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_places_dispo', self::args_string() );
