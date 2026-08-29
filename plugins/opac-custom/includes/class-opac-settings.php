@@ -127,7 +127,7 @@ class OPAC_Settings {
             'opac_insc_date_confirmation'  => [ 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_text_field' ],
 
             // Section 8 : Donnees personnelles (RGPD)
-            'opac_insc_purge_months'       => [ 'type' => 'integer', 'default' => 24, 'sanitize' => 'absint' ],
+            'opac_insc_purge_months'       => [ 'type' => 'integer', 'default' => 24, 'sanitize' => [ __CLASS__, 'sanitize_purge_months' ] ],
 
             // Section 9 : Contenu des pages legales (rendu par opac/legal-content)
             'opac_legal_confidentialite' => [ 'type' => 'string', 'default' => self::default_legal( 'confidentialite' ), 'sanitize' => 'wp_kses_post' ],
@@ -229,6 +229,21 @@ class OPAC_Settings {
             update_option( 'timezone_string', self::SITE_TIMEZONE );
         }
         update_option( self::TIMEZONE_FLAG, OPAC_CUSTOM_VERSION );
+    }
+
+    /**
+     * Duree de conservation des inscriptions (mois). 0 = purge desactivee.
+     * Garde-fou : toute valeur entre 1 et 11 est remontee a 12, pour qu'un
+     * reglage trop court (fausse manip) ne puisse jamais supprimer les
+     * inscriptions d'une annee scolaire en cours (adherents encore actifs). La
+     * suppression est definitive et sans corbeille, cf. OPAC_RGPD.
+     */
+    public static function sanitize_purge_months( $value ) {
+        $months = absint( $value );
+        if ( $months > 0 && $months < 12 ) {
+            $months = 12;
+        }
+        return $months;
     }
 
     public static function register_settings() {
@@ -434,7 +449,7 @@ class OPAC_Settings {
                 </p>
                 <table class="form-table" role="presentation">
                     <?php
-                    self::render_input_row( 'opac_insc_purge_months', __( 'Durée de conservation (mois)', 'opac-custom' ), __( 'Les demandes d\'inscription plus anciennes que cette durée sont supprimées automatiquement. Exemple : 24 = deux ans. Mettre 0 pour désactiver la suppression automatique.', 'opac-custom' ), 'number' );
+                    self::render_input_row( 'opac_insc_purge_months', __( 'Durée de conservation (mois)', 'opac-custom' ), __( 'Les demandes d\'inscription plus anciennes que cette durée sont supprimées automatiquement. Exemple : 24 = deux ans. Mettre 0 pour désactiver la suppression automatique. Minimum 12 mois si activée (une valeur plus courte est ramenée à 12), pour ne jamais effacer les inscriptions de l\'année en cours.', 'opac-custom' ), 'number' );
                     ?>
                 </table>
 

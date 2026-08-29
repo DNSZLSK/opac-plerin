@@ -248,10 +248,26 @@ class OPAC_Security {
         delete_transient( 'opac_login_fail_' . md5( $ip ) );
     }
 
-    private static function get_client_ip() {
-        // En prod derriere CDN/proxy, X-Forwarded-For peut etre necessaire.
-        // Ici on prend REMOTE_ADDR (l'IP du dernier hop). A ajuster si
-        // Cloudflare/OVH proxy en M10 selon le header reel.
+    /**
+     * IP du client. Source unique reutilisee par le rate-limit login et
+     * l'anti-doublon des inscriptions.
+     *
+     * Par defaut REMOTE_ADDR (le dernier hop), correct en hebergement direct
+     * (OVH sans reverse-proxy) : c'est la vraie IP du visiteur. Si le site passe
+     * un jour derriere un proxy / CDN de confiance (Cloudflare...), definir
+     * OPAC_TRUST_PROXY dans wp-config.php : on lit alors la premiere entree de
+     * X-Forwarded-For (l'IP cliente d'origine). Opt-in volontaire, car ce header
+     * est falsifiable tant qu'aucun proxy de confiance ne le pose lui-meme :
+     * l'activer sans proxy devant permettrait de contourner les rate-limits.
+     */
+    public static function get_client_ip() {
+        if ( defined( 'OPAC_TRUST_PROXY' ) && OPAC_TRUST_PROXY && ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+            $parts = explode( ',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'] );
+            $first = trim( $parts[0] );
+            if ( '' !== $first ) {
+                return $first;
+            }
+        }
         return isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
     }
 

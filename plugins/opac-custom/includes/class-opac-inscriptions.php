@@ -26,6 +26,10 @@ class OPAC_Inscriptions {
     const ACTION_EXPORT = 'opac_insc_export';
     const ACTION_SEND_EMAIL = 'opac_insc_send_email';
     const RATE_LIMIT_S  = 60;
+    // Taille d'un lot d'envoi groupe : un seul wp_mail par lot, les inscrits en
+    // Bcc. Evite un message unique a plusieurs centaines de Bcc (rejet SMTP /
+    // classement spam / plafond d'envoi de l'hebergeur) sur une grosse liste.
+    const EMAIL_BCC_BATCH = 45;
 
     private static function recipient() {
         if ( class_exists( 'OPAC_Settings' ) ) {
@@ -170,7 +174,9 @@ class OPAC_Inscriptions {
         // creneau + nom + prenom pour qu'un meme parent (meme email + meme IP)
         // puisse inscrire plusieurs enfants, ou lui-meme, voire des freres au
         // meme creneau, sans faux "doublon". L'anti-bot reste honeypot + nonce.
-        if ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
+        if ( class_exists( 'OPAC_Security' ) ) {
+            $ip = OPAC_Security::get_client_ip();
+        } elseif ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
             $ip = (string) $_SERVER['REMOTE_ADDR'];
         } else {
             $ip = '';
@@ -394,14 +400,26 @@ class OPAC_Inscriptions {
             }
         }
 
-        $redirect = add_query_arg(
-            [
-                'post_type'      => 'opac_inscription',
-                'opac_insc_done' => $status,
-            ],
-            admin_url( 'edit.php' )
-        );
-        wp_safe_redirect( $redirect );
+        // Filet metier : la validation manuelle ne verifie pas la capacite (c'est
+        // l'admin qui tranche). Si cette validation fait passer le creneau
+        // au-dela de sa capacite, on le signale par une notice d'avertissement
+        // (sans bloquer), pour qu'un depassement ne passe pas inapercu.
+        $redirect_args = [
+            'post_type'      => 'opac_inscription',
+            'opac_insc_done' => $status,
+        ];
+        if ( 'validee' === $status ) {
+            $a_id = (int) get_post_meta( $id, 'opac_insc_atelier_id', true );
+            $c_id = (string) get_post_meta( $id, 'opac_insc_creneau_id', true );
+            if ( $a_id && '' !== $c_id ) {
+                $cap = self::creneau_capacite( $a_id, $c_id );
+                if ( $cap > 0 && self::count_validees( $a_id, $c_id ) > $cap ) {
+                    $redirect_args['opac_insc_over'] = '1';
+                }
+            }
+        }
+
+        wp_safe_redirect( add_query_arg( $redirect_args, admin_url( 'edit.php' ) ) );
         exit;
     }
 
@@ -789,22 +807,49 @@ class OPAC_Inscriptions {
             $from_name = 'Association OPAC';
         }
 
-        $headers = [
-            'Content-Type: text/html; charset=UTF-8',
-            sprintf( 'From: %s <%s>', $from_name, $from_email ),
-            'Reply-To: ' . $from_email,
-            'Bcc: ' . implode( ', ', $emails ),
-        ];
+        $result = self::dispatch_bulk_email( $emails, $subject, wpautop( $body ), $from_email, $from_name );
 
-        // To : l'association elle-meme ; tous les inscrits sont en Bcc.
-        $sent = wp_mail( $from_email, $subject, wpautop( $body ), $headers );
-
-        if ( ! $sent ) {
+        // Echec total : on conserve le brouillon et on revient a l'ecran de
+        // redaction. Echec partiel : on log mais on confirme les envois reussis
+        // (ne pas reproposer un renvoi complet qui doublonnerait les lots partis).
+        if ( 0 === $result['sent'] ) {
             error_log( '[OPAC inscription] bulk email wp_mail failed (' . count( $emails ) . ' destinataires)' );
             self::email_fail_redirect( $subject, $body, $ids );
         }
-        wp_safe_redirect( add_query_arg( 'opac_insc_email_sent', (string) count( $emails ), $list_url ) );
+        if ( $result['failed'] > 0 ) {
+            error_log( '[OPAC inscription] bulk email partiel : ' . $result['sent'] . ' envoyes, ' . $result['failed'] . ' echecs' );
+        }
+        wp_safe_redirect( add_query_arg( 'opac_insc_email_sent', (string) $result['sent'], $list_url ) );
         exit;
+    }
+
+    /**
+     * Envoie le message groupe par lots : un wp_mail par tranche de
+     * EMAIL_BCC_BATCH destinataires en Bcc (jamais un unique message a plusieurs
+     * centaines de Bcc, cause de rejet SMTP / spam / plafond hebergeur). To :
+     * l'association elle-meme a chaque lot ; les inscrits ne se voient pas entre
+     * eux. Retourne [ 'sent' => n, 'failed' => n ] pour distinguer succes total,
+     * partiel et echec total cote appelant. Logique isolee (aucun exit / redirect)
+     * pour etre testable unitairement.
+     */
+    public static function dispatch_bulk_email( $emails, $subject, $html, $from_email, $from_name ) {
+        $base_headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            sprintf( 'From: %s <%s>', $from_name, $from_email ),
+            'Reply-To: ' . $from_email,
+        ];
+
+        $sent   = 0;
+        $failed = 0;
+        foreach ( array_chunk( array_values( $emails ), self::EMAIL_BCC_BATCH ) as $chunk ) {
+            $headers = array_merge( $base_headers, [ 'Bcc: ' . implode( ', ', $chunk ) ] );
+            if ( wp_mail( $from_email, $subject, $html, $headers ) ) {
+                $sent += count( $chunk );
+            } else {
+                $failed += count( $chunk );
+            }
+        }
+        return [ 'sent' => $sent, 'failed' => $failed ];
     }
 
     /**
@@ -1040,6 +1085,36 @@ class OPAC_Inscriptions {
             return false;
         }
         return self::count_validees( $atelier_id, $id ) >= $cap;
+    }
+
+    /**
+     * Capacite d'un creneau/seance retrouve par son id dans la structure de la
+     * cible (0 = pas de limite, ou creneau introuvable). Sert a detecter un
+     * depassement au moment de la validation manuelle. Check explicite par type
+     * (pas de else catch-all) : on ne lit que la meta que la cible possede.
+     */
+    public static function creneau_capacite( $cible_id, $creneau_id ) {
+        $cible_id   = (int) $cible_id;
+        $creneau_id = (string) $creneau_id;
+        if ( ! $cible_id || '' === $creneau_id ) {
+            return 0;
+        }
+        $type = get_post_type( $cible_id );
+        if ( 'opac_atelier' === $type ) {
+            $struct = get_post_meta( $cible_id, 'opac_creneaux', true );
+        } elseif ( 'opac_stage' === $type ) {
+            $struct = get_post_meta( $cible_id, 'opac_stage_seances', true );
+        } else {
+            return 0;
+        }
+        if ( is_array( $struct ) ) {
+            foreach ( $struct as $c ) {
+                if ( is_array( $c ) && isset( $c['id'] ) && (string) $c['id'] === $creneau_id ) {
+                    return isset( $c['capacite'] ) ? (int) $c['capacite'] : 0;
+                }
+            }
+        }
+        return 0;
     }
 
     /**

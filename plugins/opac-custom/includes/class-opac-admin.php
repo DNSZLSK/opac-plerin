@@ -581,6 +581,16 @@ class OPAC_Admin {
             esc_attr( $notice_class ),
             esc_html( $msg )
         );
+
+        // Avertissement si cette validation a fait depasser la capacite du creneau
+        // (flag opac_insc_over pose par OPAC_Inscriptions::handle_action). Ne
+        // bloque rien : l'admin reste maitre, mais le depassement est visible.
+        if ( 'validee' === $status && isset( $_GET['opac_insc_over'] ) && '1' === $_GET['opac_insc_over'] ) {
+            printf(
+                '<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
+                esc_html__( 'Attention : ce créneau dépasse désormais sa capacité. Vérifiez qu\'il reste de la place ou basculez un inscrit en liste d\'attente.', 'opac-custom' )
+            );
+        }
     }
 
     /**
@@ -1693,6 +1703,20 @@ class OPAC_Admin {
     }
 
     /**
+     * Genere un id de creneau/seance garanti unique dans la sauvegarde courante.
+     * uniqid() avec entropie (2e argument a true) rend une collision quasi
+     * impossible, et le do/while contre $used la ferme completement : deux
+     * nouvelles lignes ajoutees d'un coup ne peuvent jamais partager un id (ce
+     * qui melangerait leur comptage de places). $used indexe les ids deja pris.
+     */
+    private static function next_unique_id( $prefix, $used ) {
+        do {
+            $id = sanitize_key( uniqid( $prefix, true ) );
+        } while ( '' === $id || isset( $used[ $id ] ) );
+        return $id;
+    }
+
+    /**
      * Sauvegarde des creneaux structures. Ignore les lignes sans horaire,
      * attribue un id stable (preserve a l'edition) pour le comptage palier 3.
      */
@@ -1713,6 +1737,7 @@ class OPAC_Admin {
             : [];
         $jours_ok = OPAC_Calendar::jours_keys();
         $clean = [];
+        $used  = [];
         foreach ( $raw as $row ) {
             if ( ! is_array( $row ) ) {
                 continue;
@@ -1727,9 +1752,10 @@ class OPAC_Admin {
                 $jour = 'lundi';
             }
             $id = isset( $row['id'] ) ? sanitize_key( $row['id'] ) : '';
-            if ( '' === $id ) {
-                $id = uniqid( 'c', false );
+            if ( '' === $id || isset( $used[ $id ] ) ) {
+                $id = self::next_unique_id( 'c', $used );
             }
+            $used[ $id ] = true;
             $clean[] = [
                 'id'       => $id,
                 'jour'     => $jour,
@@ -1879,6 +1905,7 @@ class OPAC_Admin {
             ? wp_unslash( $_POST['opac_stage_seances'] )
             : [];
         $clean = [];
+        $used  = [];
         foreach ( $raw as $row ) {
             if ( ! is_array( $row ) ) {
                 continue;
@@ -1891,9 +1918,10 @@ class OPAC_Admin {
                 continue;
             }
             $id = isset( $row['id'] ) ? sanitize_key( $row['id'] ) : '';
-            if ( '' === $id ) {
-                $id = uniqid( 's', false );
+            if ( '' === $id || isset( $used[ $id ] ) ) {
+                $id = self::next_unique_id( 's', $used );
             }
+            $used[ $id ] = true;
             $clean[] = [
                 'id'       => $id,
                 'date'     => $date,
