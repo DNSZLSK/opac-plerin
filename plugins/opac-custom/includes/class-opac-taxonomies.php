@@ -17,7 +17,7 @@ class OPAC_Taxonomies {
      * alors le seed (idempotent) sur les installs déjà activées, sans exiger
      * une réactivation manuelle du plugin.
      */
-    const DB_VERSION = 2;
+    const DB_VERSION = 3;
 
     public static function register() {
         // Périodes des stages (Automne, Hiver, Printemps, Été).
@@ -126,9 +126,11 @@ class OPAC_Taxonomies {
             ],
             'opac_audience' => [
                 'tous-publics' => 'Tous publics',
-                'adultes' => 'Adultes',
-                'ados' => 'Ados',
                 'enfants' => 'Enfants',
+                'enfants-ados' => 'Enfants/Ados',
+                'ados' => 'Ados',
+                'ados-adultes' => 'Ados/Adultes',
+                'adultes' => 'Adultes',
                 'familles' => 'Familles',
             ],
             'opac_inscription_status' => [
