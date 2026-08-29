@@ -105,21 +105,21 @@ class OPAC_Meta_Boxes {
                 return [
                     [ 'key' => '_thumbnail', 'type' => 'image', 'label' => __( 'Image mise en avant', 'opac-custom' ), 'desc' => __( 'Photo affichée sur la fiche et les listings.', 'opac-custom' ) ],
                     [ 'key' => 'opac_animator_id', 'type' => 'person_select', 'role' => 'pedagogique', 'fallback_key' => 'opac_animator', 'label' => __( 'Animateur', 'opac-custom' ), 'desc' => __( 'Choisissez un animateur dans la liste (section « Animateurs » de l\'Équipe). « Autre / saisie libre » permet de saisir un intervenant ponctuel hors équipe. Laisser vide si l\'atelier n\'a pas d\'animateur nommé.', 'opac-custom' ) ],
-                    [ 'key' => 'opac_description_courte', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Description courte', 'opac-custom' ), 'desc' => __( 'Affichée sur les cartes (accueil, listing des ateliers).', 'opac-custom' ) ],
-                    [ 'key' => 'opac_tagline', 'type' => 'textarea', 'rows' => 4, 'label' => __( 'Description longue', 'opac-custom' ), 'desc' => __( 'Affichée en haut de la fiche détaillée de l\'atelier.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_description_courte', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Description courte (aperçu dans les listes)', 'opac-custom' ), 'desc' => __( 'Résumé d\'1 à 2 lignes, affiché dans les listes (accueil, page Ateliers) avant de cliquer sur l\'atelier.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_tagline', 'type' => 'textarea', 'rows' => 4, 'label' => __( 'Description longue (sur la page de l\'atelier)', 'opac-custom' ), 'desc' => __( 'Texte de présentation complet, affiché en haut de la page de l\'atelier (quand on a cliqué dessus).', 'opac-custom' ) ],
                     [ 'key' => 'opac_tarif_annuel', 'type' => 'number', 'label' => __( 'Tarif annuel (€)', 'opac-custom' ) ],
                     [ 'key' => 'opac_audience', 'type' => 'audience_select', 'taxonomy' => 'opac_audience', 'label' => __( 'Public', 'opac-custom' ), 'desc' => __( 'Catégorie de public visée. Gérez la liste depuis le menu Publics.', 'opac-custom' ) ],
                     [ 'key' => 'opac_public_precision', 'type' => 'text', 'label' => __( 'Précision d\'âge', 'opac-custom' ), 'desc' => __( 'Optionnel. Ex : 6-10 ans, à partir de 8 ans. Affiché à côté de la catégorie (ex : « Enfants 6-10 ans »).', 'opac-custom' ) ],
                     [ 'key' => 'opac_places_dispo', 'type' => 'select', 'options' => self::places_options(), 'label' => __( 'Places', 'opac-custom' ) ],
-                    [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale', 'opac-custom' ), 'desc' => __( 'Encart optionnel sur la fiche (ex : matériel à prévoir). Laisser vide pour masquer.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale (encart sur la page)', 'opac-custom' ), 'desc' => __( 'Encart optionnel affiché sur la page de l\'atelier (ex : matériel à prévoir). Laisser vide pour masquer.', 'opac-custom' ) ],
                     [ 'key' => 'opac_show_gallery', 'type' => 'checkbox', 'label' => __( 'Afficher les réalisations', 'opac-custom' ), 'desc' => __( 'Décochez pour masquer la section Réalisations même si des photos sont liées. La section se masque de toute façon quand aucune photo n\'est liée.', 'opac-custom' ) ],
                 ];
 
             case 'opac_stage':
                 return [
                     [ 'key' => '_thumbnail', 'type' => 'image', 'label' => __( 'Image mise en avant', 'opac-custom' ) ],
-                    [ 'key' => 'opac_description_courte', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Description courte', 'opac-custom' ), 'desc' => __( 'Affichée sur les cartes (listing des éphémères).', 'opac-custom' ) ],
-                    [ 'key' => 'opac_tagline', 'type' => 'textarea', 'rows' => 4, 'label' => __( 'Description longue', 'opac-custom' ), 'desc' => __( 'Affichée en haut de la fiche détaillée.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_description_courte', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Description courte (aperçu dans les listes)', 'opac-custom' ), 'desc' => __( 'Résumé d\'1 à 2 lignes, affiché dans la liste des éphémères avant de cliquer.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_tagline', 'type' => 'textarea', 'rows' => 4, 'label' => __( 'Description longue (sur la page de l\'éphémère)', 'opac-custom' ), 'desc' => __( 'Texte de présentation complet, affiché en haut de la page de l\'éphémère (quand on a cliqué dessus).', 'opac-custom' ) ],
                     [ 'key' => 'opac_date_debut', 'type' => 'date', 'label' => __( 'Date de début', 'opac-custom' ) ],
                     [ 'key' => 'opac_date_fin', 'type' => 'date', 'label' => __( 'Date de fin', 'opac-custom' ) ],
                     [ 'key' => 'opac_tarif_seance', 'type' => 'number', 'label' => __( 'Tarif séance (€)', 'opac-custom' ) ],
@@ -129,7 +129,7 @@ class OPAC_Meta_Boxes {
                     [ 'key' => 'opac_lieu', 'type' => 'text', 'label' => __( 'Lieu', 'opac-custom' ) ],
                     [ 'key' => 'opac_period', 'type' => 'taxonomy', 'taxonomy' => 'opac_period', 'label' => __( 'Période', 'opac-custom' ), 'desc' => __( 'Classe l\'éphémère dans l\'onglet correspondant de la page éphémères. Pré-cochée automatiquement selon la date de début, corrigez si besoin.', 'opac-custom' ) ],
                     [ 'key' => 'opac_places_dispo', 'type' => 'select', 'options' => self::places_options(), 'label' => __( 'Places', 'opac-custom' ) ],
-                    [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale', 'opac-custom' ), 'desc' => __( 'Encart optionnel sur la fiche. Laisser vide pour masquer.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale (encart sur la page)', 'opac-custom' ), 'desc' => __( 'Encart optionnel affiché sur la page de l\'éphémère. Laisser vide pour masquer.', 'opac-custom' ) ],
                 ];
 
             case 'opac_event':
@@ -138,15 +138,15 @@ class OPAC_Meta_Boxes {
                     [ 'key' => 'opac_date_event', 'type' => 'date', 'label' => __( 'Date', 'opac-custom' ) ],
                     [ 'key' => 'opac_lieu', 'type' => 'text', 'label' => __( 'Lieu', 'opac-custom' ) ],
                     [ 'key' => 'opac_event_cat', 'type' => 'taxonomy', 'taxonomy' => 'opac_event_cat', 'label' => __( 'Catégorie', 'opac-custom' ) ],
-                    [ 'key' => 'opac_description_courte', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Description courte', 'opac-custom' ), 'desc' => __( 'Affichée sur les cartes de l\'agenda.', 'opac-custom' ) ],
-                    [ 'key' => '_content', 'type' => 'wysiwyg', 'label' => __( 'Description complète', 'opac-custom' ), 'desc' => __( 'Affichée sur la fiche détaillée de l\'événement.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_description_courte', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Description courte (aperçu dans l\'agenda)', 'opac-custom' ), 'desc' => __( 'Résumé affiché dans l\'agenda avant de cliquer sur l\'événement.', 'opac-custom' ) ],
+                    [ 'key' => '_content', 'type' => 'wysiwyg', 'label' => __( 'Description complète (sur la page de l\'événement)', 'opac-custom' ), 'desc' => __( 'Texte complet affiché sur la page de l\'événement (quand on a cliqué dessus).', 'opac-custom' ) ],
                 ];
 
             case 'opac_person':
                 return [
                     [ 'key' => '_thumbnail', 'type' => 'image', 'label' => __( 'Photo', 'opac-custom' ), 'desc' => __( 'Optionnelle. Si vous ajoutez une photo, elle remplace l\'avatar à initiales. Sans photo, un avatar coloré avec les initiales s\'affiche automatiquement.', 'opac-custom' ) ],
-                    [ 'key' => 'opac_role', 'type' => 'text', 'label' => __( 'Rôle / fonction', 'opac-custom' ), 'desc' => __( 'Ex : Céramique, Présidente, Secrétaire.', 'opac-custom' ) ],
-                    [ 'key' => 'opac_person_type', 'type' => 'taxonomy', 'taxonomy' => 'opac_person_type', 'label' => __( 'Rôles', 'opac-custom' ), 'desc' => __( 'Cochez un ou plusieurs rôles : la personne apparaît dans chaque section correspondante de la page Association.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_role', 'type' => 'text', 'label' => __( 'Fonction affichée (sous le nom)', 'opac-custom' ), 'desc' => __( 'Texte affiché sous le nom de la personne sur la page Association. Ex : Céramique, Présidente, Secrétaire.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_person_type', 'type' => 'taxonomy', 'taxonomy' => 'opac_person_type', 'label' => __( 'Sections où l\'afficher (Animateurs, Bureau...)', 'opac-custom' ), 'desc' => __( 'Cochez une ou plusieurs sections : la personne apparaît dans chacune sur la page Association.', 'opac-custom' ) ],
                 ];
         }
         return [];
