@@ -807,39 +807,49 @@ class OPAC_Inscriptions {
             $from_name = 'Association OPAC';
         }
 
+        $result = self::dispatch_bulk_email( $emails, $subject, wpautop( $body ), $from_email, $from_name );
+
+        // Echec total : on conserve le brouillon et on revient a l'ecran de
+        // redaction. Echec partiel : on log mais on confirme les envois reussis
+        // (ne pas reproposer un renvoi complet qui doublonnerait les lots partis).
+        if ( 0 === $result['sent'] ) {
+            error_log( '[OPAC inscription] bulk email wp_mail failed (' . count( $emails ) . ' destinataires)' );
+            self::email_fail_redirect( $subject, $body, $ids );
+        }
+        if ( $result['failed'] > 0 ) {
+            error_log( '[OPAC inscription] bulk email partiel : ' . $result['sent'] . ' envoyes, ' . $result['failed'] . ' echecs' );
+        }
+        wp_safe_redirect( add_query_arg( 'opac_insc_email_sent', (string) $result['sent'], $list_url ) );
+        exit;
+    }
+
+    /**
+     * Envoie le message groupe par lots : un wp_mail par tranche de
+     * EMAIL_BCC_BATCH destinataires en Bcc (jamais un unique message a plusieurs
+     * centaines de Bcc, cause de rejet SMTP / spam / plafond hebergeur). To :
+     * l'association elle-meme a chaque lot ; les inscrits ne se voient pas entre
+     * eux. Retourne [ 'sent' => n, 'failed' => n ] pour distinguer succes total,
+     * partiel et echec total cote appelant. Logique isolee (aucun exit / redirect)
+     * pour etre testable unitairement.
+     */
+    public static function dispatch_bulk_email( $emails, $subject, $html, $from_email, $from_name ) {
         $base_headers = [
             'Content-Type: text/html; charset=UTF-8',
             sprintf( 'From: %s <%s>', $from_name, $from_email ),
             'Reply-To: ' . $from_email,
         ];
-        $html = wpautop( $body );
 
-        // Envoi par lots : un wp_mail par tranche de EMAIL_BCC_BATCH inscrits en
-        // Bcc (jamais un unique message a plusieurs centaines de Bcc). To :
-        // l'association elle-meme a chaque lot ; les inscrits ne se voient pas.
-        $sent_count = 0;
-        $failed     = 0;
-        foreach ( array_chunk( $emails, self::EMAIL_BCC_BATCH ) as $chunk ) {
-            $headers   = array_merge( $base_headers, [ 'Bcc: ' . implode( ', ', $chunk ) ] );
+        $sent   = 0;
+        $failed = 0;
+        foreach ( array_chunk( array_values( $emails ), self::EMAIL_BCC_BATCH ) as $chunk ) {
+            $headers = array_merge( $base_headers, [ 'Bcc: ' . implode( ', ', $chunk ) ] );
             if ( wp_mail( $from_email, $subject, $html, $headers ) ) {
-                $sent_count += count( $chunk );
+                $sent += count( $chunk );
             } else {
                 $failed += count( $chunk );
             }
         }
-
-        // Echec total : on conserve le brouillon et on revient a l'ecran de
-        // redaction. Echec partiel : on log mais on confirme les envois reussis
-        // (ne pas reproposer un renvoi complet qui doublonnerait les lots partis).
-        if ( 0 === $sent_count ) {
-            error_log( '[OPAC inscription] bulk email wp_mail failed (' . count( $emails ) . ' destinataires)' );
-            self::email_fail_redirect( $subject, $body, $ids );
-        }
-        if ( $failed > 0 ) {
-            error_log( '[OPAC inscription] bulk email partiel : ' . $sent_count . ' envoyes, ' . $failed . ' echecs' );
-        }
-        wp_safe_redirect( add_query_arg( 'opac_insc_email_sent', (string) $sent_count, $list_url ) );
-        exit;
+        return [ 'sent' => $sent, 'failed' => $failed ];
     }
 
     /**
