@@ -442,6 +442,18 @@ class OPAC_Settings {
                     self::render_input_row( 'opac_insc_date_confirmation', __( 'Date de confirmation des nouvelles inscriptions', 'opac-custom' ), __( 'Optionnel. Affichée pendant la phase d\'inscription ouverte : les nouvelles demandes seront confirmées à partir de cette date.', 'opac-custom' ), 'date' );
                     ?>
                 </table>
+                <?php
+                // Garde-fou non bloquant : signale une saisie de dates dans le
+                // desordre (qui masquerait une phase sans que l'equipe le sache).
+                $date_warnings = self::inscription_dates_warnings();
+                if ( $date_warnings ) {
+                    echo '<div class="notice notice-warning inline"><p><strong>' . esc_html__( 'Vérifiez l\'ordre des dates :', 'opac-custom' ) . '</strong></p><ul style="list-style:disc;margin:0 0 4px 20px">';
+                    foreach ( $date_warnings as $dw ) {
+                        echo '<li>' . esc_html( $dw ) . '</li>';
+                    }
+                    echo '</ul></div>';
+                }
+                ?>
 
                 <h2><?php esc_html_e( 'Données personnelles (RGPD)', 'opac-custom' ); ?></h2>
                 <p class="description">
@@ -705,6 +717,33 @@ class OPAC_Settings {
         }
         // Aucune date configuree : comportement actuel (toujours ouvert).
         return 'ouverte';
+    }
+
+    /**
+     * Avertissements de coherence sur les 3 dates de phase. Retourne la liste
+     * des messages a afficher (vide si tout est coherent). NON bloquant : une
+     * config incoherente n'empeche pas la sauvegarde, mais la phase concernee
+     * ne s'afficherait jamais (ex : reinscription >= ouverture => la phase de
+     * reinscription prioritaire est masquee en silence). Comparaison de chaines
+     * Y-m-d = ordre chronologique. Jour egal traite comme incoherent (la phase
+     * suivante l'emporte des le jour meme).
+     */
+    public static function inscription_dates_warnings() {
+        $rein = (string) self::get( 'opac_insc_date_reinscription' );
+        $ouv  = (string) self::get( 'opac_insc_date_ouverture' );
+        $ferm = (string) self::get( 'opac_insc_date_fermeture' );
+
+        $warnings = [];
+        if ( $rein && $ouv && $rein >= $ouv ) {
+            $warnings[] = __( 'La date de début de réinscription prioritaire doit être AVANT l\'ouverture générale, sinon la phase de réinscription prioritaire ne s\'affichera jamais sur le formulaire.', 'opac-custom' );
+        }
+        if ( $ouv && $ferm && $ouv >= $ferm ) {
+            $warnings[] = __( 'La date d\'ouverture générale doit être AVANT la date de fin des inscriptions.', 'opac-custom' );
+        }
+        if ( $rein && $ferm && $rein >= $ferm ) {
+            $warnings[] = __( 'La date de réinscription prioritaire doit être AVANT la date de fin des inscriptions.', 'opac-custom' );
+        }
+        return $warnings;
     }
 
     /* ---------------------------------------------------------------------
