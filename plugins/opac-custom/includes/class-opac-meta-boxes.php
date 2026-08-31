@@ -33,6 +33,10 @@ class OPAC_Meta_Boxes {
         add_filter( 'enter_title_here', [ __CLASS__, 'title_placeholder' ], 10, 2 );
         add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue' ] );
 
+        // Collage dans l'editeur visuel : retire les polices heritees du texte
+        // colle (Word, page web) pour que la police du site soit respectee.
+        add_filter( 'tiny_mce_before_init', [ __CLASS__, 'strip_pasted_fonts' ] );
+
         // Priorite 9 : la fiche s'enregistre avant la box creneaux d'OPAC_Admin
         // (priorite 10) pour s'afficher au-dessus d'elle sur l'atelier.
         add_action( 'add_meta_boxes', [ __CLASS__, 'register_boxes' ], 9 );
@@ -52,6 +56,25 @@ class OPAC_Meta_Boxes {
      */
     public static function disable_block_editor( $use_block_editor, $post_type ) {
         return in_array( $post_type, self::POST_TYPES, true ) ? false : $use_block_editor;
+    }
+
+    /**
+     * Nettoie les styles herites au collage dans l'editeur visuel.
+     *
+     * invalid_styles agit au niveau du parseur/serialiseur de TinyMCE : les
+     * proprietes listees sont retirees du contenu colle ET du contenu re-edite,
+     * independamment du plugin de collage charge (fiable en mode teeny). Les
+     * options paste_* renforcent le nettoyage cote Word (classes mso-*, styles
+     * webkit). On garde volontairement gras, italique, listes et liens : seules
+     * la police, la taille et la couleur sont supprimees, car la barre d'outils
+     * ne propose aucun choix de police (toute font collee est donc parasite).
+     */
+    public static function strip_pasted_fonts( $init ) {
+        $init['invalid_styles']                = 'font font-family font-size color background background-color line-height';
+        $init['paste_strip_class_attributes']  = 'all';
+        $init['paste_remove_styles_if_webkit'] = true;
+        $init['paste_merge_formats']           = true;
+        return $init;
     }
 
     public static function title_placeholder( $text, $post ) {
