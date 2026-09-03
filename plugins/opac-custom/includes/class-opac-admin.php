@@ -407,6 +407,23 @@ class OPAC_Admin {
                     true
                 );
             }
+            // « Copier pour Excel » : liste des inscriptions uniquement.
+            if ( $screen && 'opac_inscription' === $screen->post_type ) {
+                wp_enqueue_script(
+                    'opac-insc-copy-excel',
+                    OPAC_CUSTOM_URL . 'assets/js/admin-insc-copy-excel.js',
+                    [],
+                    OPAC_CUSTOM_VERSION,
+                    true
+                );
+                wp_localize_script( 'opac-insc-copy-excel', 'opacCopyExcel', [
+                    'label'     => __( 'Copier pour Excel', 'opac-custom' ),
+                    'empty'     => __( 'Rien à copier', 'opac-custom' ),
+                    'copiedSel' => __( '%d ligne(s) copiée(s)', 'opac-custom' ),
+                    'copiedAll' => __( '%d copiée(s), collez dans Excel', 'opac-custom' ),
+                    'failed'    => __( 'Copie impossible', 'opac-custom' ),
+                ] );
+            }
         }
     }
 
@@ -462,6 +479,7 @@ class OPAC_Admin {
             'opac_insc_prenom' => __( 'Prénom', 'opac-custom' ),
             'opac_insc_email' => __( 'Email', 'opac-custom' ),
             'opac_insc_atelier' => __( 'Atelier', 'opac-custom' ),
+            'opac_insc_creneau' => __( 'Créneau', 'opac-custom' ),
             'opac_insc_priorite' => __( 'Priorité', 'opac-custom' ),
             'taxonomy-opac_inscription_status' => __( 'Statut', 'opac-custom' ),
             'date' => $columns['date'] ?? __( 'Date', 'opac-custom' ),
@@ -473,6 +491,16 @@ class OPAC_Admin {
             case 'opac_insc_nom':
                 $nom = get_post_meta( $post_id, 'opac_insc_nom', true );
                 echo $nom ? esc_html( $nom ) : '-';
+                // Porteur cache de la ligne "prete a coller" dans le fichier Excel
+                // de suivi : lu par admin-insc-copy-excel.js au clic sur le bouton
+                // « Copier pour Excel ». Une seule sortie par ligne (cellule Nom
+                // toujours rendue). La tabulation reste litterale dans l'attribut.
+                if ( class_exists( 'OPAC_Inscriptions' ) ) {
+                    printf(
+                        '<span class="opac-insc-tsv" data-tsv="%s" hidden></span>',
+                        esc_attr( OPAC_Inscriptions::excel_tsv_line( $post_id ) )
+                    );
+                }
                 break;
             case 'opac_insc_prenom':
                 $prenom = get_post_meta( $post_id, 'opac_insc_prenom', true );
@@ -497,6 +525,10 @@ class OPAC_Admin {
                 } else {
                     echo '-';
                 }
+                break;
+            case 'opac_insc_creneau':
+                $creneau = get_post_meta( $post_id, 'opac_insc_creneau', true );
+                echo $creneau ? esc_html( $creneau ) : '-';
                 break;
             case 'opac_insc_priorite':
                 self::render_priorite_cell( $post_id );
@@ -1419,6 +1451,15 @@ class OPAC_Admin {
             '<a class="button" href="%s">%s</a> ',
             esc_url( add_query_arg( $export_args, admin_url( 'admin-post.php' ) ) ),
             esc_html__( 'Exporter en CSV', 'opac-custom' )
+        );
+
+        // Bouton « Copier pour Excel » : cote client (admin-insc-copy-excel.js), copie
+        // les inscriptions cochees (ou toute la page si rien n'est coche) dans le
+        // presse-papier, en lignes tabulees pretes a coller dans le fichier de suivi
+        // de la secretaire. type="button" pour ne pas soumettre le formulaire de filtre.
+        printf(
+            '<button type="button" class="button" id="opac-copy-excel">%s</button> ',
+            esc_html__( 'Copier pour Excel', 'opac-custom' )
         );
 
         // Bouton « Envoyer un email » : ouvre l'ecran de redaction cache avec les

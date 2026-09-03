@@ -516,6 +516,104 @@ class OPAC_Inscriptions {
     }
 
     /**
+     * Construit une ligne "prete a coller" (cellules separees par des tabulations)
+     * dans le fichier Excel de suivi que la secretaire tient a la main. La secretaire
+     * garde SES classeurs : elle coche une/des inscription(s) dans la liste admin,
+     * copie, puis Ctrl+V sur une ligne vide de son onglet. Excel eclate chaque
+     * tabulation dans une colonne.
+     *
+     * Les colonnes suivent l'ordre EXACT de son gabarit (identique sur tous les
+     * ateliers), A a R :
+     *   A N°  B NOM  C Prenom  D n°adh  E adresse  F CP  G Ville  H portable
+     *   I Mail  J Arrhes  K Recu  L adh.  M tarif  N Recu  O Autre
+     *   P Reinscrip.  Q Inscrip.  R infos
+     *
+     * Les cellules qu'elle remplit a la main ou non collectees en ligne (N°, n°adh,
+     * adresse de rue, arrhes, recu, adhesion, autre, reinscription) restent VIDES :
+     * un collage sur une ligne neuve n'ecrase rien. Pre-remplies : NOM, Prenom, CP,
+     * Ville, portable, Mail, tarif, date d'inscription, message (colonne infos).
+     *
+     * Statut "liste d'attente" : la section correspondante de son fichier ne va que
+     * jusqu'au Mail (pas de paiement tant qu'on n'est pas inscrit), on s'arrete donc
+     * a la colonne I pour ne pas semer de valeurs dans des cellules hors tableau.
+     *
+     * @param int $post_id Inscription.
+     * @return string Ligne TSV (sans retour a la ligne final).
+     */
+    public static function excel_tsv_line( $post_id ) {
+        $nom    = (string) get_post_meta( $post_id, 'opac_insc_nom', true );
+        $prenom = (string) get_post_meta( $post_id, 'opac_insc_prenom', true );
+        $cp     = (string) get_post_meta( $post_id, 'opac_insc_code_postal', true );
+        $ville  = (string) get_post_meta( $post_id, 'opac_insc_commune', true );
+        $tel    = (string) get_post_meta( $post_id, 'opac_insc_telephone', true );
+        $email  = (string) get_post_meta( $post_id, 'opac_insc_email', true );
+
+        // Bloc contact A..I. A (N°), D (n°adh) et E (adresse de rue) : remplis a la
+        // main ou non demandes dans le formulaire en ligne -> vides.
+        $cells = [
+            '',       // A N°
+            $nom,     // B NOM
+            $prenom,  // C Prenom
+            '',       // D n°adh
+            '',       // E adresse
+            $cp,      // F CP
+            $ville,   // G Ville
+            $tel,     // H portable
+            $email,   // I Mail
+        ];
+
+        $status = wp_get_object_terms( $post_id, 'opac_inscription_status', [ 'fields' => 'slugs' ] );
+        $status = is_wp_error( $status ) ? [] : (array) $status;
+
+        // Liste d'attente : on s'arrete au Mail (section contact seule du fichier).
+        if ( in_array( 'liste-attente', $status, true ) ) {
+            return implode( "\t", array_map( [ __CLASS__, 'excel_cell' ], $cells ) );
+        }
+
+        // Inscrit(e) : ligne complete. Colonnes paiement (J,K,L,N,O) et Reinscrip.
+        // (P) laissees vides ; tarif, date d'inscription et infos pre-remplis.
+        $tarif = (int) get_post_meta( $post_id, 'opac_insc_tarif', true );
+        $date  = self::excel_date( (string) get_post_meta( $post_id, 'opac_insc_date_submitted', true ) );
+        $infos = (string) get_post_meta( $post_id, 'opac_insc_message', true );
+
+        $cells = array_merge( $cells, [
+            '',                                // J Arrhes
+            '',                                // K Recu
+            '',                                // L adh.
+            $tarif > 0 ? (string) $tarif : '', // M tarif
+            '',                                // N Recu
+            '',                                // O Autre
+            '',                                // P Reinscrip.
+            $date,                             // Q Inscrip.
+            $infos,                            // R infos
+        ] );
+
+        return implode( "\t", array_map( [ __CLASS__, 'excel_cell' ], $cells ) );
+    }
+
+    /**
+     * Assainit une cellule destinee a un collage tableur : on retire tabulations et
+     * retours a la ligne (qui casseraient le decoupage en colonnes/lignes du
+     * collage), puis on neutralise l'injection de formule (cf. csv_safe).
+     */
+    private static function excel_cell( $value ) {
+        $value = str_replace( [ "\t", "\r\n", "\r", "\n" ], ' ', (string) $value );
+        return self::csv_safe( $value );
+    }
+
+    /**
+     * Convertit une date stockee en 'Y-m-d H:i:s' (current_time('mysql'), heure
+     * locale du site) en 'd/m/Y' pour la colonne Inscrip. du fichier. On decoupe la
+     * partie date au format, sans strtotime, pour eviter tout decalage de fuseau.
+     */
+    private static function excel_date( $mysql ) {
+        if ( preg_match( '/^(\d{4})-(\d{2})-(\d{2})/', trim( $mysql ), $m ) ) {
+            return $m[3] . '/' . $m[2] . '/' . $m[1];
+        }
+        return '';
+    }
+
+    /**
      * Args WP_Query construits depuis les filtres de la liste admin (statut,
      * atelier, recherche par nom, mois). Partage par l'export CSV et l'ecran
      * d'envoi d'email pour garantir le meme perimetre que ce qui est affiche :
