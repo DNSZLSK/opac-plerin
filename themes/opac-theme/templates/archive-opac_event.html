@@ -18,16 +18,18 @@
     </section>
     <!-- /wp:group -->
 
-    <!-- Tabs filtres par categorie (JS client-side) -->
+    <!-- Filtre par catégorie : sélection exclusive d'une liste filtrée en place,
+         donc radiogroup (pas des onglets : aucun panneau distinct). Clavier +
+         roving tabindex gérés en JS (initEventTabs / bindRadioKeyboard). -->
     <!-- wp:group {"align":"wide","className":"opac-event-tabs","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"center"}} -->
-    <div class="wp-block-group alignwide opac-event-tabs" role="tablist" aria-label="Filtrer par catégorie">
+    <div class="wp-block-group alignwide opac-event-tabs" role="radiogroup" aria-label="Filtrer par catégorie">
         <!-- wp:html -->
-        <button type="button" class="opac-tab is-active" data-cat="all" role="tab" aria-selected="true">Tous</button>
-        <button type="button" class="opac-tab" data-cat="sortie" role="tab" aria-selected="false">Sorties</button>
-        <button type="button" class="opac-tab" data-cat="expo" role="tab" aria-selected="false">Expositions</button>
-        <button type="button" class="opac-tab" data-cat="association" role="tab" aria-selected="false">Association</button>
-        <button type="button" class="opac-tab" data-cat="ephemere" role="tab" aria-selected="false">Éphémères</button>
-        <button type="button" class="opac-tab" data-cat="partenaire" role="tab" aria-selected="false">Partenaires</button>
+        <button type="button" class="opac-tab is-active" data-cat="all" role="radio" aria-checked="true" tabindex="0">Tous</button>
+        <button type="button" class="opac-tab" data-cat="sortie" role="radio" aria-checked="false" tabindex="-1">Sorties</button>
+        <button type="button" class="opac-tab" data-cat="expo" role="radio" aria-checked="false" tabindex="-1">Expositions</button>
+        <button type="button" class="opac-tab" data-cat="association" role="radio" aria-checked="false" tabindex="-1">Association</button>
+        <button type="button" class="opac-tab" data-cat="ephemere" role="radio" aria-checked="false" tabindex="-1">Éphémères</button>
+        <button type="button" class="opac-tab" data-cat="partenaire" role="radio" aria-checked="false" tabindex="-1">Partenaires</button>
         <!-- /wp:html -->
     </div>
     <!-- /wp:group -->

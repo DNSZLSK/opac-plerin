@@ -25,15 +25,17 @@
     <!-- Sélecteur de saison (bloc serveur : recharge la page avec ?saison= ; masqué s'il n'y a qu'une saison) -->
     <!-- wp:opac/ephemeres-saisons /-->
 
-    <!-- Onglets de filtre par période (JS client-side, ARIA tablist A11y) -->
+    <!-- Filtre par période : sélection exclusive d'une liste filtrée en place,
+         donc radiogroup (pas des onglets : aucun panneau distinct). Clavier +
+         roving tabindex gérés en JS (initStageTabs / bindRadioKeyboard). -->
     <!-- wp:group {"align":"wide","className":"opac-stage-tabs","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"center"}} -->
-    <div class="wp-block-group alignwide opac-stage-tabs" role="tablist" aria-label="Filtrer par période">
+    <div class="wp-block-group alignwide opac-stage-tabs" role="radiogroup" aria-label="Filtrer par période">
         <!-- wp:html -->
-        <button type="button" class="opac-tab is-active" data-period="all" role="tab" aria-selected="true">Tous</button>
-        <button type="button" class="opac-tab" data-period="automne" role="tab" aria-selected="false">Automne</button>
-        <button type="button" class="opac-tab" data-period="hiver" role="tab" aria-selected="false">Hiver</button>
-        <button type="button" class="opac-tab" data-period="printemps" role="tab" aria-selected="false">Printemps</button>
-        <button type="button" class="opac-tab" data-period="ete" role="tab" aria-selected="false">Été</button>
+        <button type="button" class="opac-tab is-active" data-period="all" role="radio" aria-checked="true" tabindex="0">Tous</button>
+        <button type="button" class="opac-tab" data-period="automne" role="radio" aria-checked="false" tabindex="-1">Automne</button>
+        <button type="button" class="opac-tab" data-period="hiver" role="radio" aria-checked="false" tabindex="-1">Hiver</button>
+        <button type="button" class="opac-tab" data-period="printemps" role="radio" aria-checked="false" tabindex="-1">Printemps</button>
+        <button type="button" class="opac-tab" data-period="ete" role="radio" aria-checked="false" tabindex="-1">Été</button>
         <!-- /wp:html -->
     </div>
     <!-- /wp:group -->

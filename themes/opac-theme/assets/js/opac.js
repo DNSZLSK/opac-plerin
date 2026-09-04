@@ -67,22 +67,40 @@
     }
 
     /**
-     * Helper : navigation clavier au sein d'un tablist (fleches gauche/droite,
-     * Home, End) avec rotation + focus auto. Active aussi le tab focuse au
-     * passage (auto-activation pattern WAI-ARIA APG).
+     * Applique l'etat de selection a un radiogroup de filtres : le radio actif
+     * recoit aria-checked=true, la classe .is-active et tabindex=0 ; les autres
+     * aria-checked=false et tabindex=-1 (roving : un seul radio dans l'ordre de
+     * tabulation, comme l'exige le pattern WAI-ARIA radio). Le filtrage effectif
+     * des cartes reste dans le handler de clic appelant.
      */
-    function bindTablistKeyboard(tabs) {
-        tabs.forEach(function (tab, idx) {
-            tab.addEventListener('keydown', function (e) {
+    function setActiveRadio(radios, active) {
+        radios.forEach(function (r) {
+            var on = (r === active);
+            r.classList.toggle('is-active', on);
+            r.setAttribute('aria-checked', on ? 'true' : 'false');
+            r.tabIndex = on ? 0 : -1;
+        });
+    }
+
+    /**
+     * Navigation clavier d'un radiogroup de filtres (fleches gauche/droite ET
+     * haut/bas, Home, End) avec rotation + focus auto. Active aussi le radio
+     * focuse au passage (selection qui suit le focus, pattern WAI-ARIA radio) :
+     * le .click() declenche le handler qui pose l'etat via setActiveRadio et
+     * filtre. Le roving tabindex est donc mis a jour a chaque deplacement.
+     */
+    function bindRadioKeyboard(radios) {
+        radios.forEach(function (radio, idx) {
+            radio.addEventListener('keydown', function (e) {
                 var target = null;
-                if (e.key === 'ArrowRight') {
-                    target = tabs[(idx + 1) % tabs.length];
-                } else if (e.key === 'ArrowLeft') {
-                    target = tabs[(idx - 1 + tabs.length) % tabs.length];
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    target = radios[(idx + 1) % radios.length];
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    target = radios[(idx - 1 + radios.length) % radios.length];
                 } else if (e.key === 'Home') {
-                    target = tabs[0];
+                    target = radios[0];
                 } else if (e.key === 'End') {
-                    target = tabs[tabs.length - 1];
+                    target = radios[radios.length - 1];
                 }
                 if (target) {
                     e.preventDefault();
@@ -110,12 +128,7 @@
 
         tabs.forEach(function (tab) {
             tab.addEventListener('click', function () {
-                tabs.forEach(function (t) {
-                    t.classList.remove('is-active');
-                    t.setAttribute('aria-selected', 'false');
-                });
-                tab.classList.add('is-active');
-                tab.setAttribute('aria-selected', 'true');
+                setActiveRadio(tabs, tab);
 
                 var period = tab.getAttribute('data-period');
                 cards.forEach(function (card) {
@@ -139,7 +152,7 @@
             });
         });
 
-        bindTablistKeyboard(tabs);
+        bindRadioKeyboard(tabs);
     }
 
     /**
@@ -188,17 +201,12 @@
 
         tabs.forEach(function (tab) {
             tab.addEventListener('click', function () {
-                tabs.forEach(function (t) {
-                    t.classList.remove('is-active');
-                    t.setAttribute('aria-selected', 'false');
-                });
-                tab.classList.add('is-active');
-                tab.setAttribute('aria-selected', 'true');
+                setActiveRadio(tabs, tab);
                 applyFilter(tab.getAttribute('data-cat'));
             });
         });
 
-        bindTablistKeyboard(tabs);
+        bindRadioKeyboard(tabs);
     }
 
     /**
