@@ -75,6 +75,13 @@ add_action( 'wp_enqueue_scripts', static function () {
 
 // Aucun preconnect Google : les polices sont auto-hebergees (theme.json fontFace).
 
+// Marqueur "JS actif" pose tres tot en <head> (avant le rendu du body) : permet
+// au CSS (html:not(.js)) de masquer sans clignotement les commandes qui n'ont de
+// sens qu'avec JavaScript, comme les barres de filtres (filtrage 100% client).
+add_action( 'wp_head', static function () {
+	echo "<script>document.documentElement.classList.add('js');</script>\n";
+}, 0 );
+
 add_action( 'init', static function () {
     remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
     remove_action( 'admin_print_scripts', 'print_emoji_detection_script' );

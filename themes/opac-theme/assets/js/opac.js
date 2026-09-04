@@ -15,68 +15,39 @@
         'color:#5bc0de;font-size:12px;'
     );
 
-    function closeAll(wrappers) {
-        wrappers.forEach(function (wrapper) {
-            wrapper.setAttribute('data-open', 'false');
-            var btn = wrapper.querySelector('.opac-cta-btn');
-            if (btn) {
-                btn.setAttribute('aria-expanded', 'false');
-            }
-        });
-    }
-
+    /**
+     * Disclosure "S'inscrire" : le <details> natif gere toggle, clavier et le
+     * repli sans JS. On n'ajoute ici que deux commodites : fermeture au clic
+     * exterieur et a Echap (avec restitution du focus au summary), que <details>
+     * n'offre pas nativement.
+     */
     function initCtaDropdown() {
-        var wrappers = document.querySelectorAll('.opac-cta');
-        if (!wrappers.length) {
+        var details = document.querySelectorAll('details.opac-cta');
+        if (!details.length) {
             return;
         }
 
-        wrappers.forEach(function (wrapper) {
-            var btn = wrapper.querySelector('.opac-cta-btn');
-            if (!btn) {
-                return;
-            }
-
-            btn.setAttribute('aria-expanded', 'false');
-
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                var isOpen = wrapper.getAttribute('data-open') === 'true';
-                closeAll(wrappers);
-                if (!isOpen) {
-                    wrapper.setAttribute('data-open', 'true');
-                    btn.setAttribute('aria-expanded', 'true');
+        document.addEventListener('click', function (e) {
+            details.forEach(function (d) {
+                if (d.open && !d.contains(e.target)) {
+                    d.open = false;
                 }
             });
-
-            wrapper.addEventListener('click', function (e) {
-                e.stopPropagation();
-            });
-        });
-
-        document.addEventListener('click', function () {
-            closeAll(wrappers);
         });
 
         document.addEventListener('keydown', function (e) {
             if (e.key !== 'Escape') {
                 return;
             }
-            // Echap ferme et rend le focus au bouton declencheur (disclosure) :
-            // sinon le focus reste sur un lien qui vient de disparaitre.
-            var open = null;
-            wrappers.forEach(function (w) {
-                if (w.getAttribute('data-open') === 'true') {
-                    open = w;
+            details.forEach(function (d) {
+                if (d.open) {
+                    d.open = false;
+                    var s = d.querySelector('summary');
+                    if (s) {
+                        s.focus();
+                    }
                 }
             });
-            closeAll(wrappers);
-            if (open) {
-                var b = open.querySelector('.opac-cta-btn');
-                if (b) {
-                    b.focus();
-                }
-            }
         });
     }
 
@@ -126,6 +97,50 @@
     }
 
     /**
+     * Semantique ARIA des filtres posee ICI, au demarrage du JS : sans JS les
+     * boutons ne font rien, on evite donc des commandes "radio" visibles mais
+     * inertes (le CSS masque les barres tant que <html> n'a pas la classe js).
+     * role=radiogroup sur le conteneur, role=radio + aria-checked + roving
+     * tabindex sur chaque bouton, d'apres la classe .is-active initiale.
+     */
+    function setupRadioGroup(group, radios) {
+        if (group) {
+            group.setAttribute('role', 'radiogroup');
+        }
+        radios.forEach(function (r) {
+            r.setAttribute('role', 'radio');
+            var on = r.classList.contains('is-active');
+            r.setAttribute('aria-checked', on ? 'true' : 'false');
+            r.tabIndex = on ? 0 : -1;
+        });
+    }
+
+    /**
+     * Zone live (aria-live=polite, visuellement masquee) inseree apres le groupe
+     * de filtres : annonce le nombre de resultats apres chaque filtrage, pour
+     * qu'un lecteur d'ecran sache que la liste a change (la bascule de
+     * aria-checked seule ne dit pas combien d'elements restent visibles).
+     */
+    function makeLiveRegion(afterEl) {
+        var live = document.createElement('div');
+        live.className = 'opac-visually-hidden';
+        live.setAttribute('aria-live', 'polite');
+        if (afterEl && afterEl.parentNode) {
+            afterEl.parentNode.insertBefore(live, afterEl.nextSibling);
+        } else {
+            document.body.appendChild(live);
+        }
+        return live;
+    }
+
+    function announceCount(live, n) {
+        if (!live) {
+            return;
+        }
+        live.textContent = n + ' résultat' + (n > 1 ? 's' : '') + ' affiché' + (n > 1 ? 's' : '');
+    }
+
+    /**
      * Onglets de filtrage des ephemeres par periode (page archive). Le bloc
      * serveur opac/ephemeres-list pose la classe opac-period-<slug> sur chaque
      * carte .opac-stage-card ; on show/hide selon le tab actif.
@@ -140,17 +155,26 @@
             return;
         }
 
+        var group = document.querySelector('.opac-stage-tabs');
+        setupRadioGroup(group, tabs);
+        var live = makeLiveRegion(group);
+
         tabs.forEach(function (tab) {
             tab.addEventListener('click', function () {
                 setActiveRadio(tabs, tab);
 
                 var period = tab.getAttribute('data-period');
+                var visible = 0;
                 cards.forEach(function (card) {
                     var match = period === 'all' || card.classList.contains('opac-period-' + period);
                     // Classe (pas style.display) : .opac-stage-card a display:grid
                     // !important, qu'un display:none inline ne battrait pas.
                     card.classList.toggle('opac-hidden', !match);
+                    if (match) {
+                        visible++;
+                    }
                 });
+                announceCount(live, visible);
 
                 // Separateur "Ephemeres passes" : visible seulement s'il reste
                 // au moins une carte a venir ET une carte passee apres filtrage.
@@ -185,10 +209,15 @@
             return;
         }
 
+        var group = document.querySelector('.opac-event-tabs');
+        setupRadioGroup(group, tabs);
+        var live = makeLiveRegion(group);
+
         function applyFilter(cat) {
             var children = agenda.children;
             var currentLabel = null;
             var labelHasVisible = false;
+            var visible = 0;
 
             function commit() {
                 if (currentLabel) {
@@ -207,16 +236,18 @@
                     el.style.display = match ? '' : 'none';
                     if (match) {
                         labelHasVisible = true;
+                        visible++;
                     }
                 }
             }
             commit();
+            return visible;
         }
 
         tabs.forEach(function (tab) {
             tab.addEventListener('click', function () {
                 setActiveRadio(tabs, tab);
-                applyFilter(tab.getAttribute('data-cat'));
+                announceCount(live, applyFilter(tab.getAttribute('data-cat')));
             });
         });
 
@@ -356,7 +387,9 @@
         }
 
         items.forEach(function (el, i) {
-            el.addEventListener('click', function () { open(i); });
+            // .opac-gallery-item est un lien vers l'image pleine taille (repli
+            // sans JS) : on annule la navigation pour ouvrir la lightbox a la place.
+            el.addEventListener('click', function (e) { e.preventDefault(); open(i); });
         });
         lb.querySelector('.opac-lightbox-close').addEventListener('click', close);
         lb.querySelector('.opac-lightbox-prev').addEventListener('click', function () { show(current - 1); });
