@@ -76,6 +76,8 @@ check("id inexistant",                         resolve(['atelier' => '999']),   
 check("mauvais type (event en ?atelier)",      resolve(['atelier' => '30']),      [0, 0]);
 check("mauvais type (atelier en ?stage)",      resolve(['stage' => '10']),        [0, 0]);
 check("stage brouillon",                       resolve(['stage' => '21']),        [0, 0]);
+check("valeur non scalaire ?atelier[]=10",     resolve(['atelier' => ['10']]),    [0, 0]);
+check("valeur non scalaire ?stage[]=20",       resolve(['stage' => ['20']]),      [0, 0]);
 
 echo "\n=== C. Exclusivite : au plus une cible, atelier prioritaire ===\n";
 check("atelier invalide + stage valide -> stage", resolve(['atelier' => '11', 'stage' => '20']), [0, 20]);

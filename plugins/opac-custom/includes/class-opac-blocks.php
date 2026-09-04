@@ -1417,12 +1417,6 @@ class OPAC_Blocks {
     }
 
     /**
-     * Etat de confirmation apres une inscription reussie (cf. render_inscription_form).
-     * On confirme l'action, en nommant l'atelier/stage si transmis par la redirection,
-     * et on propose la suite SANS reafficher le formulaire : l'action est terminee,
-     * re-proposer une inscription seme le doute et provoque des doublons.
-     */
-    /**
      * Resout LA cible (atelier / stage) depuis l'URL en ne gardant qu'un id
      * PUBLIE et du bon type. Un id invalide (brouillon, prive, corbeille, mauvais
      * type, inexistant, devine ou forge) est ecarte. Source unique (isolee et
@@ -1438,17 +1432,26 @@ class OPAC_Blocks {
      * @return int[] [ atelier_id, stage_id ].
      */
     private static function resolve_public_target() {
-        $atelier_id = isset( $_GET['atelier'] ) ? absint( $_GET['atelier'] ) : 0;
+        // is_scalar avant absint : ?atelier[]=10 arriverait en tableau, et
+        // absint( array ) le coercerait a 1 (donc l'id de post 1). On ecarte
+        // toute valeur non scalaire en la traitant comme absente.
+        $atelier_id = ( isset( $_GET['atelier'] ) && is_scalar( $_GET['atelier'] ) ) ? absint( $_GET['atelier'] ) : 0;
         if ( $atelier_id && 'opac_atelier' === get_post_type( $atelier_id ) && 'publish' === get_post_status( $atelier_id ) ) {
             return [ $atelier_id, 0 ];
         }
-        $stage_id = isset( $_GET['stage'] ) ? absint( $_GET['stage'] ) : 0;
+        $stage_id = ( isset( $_GET['stage'] ) && is_scalar( $_GET['stage'] ) ) ? absint( $_GET['stage'] ) : 0;
         if ( $stage_id && 'opac_stage' === get_post_type( $stage_id ) && 'publish' === get_post_status( $stage_id ) ) {
             return [ 0, $stage_id ];
         }
         return [ 0, 0 ];
     }
 
+    /**
+     * Etat de confirmation apres une inscription reussie (cf. render_inscription_form).
+     * On confirme l'action, en nommant l'atelier/stage si transmis par la redirection,
+     * et on propose la suite SANS reafficher le formulaire : l'action est terminee,
+     * re-proposer une inscription seme le doute et provoque des doublons.
+     */
     private static function inscription_confirmation() {
         $waitlist = isset( $_GET['attente'] ) && '1' === $_GET['attente'];
 
