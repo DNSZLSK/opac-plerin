@@ -73,8 +73,12 @@ class OPAC_Inscriptions {
      * franchir le plafond. Frein pragmatique contre le flood sequentiel d'un bot,
      * suffisant pour ce site ; le vrai anti-abus a forte concurrence se pose en
      * amont (OVH / Cloudflare), hors PHP.
+     *
+     * Interne (private) : appelee seulement par handle_submit(). Le harnais la
+     * teste par ReflectionMethod, comme OPAC_Admin::next_unique_id, pour ne pas
+     * elargir l'API publique de la classe juste pour les tests.
      */
-    public static function ip_over_limit( $ip ) {
+    private static function ip_over_limit( $ip ) {
         if ( '' === (string) $ip ) {
             return false;
         }
@@ -86,8 +90,10 @@ class OPAC_Inscriptions {
      * Incremente le compteur IP apres une inscription reellement creee, en
      * (re)posant le TTL a self::RL_IP_WINDOW_S : la fenetre est donc glissante
      * (elle repart de la derniere demande acceptee). No-op si l'IP est inconnue.
+     *
+     * Interne (private) : voir ip_over_limit(), meme raison.
      */
-    public static function ip_bump( $ip ) {
+    private static function ip_bump( $ip ) {
         if ( '' === (string) $ip ) {
             return;
         }

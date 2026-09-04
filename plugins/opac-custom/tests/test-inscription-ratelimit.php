@@ -8,6 +8,10 @@
  * sont remplaces par des mocks a base de globals. On memorise aussi le dernier TTL
  * passe a set_transient pour verifier la fenetre glissante.
  *
+ * ip_over_limit() et ip_bump() sont PRIVATE (internes a handle_submit) : on les
+ * appelle par ReflectionMethod, comme test-creneaux-ids.php le fait pour
+ * OPAC_Admin::next_unique_id, plutot que d'elargir l'API publique pour les tests.
+ *
  * Ce qui N'EST PAS teste ici (et pourquoi) : les proprietes de flot de
  * handle_submit() - "aucun increment sur cible/creneau invalide ou insert rate",
  * "purge de l'anti-doublon sur chaque echec aval". handle_submit() appelle exit()
@@ -56,6 +60,14 @@ function check($label, $got, $exp) {
         $n, $ok ? 'OK' : 'FAIL', $label, var_export($got, true), var_export($exp, true));
 }
 
+// Acces aux methodes privees par reflexion (invoke(null, ...) : statiques).
+$refOver = new ReflectionMethod('OPAC_Inscriptions', 'ip_over_limit');
+$refOver->setAccessible(true);
+$refBump = new ReflectionMethod('OPAC_Inscriptions', 'ip_bump');
+$refBump->setAccessible(true);
+$over = function ($ip) use ($refOver) { return $refOver->invoke(null, $ip); };
+$bump = function ($ip) use ($refBump) { return $refBump->invoke(null, $ip); };
+
 $MAX    = OPAC_Inscriptions::RL_IP_MAX;
 $WINDOW = OPAC_Inscriptions::RL_IP_WINDOW_S;
 $ip     = '203.0.113.7';
@@ -64,22 +76,22 @@ $key    = 'opac_insc_ip_' . md5($ip);
 // ---------------------------------------------------------------------------
 echo "=== A. Compteur absent -> demandes 1..MAX acceptees, MAX+1 refusee ===\n";
 
-check("compteur absent -> pas bloque", OPAC_Inscriptions::ip_over_limit($ip), false);
+check("compteur absent -> pas bloque", $over($ip), false);
 
 // Simule MAX inscriptions creees : chacune est acceptee AVANT son bump.
 for ($i = 1; $i <= $MAX; $i++) {
-    check("demande $i sur $MAX : acceptee avant creation", OPAC_Inscriptions::ip_over_limit($ip), false);
-    OPAC_Inscriptions::ip_bump($ip);
+    check("demande $i sur $MAX : acceptee avant creation", $over($ip), false);
+    $bump($ip);
 }
 
 check("apres $MAX creations : compteur = MAX", (int) get_transient($key), $MAX);
-check("demande MAX+1 : REFUSEE",               OPAC_Inscriptions::ip_over_limit($ip), true);
+check("demande MAX+1 : REFUSEE",               $over($ip), true);
 
 // ---------------------------------------------------------------------------
 echo "\n=== B. IP inconnue : jamais bloquee, bump = no-op ===\n";
 
-check("IP vide jamais au-dessus du plafond", OPAC_Inscriptions::ip_over_limit(''), false);
-OPAC_Inscriptions::ip_bump('');
+check("IP vide jamais au-dessus du plafond", $over(''), false);
+$bump('');
 check("bump('') ne cree aucun transient",    get_transient('opac_insc_ip_' . md5('')), false);
 check("bump('') n'a pas touche le store",    array_key_exists('opac_insc_ip_' . md5(''), $GLOBALS['transients']), false);
 
@@ -90,7 +102,7 @@ check("TTL memorise = RL_IP_WINDOW_S", $GLOBALS['ttl'][$key], $WINDOW);
 
 // Un bump de plus doit reposer le meme TTL (fenetre qui repart de la derniere demande).
 $GLOBALS['ttl'][$key] = -1; // brouille la trace pour verifier qu'elle est bien reecrite
-OPAC_Inscriptions::ip_bump($ip);
+$bump($ip);
 check("bump suivant : TTL repose a RL_IP_WINDOW_S", $GLOBALS['ttl'][$key], $WINDOW);
 check("compteur incremente (MAX+1)",                (int) get_transient($key), $MAX + 1);
 
@@ -98,8 +110,8 @@ check("compteur incremente (MAX+1)",                (int) get_transient($key), $
 echo "\n=== D. Isolation par IP : une autre IP n'est pas affectee ===\n";
 
 $ip2 = '198.51.100.9';
-check("autre IP : pas bloquee malgre le quota de la 1ere", OPAC_Inscriptions::ip_over_limit($ip2), false);
-OPAC_Inscriptions::ip_bump($ip2);
+check("autre IP : pas bloquee malgre le quota de la 1ere", $over($ip2), false);
+$bump($ip2);
 check("autre IP : compteur independant = 1", (int) get_transient('opac_insc_ip_' . md5($ip2)), 1);
 
 echo "\n";
