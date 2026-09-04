@@ -62,6 +62,39 @@ class OPAC_Inscriptions {
         add_action( 'admin_menu', [ __CLASS__, 'register_email_page' ] );
     }
 
+    /**
+     * Rate-limit par IP : true si l'IP a deja atteint le plafond
+     * (self::RL_IP_MAX) d'inscriptions creees sur la fenetre courante. Une IP
+     * vide (inconnue) n'est jamais bloquee, pour ne pas verrouiller a l'aveugle.
+     *
+     * Best-effort, PAS un semaphore : le couple get_transient / set_transient
+     * (dans ip_bump) n'est pas atomique. Deux requetes simultanees peuvent lire
+     * la meme valeur puis ecrire le meme increment, donc un burst parallele peut
+     * franchir le plafond. Frein pragmatique contre le flood sequentiel d'un bot,
+     * suffisant pour ce site ; le vrai anti-abus a forte concurrence se pose en
+     * amont (OVH / Cloudflare), hors PHP.
+     */
+    public static function ip_over_limit( $ip ) {
+        if ( '' === (string) $ip ) {
+            return false;
+        }
+        $key = 'opac_insc_ip_' . md5( (string) $ip );
+        return (int) get_transient( $key ) >= self::RL_IP_MAX;
+    }
+
+    /**
+     * Incremente le compteur IP apres une inscription reellement creee, en
+     * (re)posant le TTL a self::RL_IP_WINDOW_S : la fenetre est donc glissante
+     * (elle repart de la derniere demande acceptee). No-op si l'IP est inconnue.
+     */
+    public static function ip_bump( $ip ) {
+        if ( '' === (string) $ip ) {
+            return;
+        }
+        $key = 'opac_insc_ip_' . md5( (string) $ip );
+        set_transient( $key, (int) get_transient( $key ) + 1, self::RL_IP_WINDOW_S );
+    }
+
     public static function handle_submit() {
         $back = self::inscription_url();
 
@@ -283,11 +316,10 @@ class OPAC_Inscriptions {
 
         // Rate-limit par IP, independant du contenu du formulaire : contrairement
         // a l'anti-doublon (signature exacte, contournable en variant un champ),
-        // il plafonne les inscriptions creees depuis une meme IP sur la fenetre
-        // glissante. Verifie juste avant l'insert + l'email (le cout reel). Cle
-        // par IP seule ; ignore si l'IP est inconnue (pas de blocage a l'aveugle).
-        $ip_key = $ip ? 'opac_insc_ip_' . md5( $ip ) : '';
-        if ( $ip_key && (int) get_transient( $ip_key ) >= self::RL_IP_MAX ) {
+        // il plafonne les inscriptions creees depuis une meme IP. Verifie juste
+        // avant l'insert + l'email (le cout reel). Voir ip_over_limit() pour la
+        // reserve d'atomicite.
+        if ( self::ip_over_limit( $ip ) ) {
             delete_transient( $rl_key ); // ne pas laisser un faux "doublon" par-dessus le refus
             wp_safe_redirect( add_query_arg( 'erreur', 'trop', $back ) );
             exit;
@@ -306,12 +338,10 @@ class OPAC_Inscriptions {
             exit;
         }
 
-        // Inscription reellement creee : incremente le compteur IP (fenetre
-        // glissante). set_transient rafraichit le TTL a chaque ajout, ce qui
-        // etale d'autant la fenetre pour une IP qui insiste (comportement voulu).
-        if ( $ip_key ) {
-            set_transient( $ip_key, (int) get_transient( $ip_key ) + 1, self::RL_IP_WINDOW_S );
-        }
+        // Inscription reellement creee : incremente le compteur IP. SEUL site
+        // d'incrementation, place APRES le succes de l'insert : une cible/creneau
+        // invalide ou un insert rate ne compte donc jamais dans le quota IP.
+        self::ip_bump( $ip );
 
         update_post_meta( $post_id, 'opac_insc_nom',            $nom );
         update_post_meta( $post_id, 'opac_insc_prenom',         $prenom );
