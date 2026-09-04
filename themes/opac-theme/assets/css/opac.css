@@ -107,8 +107,17 @@
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     z-index: 100;
-    /* Affichage gere nativement par <details> : masque quand ferme, visible
-       quand <details open>. Pas de display:none ni de regle [data-open]. */
+    /* Affichage gere nativement par <details>. */
+}
+
+/* Compatibilite avec un ancien template-part header conserve dans la base
+   WordPress et prioritaire sur parts/header.html apres deploiement. */
+div.opac-cta > .opac-cta-dd {
+    display: none;
+}
+
+div.opac-cta[data-open="true"] > .opac-cta-dd {
+    display: block;
 }
 
 .opac-cta-dd a {
