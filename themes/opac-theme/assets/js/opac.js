@@ -16,21 +16,57 @@
     );
 
     /**
-     * Disclosure "S'inscrire" : le <details> natif gere toggle, clavier et le
-     * repli sans JS. On n'ajoute ici que deux commodites : fermeture au clic
-     * exterieur et a Echap (avec restitution du focus au summary), que <details>
-     * n'offre pas nativement.
+     * Disclosure "S'inscrire". Le <details> natif gere toggle, clavier et
+     * repli sans JS. La variante historique div + button reste prise en charge
+     * car un template-part personnalise en base WordPress peut continuer a
+     * primer sur parts/header.html apres un deploiement de fichiers.
      */
     function initCtaDropdown() {
         var details = document.querySelectorAll('details.opac-cta');
-        if (!details.length) {
+        var legacy = document.querySelectorAll('div.opac-cta');
+
+        if (!details.length && !legacy.length) {
             return;
         }
+
+        legacy.forEach(function (wrapper, idx) {
+            var btn = wrapper.querySelector('.opac-cta-btn');
+            var panel = wrapper.querySelector('.opac-cta-dd');
+            if (!btn || !panel) {
+                return;
+            }
+
+            var panelId = panel.id || 'opac-cta-dd-' + idx;
+            panel.id = panelId;
+            panel.removeAttribute('role');
+            panel.querySelectorAll('[role="menuitem"]').forEach(function (item) {
+                item.removeAttribute('role');
+            });
+            btn.removeAttribute('aria-haspopup');
+            btn.setAttribute('aria-controls', panelId);
+            btn.setAttribute('aria-expanded', 'false');
+            wrapper.setAttribute('data-open', 'false');
+
+            btn.addEventListener('click', function () {
+                var open = wrapper.getAttribute('data-open') === 'true';
+                wrapper.setAttribute('data-open', open ? 'false' : 'true');
+                btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+            });
+        });
 
         document.addEventListener('click', function (e) {
             details.forEach(function (d) {
                 if (d.open && !d.contains(e.target)) {
                     d.open = false;
+                }
+            });
+            legacy.forEach(function (wrapper) {
+                if (wrapper.getAttribute('data-open') === 'true' && !wrapper.contains(e.target)) {
+                    wrapper.setAttribute('data-open', 'false');
+                    var btn = wrapper.querySelector('.opac-cta-btn');
+                    if (btn) {
+                        btn.setAttribute('aria-expanded', 'false');
+                    }
                 }
             });
         });
@@ -45,6 +81,16 @@
                     var s = d.querySelector('summary');
                     if (s) {
                         s.focus();
+                    }
+                }
+            });
+            legacy.forEach(function (wrapper) {
+                if (wrapper.getAttribute('data-open') === 'true') {
+                    wrapper.setAttribute('data-open', 'false');
+                    var btn = wrapper.querySelector('.opac-cta-btn');
+                    if (btn) {
+                        btn.setAttribute('aria-expanded', 'false');
+                        btn.focus();
                     }
                 }
             });
