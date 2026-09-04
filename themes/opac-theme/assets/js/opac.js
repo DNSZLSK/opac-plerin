@@ -316,17 +316,25 @@
         // lightbox dans le body) : le contenu de fond n'est plus focusable ni
         // expose aux lecteurs d'ecran tant que le dialog est ouvert. Complete
         // aria-modal, dont le support reste inegal.
+        //
+        // On ne memorise QUE les elements que la lightbox a elle-meme rendus
+        // inertes (on saute ceux deja inertes) et on ne retire inert qu'a ceux-la
+        // a la fermeture : un element inerte pour une autre raison garde son etat.
+        var inerted = [];
         function setBackgroundInert(on) {
-            Array.prototype.forEach.call(document.body.children, function (el) {
-                if (el === lb) {
-                    return;
-                }
-                if (on) {
+            if (on) {
+                inerted = [];
+                Array.prototype.forEach.call(document.body.children, function (el) {
+                    if (el === lb || el.hasAttribute('inert')) {
+                        return;
+                    }
                     el.setAttribute('inert', '');
-                } else {
-                    el.removeAttribute('inert');
-                }
-            });
+                    inerted.push(el);
+                });
+            } else {
+                inerted.forEach(function (el) { el.removeAttribute('inert'); });
+                inerted = [];
+            }
         }
         function open(i) {
             lastFocus = document.activeElement;
