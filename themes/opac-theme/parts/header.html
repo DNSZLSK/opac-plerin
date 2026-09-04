@@ -28,12 +28,17 @@
     <!-- /wp:navigation -->
 
     <!-- wp:html -->
+    <!-- Disclosure (pas un role=menu) : le panneau ne contient que des liens de
+         navigation, pas des commandes ; le modele "menu" ARIA imposerait un
+         clavier fleches/roving inadapte a des liens. Bouton aria-expanded +
+         aria-controls, liens tabulables naturellement, Echap ferme et rend le
+         focus au bouton (gere en JS). -->
     <div class="opac-cta">
-        <button class="opac-cta-btn" type="button" aria-haspopup="true" aria-expanded="false">S'inscrire ▾</button>
-        <div class="opac-cta-dd" role="menu">
-            <a href="/ateliers/" role="menuitem">Atelier à l'année</a>
+        <button class="opac-cta-btn" type="button" aria-expanded="false" aria-controls="opac-cta-dd">S'inscrire ▾</button>
+        <div class="opac-cta-dd" id="opac-cta-dd">
+            <a href="/ateliers/">Atelier à l'année</a>
             <span class="opac-cta-dd-sub">Inscription annuelle, sept. à juillet</span>
-            <a href="/ephemeres/" role="menuitem">Atelier éphémère</a>
+            <a href="/ephemeres/">Atelier éphémère</a>
             <span class="opac-cta-dd-sub">Activités ponctuelles &amp; vacances</span>
         </div>
     </div>

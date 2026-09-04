@@ -37,7 +37,6 @@
                 return;
             }
 
-            btn.setAttribute('aria-haspopup', 'true');
             btn.setAttribute('aria-expanded', 'false');
 
             btn.addEventListener('click', function (e) {
@@ -60,8 +59,23 @@
         });
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                closeAll(wrappers);
+            if (e.key !== 'Escape') {
+                return;
+            }
+            // Echap ferme et rend le focus au bouton declencheur (disclosure) :
+            // sinon le focus reste sur un lien qui vient de disparaitre.
+            var open = null;
+            wrappers.forEach(function (w) {
+                if (w.getAttribute('data-open') === 'true') {
+                    open = w;
+                }
+            });
+            closeAll(wrappers);
+            if (open) {
+                var b = open.querySelector('.opac-cta-btn');
+                if (b) {
+                    b.focus();
+                }
             }
         });
     }
@@ -298,17 +312,35 @@
             lbCap.textContent = cap;
             lbCap.style.display = cap ? '' : 'none';
         }
+        // Rend inerte tout ce qui est derriere l'overlay (les freres de la
+        // lightbox dans le body) : le contenu de fond n'est plus focusable ni
+        // expose aux lecteurs d'ecran tant que le dialog est ouvert. Complete
+        // aria-modal, dont le support reste inegal.
+        function setBackgroundInert(on) {
+            Array.prototype.forEach.call(document.body.children, function (el) {
+                if (el === lb) {
+                    return;
+                }
+                if (on) {
+                    el.setAttribute('inert', '');
+                } else {
+                    el.removeAttribute('inert');
+                }
+            });
+        }
         function open(i) {
             lastFocus = document.activeElement;
             show(i);
             lb.classList.add('is-open');
             // Verrou de scroll : empeche le fond de defiler derriere l'overlay.
             document.body.classList.add('opac-no-scroll');
+            setBackgroundInert(true);
             lb.querySelector('.opac-lightbox-close').focus();
         }
         function close() {
             lb.classList.remove('is-open');
             document.body.classList.remove('opac-no-scroll');
+            setBackgroundInert(false);
             lbImg.setAttribute('src', '');
             if (lastFocus && lastFocus.focus) {
                 lastFocus.focus();
@@ -329,6 +361,24 @@
             if (e.key === 'Escape') { close(); }
             else if (e.key === 'ArrowLeft') { show(current - 1); }
             else if (e.key === 'ArrowRight') { show(current + 1); }
+            else if (e.key === 'Tab') {
+                // Piege de focus : Tab cyclique sur les commandes visibles de la
+                // lightbox (offsetParent != null exclut prev/next masques en bord
+                // de galerie). Empeche le focus de s'echapper vers le fond inerte.
+                var f = Array.prototype.filter.call(
+                    lb.querySelectorAll('button'),
+                    function (el) { return el.offsetParent !== null; }
+                );
+                if (!f.length) { return; }
+                var first = f[0], last = f[f.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
         });
 
         // Swipe horizontal sur la lightbox (mobile) : photo precedente / suivante.
