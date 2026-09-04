@@ -15,74 +15,77 @@
         'color:#5bc0de;font-size:12px;'
     );
 
-    function closeAll(wrappers) {
-        wrappers.forEach(function (wrapper) {
-            wrapper.setAttribute('data-open', 'false');
-            var btn = wrapper.querySelector('.opac-cta-btn');
-            if (btn) {
-                btn.setAttribute('aria-expanded', 'false');
-            }
-        });
-    }
-
+    /**
+     * Disclosure "S'inscrire" : le <details> natif gere toggle, clavier et le
+     * repli sans JS. On n'ajoute ici que deux commodites : fermeture au clic
+     * exterieur et a Echap (avec restitution du focus au summary), que <details>
+     * n'offre pas nativement.
+     */
     function initCtaDropdown() {
-        var wrappers = document.querySelectorAll('.opac-cta');
-        if (!wrappers.length) {
+        var details = document.querySelectorAll('details.opac-cta');
+        if (!details.length) {
             return;
         }
 
-        wrappers.forEach(function (wrapper) {
-            var btn = wrapper.querySelector('.opac-cta-btn');
-            if (!btn) {
-                return;
-            }
-
-            btn.setAttribute('aria-haspopup', 'true');
-            btn.setAttribute('aria-expanded', 'false');
-
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                var isOpen = wrapper.getAttribute('data-open') === 'true';
-                closeAll(wrappers);
-                if (!isOpen) {
-                    wrapper.setAttribute('data-open', 'true');
-                    btn.setAttribute('aria-expanded', 'true');
+        document.addEventListener('click', function (e) {
+            details.forEach(function (d) {
+                if (d.open && !d.contains(e.target)) {
+                    d.open = false;
                 }
             });
-
-            wrapper.addEventListener('click', function (e) {
-                e.stopPropagation();
-            });
-        });
-
-        document.addEventListener('click', function () {
-            closeAll(wrappers);
         });
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                closeAll(wrappers);
+            if (e.key !== 'Escape') {
+                return;
             }
+            details.forEach(function (d) {
+                if (d.open) {
+                    d.open = false;
+                    var s = d.querySelector('summary');
+                    if (s) {
+                        s.focus();
+                    }
+                }
+            });
         });
     }
 
     /**
-     * Helper : navigation clavier au sein d'un tablist (fleches gauche/droite,
-     * Home, End) avec rotation + focus auto. Active aussi le tab focuse au
-     * passage (auto-activation pattern WAI-ARIA APG).
+     * Applique l'etat de selection a un radiogroup de filtres : le radio actif
+     * recoit aria-checked=true, la classe .is-active et tabindex=0 ; les autres
+     * aria-checked=false et tabindex=-1 (roving : un seul radio dans l'ordre de
+     * tabulation, comme l'exige le pattern WAI-ARIA radio). Le filtrage effectif
+     * des cartes reste dans le handler de clic appelant.
      */
-    function bindTablistKeyboard(tabs) {
-        tabs.forEach(function (tab, idx) {
-            tab.addEventListener('keydown', function (e) {
+    function setActiveRadio(radios, active) {
+        radios.forEach(function (r) {
+            var on = (r === active);
+            r.classList.toggle('is-active', on);
+            r.setAttribute('aria-checked', on ? 'true' : 'false');
+            r.tabIndex = on ? 0 : -1;
+        });
+    }
+
+    /**
+     * Navigation clavier d'un radiogroup de filtres (fleches gauche/droite ET
+     * haut/bas, Home, End) avec rotation + focus auto. Active aussi le radio
+     * focuse au passage (selection qui suit le focus, pattern WAI-ARIA radio) :
+     * le .click() declenche le handler qui pose l'etat via setActiveRadio et
+     * filtre. Le roving tabindex est donc mis a jour a chaque deplacement.
+     */
+    function bindRadioKeyboard(radios) {
+        radios.forEach(function (radio, idx) {
+            radio.addEventListener('keydown', function (e) {
                 var target = null;
-                if (e.key === 'ArrowRight') {
-                    target = tabs[(idx + 1) % tabs.length];
-                } else if (e.key === 'ArrowLeft') {
-                    target = tabs[(idx - 1 + tabs.length) % tabs.length];
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    target = radios[(idx + 1) % radios.length];
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    target = radios[(idx - 1 + radios.length) % radios.length];
                 } else if (e.key === 'Home') {
-                    target = tabs[0];
+                    target = radios[0];
                 } else if (e.key === 'End') {
-                    target = tabs[tabs.length - 1];
+                    target = radios[radios.length - 1];
                 }
                 if (target) {
                     e.preventDefault();
@@ -91,6 +94,50 @@
                 }
             });
         });
+    }
+
+    /**
+     * Semantique ARIA des filtres posee ICI, au demarrage du JS : sans JS les
+     * boutons ne font rien, on evite donc des commandes "radio" visibles mais
+     * inertes (le CSS masque les barres tant que <html> n'a pas la classe js).
+     * role=radiogroup sur le conteneur, role=radio + aria-checked + roving
+     * tabindex sur chaque bouton, d'apres la classe .is-active initiale.
+     */
+    function setupRadioGroup(group, radios) {
+        if (group) {
+            group.setAttribute('role', 'radiogroup');
+        }
+        radios.forEach(function (r) {
+            r.setAttribute('role', 'radio');
+            var on = r.classList.contains('is-active');
+            r.setAttribute('aria-checked', on ? 'true' : 'false');
+            r.tabIndex = on ? 0 : -1;
+        });
+    }
+
+    /**
+     * Zone live (aria-live=polite, visuellement masquee) inseree apres le groupe
+     * de filtres : annonce le nombre de resultats apres chaque filtrage, pour
+     * qu'un lecteur d'ecran sache que la liste a change (la bascule de
+     * aria-checked seule ne dit pas combien d'elements restent visibles).
+     */
+    function makeLiveRegion(afterEl) {
+        var live = document.createElement('div');
+        live.className = 'opac-visually-hidden';
+        live.setAttribute('aria-live', 'polite');
+        if (afterEl && afterEl.parentNode) {
+            afterEl.parentNode.insertBefore(live, afterEl.nextSibling);
+        } else {
+            document.body.appendChild(live);
+        }
+        return live;
+    }
+
+    function announceCount(live, n) {
+        if (!live) {
+            return;
+        }
+        live.textContent = n + ' résultat' + (n > 1 ? 's' : '') + ' affiché' + (n > 1 ? 's' : '');
     }
 
     /**
@@ -108,22 +155,26 @@
             return;
         }
 
+        var group = document.querySelector('.opac-stage-tabs');
+        setupRadioGroup(group, tabs);
+        var live = makeLiveRegion(group);
+
         tabs.forEach(function (tab) {
             tab.addEventListener('click', function () {
-                tabs.forEach(function (t) {
-                    t.classList.remove('is-active');
-                    t.setAttribute('aria-selected', 'false');
-                });
-                tab.classList.add('is-active');
-                tab.setAttribute('aria-selected', 'true');
+                setActiveRadio(tabs, tab);
 
                 var period = tab.getAttribute('data-period');
+                var visible = 0;
                 cards.forEach(function (card) {
                     var match = period === 'all' || card.classList.contains('opac-period-' + period);
                     // Classe (pas style.display) : .opac-stage-card a display:grid
                     // !important, qu'un display:none inline ne battrait pas.
                     card.classList.toggle('opac-hidden', !match);
+                    if (match) {
+                        visible++;
+                    }
                 });
+                announceCount(live, visible);
 
                 // Separateur "Ephemeres passes" : visible seulement s'il reste
                 // au moins une carte a venir ET une carte passee apres filtrage.
@@ -139,7 +190,7 @@
             });
         });
 
-        bindTablistKeyboard(tabs);
+        bindRadioKeyboard(tabs);
     }
 
     /**
@@ -158,10 +209,15 @@
             return;
         }
 
+        var group = document.querySelector('.opac-event-tabs');
+        setupRadioGroup(group, tabs);
+        var live = makeLiveRegion(group);
+
         function applyFilter(cat) {
             var children = agenda.children;
             var currentLabel = null;
             var labelHasVisible = false;
+            var visible = 0;
 
             function commit() {
                 if (currentLabel) {
@@ -180,25 +236,22 @@
                     el.style.display = match ? '' : 'none';
                     if (match) {
                         labelHasVisible = true;
+                        visible++;
                     }
                 }
             }
             commit();
+            return visible;
         }
 
         tabs.forEach(function (tab) {
             tab.addEventListener('click', function () {
-                tabs.forEach(function (t) {
-                    t.classList.remove('is-active');
-                    t.setAttribute('aria-selected', 'false');
-                });
-                tab.classList.add('is-active');
-                tab.setAttribute('aria-selected', 'true');
-                applyFilter(tab.getAttribute('data-cat'));
+                setActiveRadio(tabs, tab);
+                announceCount(live, applyFilter(tab.getAttribute('data-cat')));
             });
         });
 
-        bindTablistKeyboard(tabs);
+        bindRadioKeyboard(tabs);
     }
 
     /**
@@ -290,17 +343,47 @@
             lbCap.textContent = cap;
             lbCap.style.display = cap ? '' : 'none';
         }
+        // Rend inerte tout ce qui est derriere l'overlay (les freres de la
+        // lightbox dans le body) : le contenu de fond n'est plus focusable ni
+        // expose aux lecteurs d'ecran tant que le dialog est ouvert. Complete
+        // aria-modal, dont le support reste inegal.
+        //
+        // On ne memorise QUE les elements que la lightbox a elle-meme rendus
+        // inertes (on saute ceux deja inertes) et on ne retire inert qu'a ceux-la
+        // a la fermeture : un element inerte pour une autre raison garde son etat.
+        var inerted = [];
+        function setBackgroundInert(on) {
+            if (on) {
+                inerted = [];
+                Array.prototype.forEach.call(document.body.children, function (el) {
+                    if (el === lb || el.hasAttribute('inert')) {
+                        return;
+                    }
+                    el.setAttribute('inert', '');
+                    inerted.push(el);
+                });
+            } else {
+                inerted.forEach(function (el) { el.removeAttribute('inert'); });
+                inerted = [];
+            }
+        }
         function open(i) {
-            lastFocus = document.activeElement;
+            // On memorise la vignette declencheuse elle-meme (items[i]), pas
+            // document.activeElement : un clic souris sur un <a>/<button> ne le
+            // focalise pas dans tous les navigateurs (Safari), le focus reviendrait
+            // alors au body. items[i] garantit le retour sur la bonne vignette.
+            lastFocus = items[i] || document.activeElement;
             show(i);
             lb.classList.add('is-open');
             // Verrou de scroll : empeche le fond de defiler derriere l'overlay.
             document.body.classList.add('opac-no-scroll');
+            setBackgroundInert(true);
             lb.querySelector('.opac-lightbox-close').focus();
         }
         function close() {
             lb.classList.remove('is-open');
             document.body.classList.remove('opac-no-scroll');
+            setBackgroundInert(false);
             lbImg.setAttribute('src', '');
             if (lastFocus && lastFocus.focus) {
                 lastFocus.focus();
@@ -308,7 +391,9 @@
         }
 
         items.forEach(function (el, i) {
-            el.addEventListener('click', function () { open(i); });
+            // .opac-gallery-item est un lien vers l'image pleine taille (repli
+            // sans JS) : on annule la navigation pour ouvrir la lightbox a la place.
+            el.addEventListener('click', function (e) { e.preventDefault(); open(i); });
         });
         lb.querySelector('.opac-lightbox-close').addEventListener('click', close);
         lb.querySelector('.opac-lightbox-prev').addEventListener('click', function () { show(current - 1); });
@@ -321,6 +406,24 @@
             if (e.key === 'Escape') { close(); }
             else if (e.key === 'ArrowLeft') { show(current - 1); }
             else if (e.key === 'ArrowRight') { show(current + 1); }
+            else if (e.key === 'Tab') {
+                // Piege de focus : Tab cyclique sur les commandes visibles de la
+                // lightbox (offsetParent != null exclut prev/next masques en bord
+                // de galerie). Empeche le focus de s'echapper vers le fond inerte.
+                var f = Array.prototype.filter.call(
+                    lb.querySelectorAll('button'),
+                    function (el) { return el.offsetParent !== null; }
+                );
+                if (!f.length) { return; }
+                var first = f[0], last = f[f.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
         });
 
         // Swipe horizontal sur la lightbox (mobile) : photo precedente / suivante.

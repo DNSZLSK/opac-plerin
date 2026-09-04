@@ -496,8 +496,12 @@ class OPAC_Blocks {
             $thumb_id = get_post_thumbnail_id( $item->ID );
             $full     = (string) wp_get_attachment_image_url( $thumb_id, 'large' );
             $img      = get_the_post_thumbnail( $item->ID, 'medium', [ 'alt' => $alt, 'loading' => 'lazy', 'decoding' => 'async' ] );
+            // Lien vers l'image pleine taille (pas un <button>) : sans JS, le
+            // clic ouvre directement la grande image (vraie amelioration
+            // progressive). Avec JS, opac.js intercepte (preventDefault) pour
+            // ouvrir la lightbox. href et data-full pointent la meme URL.
             $cards   .= sprintf(
-                '<button type="button" class="opac-gallery-item" data-full="%s" data-caption="%s" aria-label="%s">%s</button>',
+                '<a class="opac-gallery-item" href="%1$s" data-full="%1$s" data-caption="%2$s" aria-label="%3$s">%4$s</a>',
                 esc_url( $full ),
                 esc_attr( $caption ),
                 esc_attr( sprintf( __( 'Agrandir la photo : %s', 'opac-custom' ), $alt ) ),

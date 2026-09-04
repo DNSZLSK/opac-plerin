@@ -82,6 +82,13 @@
     border: none;
     cursor: pointer;
     transition: background var(--opac-transition);
+    /* <summary> : on retire le marqueur natif (triangle), on garde notre ▾ */
+    list-style: none;
+    user-select: none;
+}
+
+.opac-cta-btn::-webkit-details-marker {
+    display: none;
 }
 
 .opac-cta-btn:hover,
@@ -100,11 +107,8 @@
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     z-index: 100;
-    display: none;
-}
-
-.opac-cta[data-open="true"] .opac-cta-dd {
-    display: block;
+    /* Affichage gere nativement par <details> : masque quand ferme, visible
+       quand <details open>. Pas de display:none ni de regle [data-open]. */
 }
 
 .opac-cta-dd a {
@@ -1041,6 +1045,26 @@ a.opac-card-link:hover,
     background: var(--opac-ink);
     color: var(--opac-card);
     border-color: var(--opac-ink);
+}
+
+/* Barres de filtres (periode / categorie) : le filtrage est 100% JS. Sans JS
+   les boutons seraient des commandes inertes, on masque donc la barre tant que
+   la classe js n'est pas posee sur <html> (script inline en <head>, cf.
+   functions.php). Avec JS, aucune regle ne s'applique : layout flex natif conserve. */
+html:not(.js) .opac-stage-tabs,
+html:not(.js) .opac-event-tabs {
+    display: none;
+}
+
+/* Utilitaire : contenu reserve aux lecteurs d'ecran (zones aria-live des filtres). */
+.opac-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 /* Selecteur de saison (menu deroulant) au-dessus des onglets de periode.

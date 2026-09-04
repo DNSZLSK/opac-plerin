@@ -28,15 +28,20 @@
     <!-- /wp:navigation -->
 
     <!-- wp:html -->
-    <div class="opac-cta">
-        <button class="opac-cta-btn" type="button" aria-haspopup="true" aria-expanded="false">S'inscrire ▾</button>
-        <div class="opac-cta-dd" role="menu">
-            <a href="/ateliers/" role="menuitem">Atelier à l'année</a>
+    <!-- Disclosure natif <details> : fonctionne SANS JavaScript (ouverture,
+         clavier, tactile) ; le summary expose nativement l'etat ouvert/ferme.
+         Le panneau ne contient que des liens de navigation (pas un role=menu,
+         inadapte a des liens). Le JS n'ajoute que la fermeture au clic exterieur
+         et a Echap. -->
+    <details class="opac-cta">
+        <summary class="opac-cta-btn">S'inscrire ▾</summary>
+        <div class="opac-cta-dd">
+            <a href="/ateliers/">Atelier à l'année</a>
             <span class="opac-cta-dd-sub">Inscription annuelle, sept. à juillet</span>
-            <a href="/ephemeres/" role="menuitem">Atelier éphémère</a>
+            <a href="/ephemeres/">Atelier éphémère</a>
             <span class="opac-cta-dd-sub">Activités ponctuelles &amp; vacances</span>
         </div>
-    </div>
+    </details>
     <!-- /wp:html -->
 
 </div>
