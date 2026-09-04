@@ -1493,6 +1493,7 @@ class OPAC_Blocks {
                 'champs'      => __( 'Merci de remplir tous les champs obligatoires.', 'opac-custom' ),
                 'email'       => __( 'L\'adresse email saisie n\'est pas valide.', 'opac-custom' ),
                 'atelier'     => __( 'Merci de sélectionner un atelier ou un stage.', 'opac-custom' ),
+                'creneau'     => __( 'Le créneau sélectionné n\'est plus disponible. Merci de rouvrir la page de l\'atelier et de choisir un créneau.', 'opac-custom' ),
                 'rgpd'        => __( 'Vous devez accepter l\'utilisation de vos données pour soumettre la demande.', 'opac-custom' ),
                 'doublon'     => __( 'Une demande a déjà été enregistrée récemment. Merci de patienter quelques instants.', 'opac-custom' ),
                 'enregistrement' => __( 'L\'enregistrement a échoué. Merci de réessayer ou de nous contacter par téléphone.', 'opac-custom' ),
