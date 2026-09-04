@@ -206,7 +206,10 @@ class OPAC_Inscriptions {
         } else {
             $cible_type = 'opac_stage';
         }
-        if ( ! $cible_post || $cible_post->post_type !== $cible_type ) {
+        // On exige le statut publish : un brouillon/prive/corbeille n'est pas
+        // proposable au public, donc une inscription vers un tel id (connu par
+        // devinette) doit etre refusee comme une cible invalide.
+        if ( ! $cible_post || $cible_post->post_type !== $cible_type || 'publish' !== $cible_post->post_status ) {
             wp_safe_redirect( add_query_arg( 'erreur', 'atelier', $back ) );
             exit;
         }
@@ -229,8 +232,9 @@ class OPAC_Inscriptions {
             // Check explicite par type (pas de else catch-all) : si un jour un
             // autre CPT devient inscriptible avec un creneau_id, on ne tente pas
             // de le resoudre contre une meta qu'il ne possede pas.
-            $struct   = [];
-            $labeller = null;
+            $creneau_resolu = false;
+            $struct         = [];
+            $labeller       = null;
             if ( 'opac_atelier' === $cible_type ) {
                 $struct   = get_post_meta( $cible_id, 'opac_creneaux', true );
                 $labeller = [ 'OPAC_Calendar', 'creneau_label' ];
@@ -247,10 +251,19 @@ class OPAC_Inscriptions {
                         } else {
                             $creneau_tarif = 0;
                         }
-                        $auto_waitlist = self::creneau_is_full( $cible_id, $c );
+                        $auto_waitlist  = self::creneau_is_full( $cible_id, $c );
+                        $creneau_resolu = true;
                         break;
                     }
                 }
+            }
+            // Un creneau_id soumis mais introuvable dans la structure de la
+            // cible est forge (ou supprime entre l'affichage et l'envoi) : on
+            // refuse plutot que d'enregistrer un id fantome, qui serait compte
+            // comme capacite illimitee et echapperait a la liste d'attente.
+            if ( ! $creneau_resolu ) {
+                wp_safe_redirect( add_query_arg( 'erreur', 'creneau', $back ) );
+                exit;
             }
         }
 

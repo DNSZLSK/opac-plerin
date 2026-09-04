@@ -1417,6 +1417,36 @@ class OPAC_Blocks {
     }
 
     /**
+     * Resout LA cible (atelier / stage) depuis l'URL en ne gardant qu'un id
+     * PUBLIE et du bon type. Un id invalide (brouillon, prive, corbeille, mauvais
+     * type, inexistant, devine ou forge) est ecarte. Source unique (isolee et
+     * testable, pas "pure" : lit $_GET, interroge WordPress) reutilisee par le
+     * formulaire ET la confirmation, pour que tout l'aval voie soit une cible
+     * valide unique, soit "pas de cible" (au lieu d'un contexte a moitie rendu
+     * ou d'un titre de contenu non publie).
+     *
+     * Invariant d'exclusivite : au plus UNE cible non nulle. Si atelier et stage
+     * sont tous deux valides dans l'URL, l'atelier l'emporte (priorite historique) ;
+     * on renvoie donc toujours [id, 0], [0, id] ou [0, 0], jamais deux ids.
+     *
+     * @return int[] [ atelier_id, stage_id ].
+     */
+    private static function resolve_public_target() {
+        // is_scalar avant absint : ?atelier[]=10 arriverait en tableau, et
+        // absint( array ) le coercerait a 1 (donc l'id de post 1). On ecarte
+        // toute valeur non scalaire en la traitant comme absente.
+        $atelier_id = ( isset( $_GET['atelier'] ) && is_scalar( $_GET['atelier'] ) ) ? absint( $_GET['atelier'] ) : 0;
+        if ( $atelier_id && 'opac_atelier' === get_post_type( $atelier_id ) && 'publish' === get_post_status( $atelier_id ) ) {
+            return [ $atelier_id, 0 ];
+        }
+        $stage_id = ( isset( $_GET['stage'] ) && is_scalar( $_GET['stage'] ) ) ? absint( $_GET['stage'] ) : 0;
+        if ( $stage_id && 'opac_stage' === get_post_type( $stage_id ) && 'publish' === get_post_status( $stage_id ) ) {
+            return [ 0, $stage_id ];
+        }
+        return [ 0, 0 ];
+    }
+
+    /**
      * Etat de confirmation apres une inscription reussie (cf. render_inscription_form).
      * On confirme l'action, en nommant l'atelier/stage si transmis par la redirection,
      * et on propose la suite SANS reafficher le formulaire : l'action est terminee,
@@ -1425,9 +1455,11 @@ class OPAC_Blocks {
     private static function inscription_confirmation() {
         $waitlist = isset( $_GET['attente'] ) && '1' === $_GET['attente'];
 
-        $cible_id = isset( $_GET['atelier'] )
-            ? absint( $_GET['atelier'] )
-            : ( isset( $_GET['stage'] ) ? absint( $_GET['stage'] ) : 0 );
+        // Cible validee (publish + bon type) : une URL forgee ?envoye=1&atelier=ID
+        // pointant un brouillon/prive/autre type est normalisee a 0, donc pas de
+        // titre de contenu non publie dans le message de confirmation.
+        list( $atelier_id, $stage_id ) = self::resolve_public_target();
+        $cible_id = $atelier_id ? $atelier_id : $stage_id;
         $cible    = $cible_id ? get_the_title( $cible_id ) : '';
 
         if ( $waitlist ) {
@@ -1493,6 +1525,7 @@ class OPAC_Blocks {
                 'champs'      => __( 'Merci de remplir tous les champs obligatoires.', 'opac-custom' ),
                 'email'       => __( 'L\'adresse email saisie n\'est pas valide.', 'opac-custom' ),
                 'atelier'     => __( 'Merci de sélectionner un atelier ou un stage.', 'opac-custom' ),
+                'creneau'     => __( 'Le créneau sélectionné n\'est plus disponible. Merci de rouvrir la page de l\'atelier et de choisir un créneau.', 'opac-custom' ),
                 'rgpd'        => __( 'Vous devez accepter l\'utilisation de vos données pour soumettre la demande.', 'opac-custom' ),
                 'doublon'     => __( 'Une demande a déjà été enregistrée récemment. Merci de patienter quelques instants.', 'opac-custom' ),
                 'enregistrement' => __( 'L\'enregistrement a échoué. Merci de réessayer ou de nous contacter par téléphone.', 'opac-custom' ),
@@ -1502,9 +1535,10 @@ class OPAC_Blocks {
             $notice = '<div class="opac-form-notice is-error" role="alert" aria-live="assertive">' . esc_html( $msg ) . '</div>';
         }
 
-        // Contexte pre-rempli depuis l'URL.
-        $atelier_id = isset( $_GET['atelier'] ) ? absint( $_GET['atelier'] ) : 0;
-        $stage_id   = isset( $_GET['stage'] )   ? absint( $_GET['stage'] )   : 0;
+        // Contexte pre-rempli depuis l'URL, deja normalise : un id invalide ou
+        // non publie vaut 0, donc le flux ci-dessous (contexte -> sinon select)
+        // se comporte comme s'il n'y avait pas de cible.
+        list( $atelier_id, $stage_id ) = self::resolve_public_target();
 
         $context_html = '';
         $hidden_inputs = '';
@@ -1512,7 +1546,9 @@ class OPAC_Blocks {
         $creneaux_struct = [];
         $seances_struct = [];
 
-        if ( $atelier_id && get_post_type( $atelier_id ) === 'opac_atelier' ) {
+        // $atelier_id / $stage_id sont deja valides (publish + bon type) via
+        // resolve_public_target() : plus besoin de re-verifier ici.
+        if ( $atelier_id ) {
             $titre  = get_the_title( $atelier_id );
             $tarif  = (int) get_post_meta( $atelier_id, 'opac_tarif_annuel', true );
             $struct = get_post_meta( $atelier_id, 'opac_creneaux', true );
@@ -1540,7 +1576,7 @@ class OPAC_Blocks {
                 $tarif > 0 ? '<div class="opac-form-context-tarif">' . sprintf( esc_html__( 'Tarif annuel : %d € + adhésion', 'opac-custom' ), $tarif ) . '</div>' : ''
             );
             $hidden_inputs = '<input type="hidden" name="opac_atelier_id" value="' . esc_attr( $atelier_id ) . '" />';
-        } elseif ( $stage_id && get_post_type( $stage_id ) === 'opac_stage' ) {
+        } elseif ( $stage_id ) {
             $titre = get_the_title( $stage_id );
             $tarif = (int) get_post_meta( $stage_id, 'opac_tarif_seance', true );
             // Seances datees (modele hybride) : si l'ephemere en a, le visiteur
