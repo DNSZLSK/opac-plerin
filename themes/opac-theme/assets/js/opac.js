@@ -368,7 +368,11 @@
             }
         }
         function open(i) {
-            lastFocus = document.activeElement;
+            // On memorise la vignette declencheuse elle-meme (items[i]), pas
+            // document.activeElement : un clic souris sur un <a>/<button> ne le
+            // focalise pas dans tous les navigateurs (Safari), le focus reviendrait
+            // alors au body. items[i] garantit le retour sur la bonne vignette.
+            lastFocus = items[i] || document.activeElement;
             show(i);
             lb.classList.add('is-open');
             // Verrou de scroll : empeche le fond de defiler derriere l'overlay.
