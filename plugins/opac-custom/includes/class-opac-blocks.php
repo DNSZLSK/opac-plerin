@@ -1423,25 +1423,30 @@ class OPAC_Blocks {
      * re-proposer une inscription seme le doute et provoque des doublons.
      */
     /**
-     * Resout la cible (atelier / stage) depuis l'URL en ne gardant que des IDs
-     * PUBLIES et du bon type. Un id invalide (brouillon, prive, mauvais type,
-     * inexistant, devine ou forge) est normalise a 0. Source unique reutilisee
-     * par le formulaire ET la confirmation : tout l'aval le voit alors comme
-     * "pas de cible" au lieu d'un contexte a moitie rendu (aucun contexte, aucun
-     * champ cache, aucun select) ou d'un titre de contenu non publie affiche.
+     * Resout LA cible (atelier / stage) depuis l'URL en ne gardant qu'un id
+     * PUBLIE et du bon type. Un id invalide (brouillon, prive, corbeille, mauvais
+     * type, inexistant, devine ou forge) est ecarte. Source unique (isolee et
+     * testable, pas "pure" : lit $_GET, interroge WordPress) reutilisee par le
+     * formulaire ET la confirmation, pour que tout l'aval voie soit une cible
+     * valide unique, soit "pas de cible" (au lieu d'un contexte a moitie rendu
+     * ou d'un titre de contenu non publie).
      *
-     * @return int[] [ atelier_id, stage_id ], chacun 0 si absent ou invalide.
+     * Invariant d'exclusivite : au plus UNE cible non nulle. Si atelier et stage
+     * sont tous deux valides dans l'URL, l'atelier l'emporte (priorite historique) ;
+     * on renvoie donc toujours [id, 0], [0, id] ou [0, 0], jamais deux ids.
+     *
+     * @return int[] [ atelier_id, stage_id ].
      */
     private static function resolve_public_target() {
         $atelier_id = isset( $_GET['atelier'] ) ? absint( $_GET['atelier'] ) : 0;
-        $stage_id   = isset( $_GET['stage'] )   ? absint( $_GET['stage'] )   : 0;
-        if ( $atelier_id && ( 'opac_atelier' !== get_post_type( $atelier_id ) || 'publish' !== get_post_status( $atelier_id ) ) ) {
-            $atelier_id = 0;
+        if ( $atelier_id && 'opac_atelier' === get_post_type( $atelier_id ) && 'publish' === get_post_status( $atelier_id ) ) {
+            return [ $atelier_id, 0 ];
         }
-        if ( $stage_id && ( 'opac_stage' !== get_post_type( $stage_id ) || 'publish' !== get_post_status( $stage_id ) ) ) {
-            $stage_id = 0;
+        $stage_id = isset( $_GET['stage'] ) ? absint( $_GET['stage'] ) : 0;
+        if ( $stage_id && 'opac_stage' === get_post_type( $stage_id ) && 'publish' === get_post_status( $stage_id ) ) {
+            return [ 0, $stage_id ];
         }
-        return [ $atelier_id, $stage_id ];
+        return [ 0, 0 ];
     }
 
     private static function inscription_confirmation() {
