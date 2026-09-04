@@ -1513,7 +1513,11 @@ class OPAC_Blocks {
         $creneaux_struct = [];
         $seances_struct = [];
 
-        if ( $atelier_id && get_post_type( $atelier_id ) === 'opac_atelier' ) {
+        // On exige le statut publish, comme le handler de soumission : sans ce
+        // controle, un ?atelier=ID de brouillon/prive (ID devine) afficherait
+        // titre, tarif et creneaux d'un contenu non publie, puis serait rejete
+        // a l'envoi. Un id non publie retombe sur le select (publish-only) plus bas.
+        if ( $atelier_id && get_post_type( $atelier_id ) === 'opac_atelier' && 'publish' === get_post_status( $atelier_id ) ) {
             $titre  = get_the_title( $atelier_id );
             $tarif  = (int) get_post_meta( $atelier_id, 'opac_tarif_annuel', true );
             $struct = get_post_meta( $atelier_id, 'opac_creneaux', true );
@@ -1541,7 +1545,7 @@ class OPAC_Blocks {
                 $tarif > 0 ? '<div class="opac-form-context-tarif">' . sprintf( esc_html__( 'Tarif annuel : %d € + adhésion', 'opac-custom' ), $tarif ) . '</div>' : ''
             );
             $hidden_inputs = '<input type="hidden" name="opac_atelier_id" value="' . esc_attr( $atelier_id ) . '" />';
-        } elseif ( $stage_id && get_post_type( $stage_id ) === 'opac_stage' ) {
+        } elseif ( $stage_id && get_post_type( $stage_id ) === 'opac_stage' && 'publish' === get_post_status( $stage_id ) ) {
             $titre = get_the_title( $stage_id );
             $tarif = (int) get_post_meta( $stage_id, 'opac_tarif_seance', true );
             // Seances datees (modele hybride) : si l'ephemere en a, le visiteur
