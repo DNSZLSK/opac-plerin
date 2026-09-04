@@ -7,14 +7,31 @@ Ce dépôt versionne uniquement `wp-content/` (thème + plugin custom). Plusieur
 À la racine du site (au même niveau que `wp-config.php`), avant le bloc `# BEGIN WordPress`, ajouter :
 
 ```apache
+# Domaine canonique : HTTPS sans www. La condition sur le host evite de
+# rediriger un environnement local qui reutiliserait ce fichier.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # www -> domaine canonique, quel que soit le schema entrant.
+    RewriteCond %{HTTP_HOST} ^www\.opacplerin\.fr$ [NC]
+    RewriteRule ^ https://opacplerin.fr%{REQUEST_URI} [R=301,L]
+
+    # HTTP -> HTTPS. Le second test evite une boucle si le TLS est termine
+    # par un reverse proxy qui transmet X-Forwarded-Proto=https a Apache.
+    RewriteCond %{HTTP_HOST} ^opacplerin\.fr$ [NC]
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+    RewriteRule ^ https://opacplerin.fr%{REQUEST_URI} [R=301,L]
+</IfModule>
+
 # OPAC pre-prod hardening : bloque les endpoints sensibles WP.
-<FilesMatch "^(xmlrpc\.php|readme\.html|install\.php|wp-config\.php|wp-config-sample\.php)$">
+<FilesMatch "^(xmlrpc\.php|readme\.html|license\.txt|install\.php|wp-config\.php|wp-config-sample\.php)$">
     Require all denied
 </FilesMatch>
 
 # Fallback Apache 2.2
 <IfModule !mod_authz_core.c>
-    <FilesMatch "^(xmlrpc\.php|readme\.html|install\.php|wp-config\.php|wp-config-sample\.php)$">
+    <FilesMatch "^(xmlrpc\.php|readme\.html|license\.txt|install\.php|wp-config\.php|wp-config-sample\.php)$">
         Order allow,deny
         Deny from all
     </FilesMatch>
@@ -24,7 +41,14 @@ Ce dépôt versionne uniquement `wp-content/` (thème + plugin custom). Plusieur
 **Pour nginx** (si OVH propose nginx au lieu d'Apache) :
 
 ```nginx
-location ~ ^/(xmlrpc\.php|readme\.html|install\.php|wp-config\.php|wp-config-sample\.php)$ {
+if ($host = www.opacplerin.fr) {
+    return 301 https://opacplerin.fr$request_uri;
+}
+
+# A placer dans le server HTTP port 80.
+return 301 https://opacplerin.fr$request_uri;
+
+location ~ ^/(xmlrpc\.php|readme\.html|license\.txt|install\.php|wp-config\.php|wp-config-sample\.php)$ {
     deny all;
     return 403;
 }

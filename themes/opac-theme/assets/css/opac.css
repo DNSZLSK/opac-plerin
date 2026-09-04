@@ -401,7 +401,7 @@ a.opac-card-link:hover,
 
 .opac-tag-ok       { background: var(--opac-teal-light);   color: var(--opac-teal); }
 .opac-tag-full     { background: var(--opac-accent-light); color: var(--opac-accent); }
-.opac-tag-few      { background: var(--opac-amber-light);  color: var(--opac-amber); }
+.opac-tag-few      { background: var(--opac-amber-light);  color: #765014; }
 .opac-tag-neutral  { background: #eee;                     color: #666; }
 .opac-tag-past     { background: #ece9e4;                  color: #8c877e; }
 
@@ -963,7 +963,7 @@ a.opac-card-link:hover,
 .opac-period-automne   .opac-stage-date { background-color: var(--opac-accent-text) !important; }
 .opac-period-hiver     .opac-stage-date { background-color: var(--opac-teal) !important; }
 .opac-period-printemps .opac-stage-date { background-color: var(--wp--preset--color--mauve) !important; }
-.opac-period-ete       .opac-stage-date { background-color: var(--wp--preset--color--gold) !important; color: #4a3a10 !important; }
+.opac-period-ete       .opac-stage-date { background-color: var(--wp--preset--color--gold) !important; color: #332600 !important; }
 
 /* Separateur "Ephemeres passes" entre le groupe a-venir et le groupe passe
    (emis par render_ephemeres_list seulement si les deux groupes existent).
@@ -2631,7 +2631,8 @@ body {
     display: inline-block;
     margin: 8px 0 0 28px;
     font-size: 12px;
-    color: var(--wp--preset--color--accent);
+    color: var(--opac-accent-text, #a64a30);
+    text-decoration: underline;
 }
 
 /* Mention d'information sous le bouton du formulaire de contact. */
@@ -2643,7 +2644,15 @@ body {
 }
 
 .opac-form-legal a {
-    color: var(--wp--preset--color--accent);
+    color: var(--opac-accent-text, #a64a30);
+    text-decoration: underline;
+}
+
+/* Un lien dans un paragraphe doit rester identifiable sans perception de la
+   couleur seule. Couvre notamment la signature du footer. */
+.has-muted-color a {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
 }
 
 /* Precision "representant legal" sous la case mineur. */

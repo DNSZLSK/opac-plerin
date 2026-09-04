@@ -46,6 +46,7 @@ class OPAC_SEO {
         // opac_gallery_item) pour eviter les 404 crawler.
         add_filter( 'wp_sitemaps_post_types', [ __CLASS__, 'filter_sitemap_post_types' ] );
         add_filter( 'wp_sitemaps_taxonomies', [ __CLASS__, 'filter_sitemap_taxonomies' ] );
+        add_filter( 'wp_sitemaps_add_provider', [ __CLASS__, 'filter_sitemap_provider' ], 10, 2 );
     }
 
     public static function render_head() {
@@ -486,15 +487,18 @@ class OPAC_SEO {
     }
 
     public static function filter_robots( $robots ) {
-        if ( is_page( 'inscription' ) ) {
+        if ( is_page( 'inscription' ) || is_author() || is_singular( 'post' ) ) {
             $robots['noindex'] = true;
             $robots['nofollow'] = false;
+            unset( $robots['index'] );
             unset( $robots['max-image-preview'] );
         }
         return $robots;
     }
 
     public static function filter_sitemap_post_types( $post_types ) {
+        // Les actualites utilisent opac_event, jamais les articles standards.
+        unset( $post_types['post'] );
         // CPTs sans single template = 404 crawler -> on les retire.
         unset( $post_types['opac_person'] );
         unset( $post_types['opac_gallery_item'] );
@@ -502,9 +506,20 @@ class OPAC_SEO {
     }
 
     public static function filter_sitemap_taxonomies( $taxonomies ) {
+        // Taxonomies des articles standards, inutilisees comme le type post.
+        unset( $taxonomies['category'] );
+        unset( $taxonomies['post_tag'] );
         // Pas d'archive frontend pour ces taxonomies = on les retire.
         unset( $taxonomies['opac_person_type'] );
         unset( $taxonomies['opac_inscription_status'] );
         return $taxonomies;
+    }
+
+    public static function filter_sitemap_provider( $provider, $name ) {
+        // Site associatif a auteur unique : aucune archive auteur publique.
+        if ( 'users' === $name ) {
+            return false;
+        }
+        return $provider;
     }
 }
