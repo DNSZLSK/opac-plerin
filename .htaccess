@@ -21,6 +21,21 @@
 # Le HTML n'est volontairement pas cache ici : les pages doivent rester
 # fraiches (saison, places restantes, agenda).
 
+# --- Securite : desactive le listing de repertoire (Apache autoindex).
+# Sans page d'index, OVH servait "Index of /wp-content/themes/opac-theme" et
+# "/wp-content/plugins/opac-custom", exposant toute l'arborescence du code
+# maison (noms de fichiers, JS/CSS, et tout .bak/.zip/.map qui trainerait).
+# Place ici, la regle couvre uploads/, themes/ et plugins/ (Apache lit les
+# .htaccess de chaque niveau). Pour /wp-includes/ (hors wp-content, donc hors
+# de ce fichier et du deploiement), ajouter la meme ligne au .htaccess racine
+# sur OVH. Sans effet en local (nginx Flywheel ignore .htaccess).
+# Guarde par mod_autoindex : la directive n'est posee que si le module qui
+# genere le listing est charge (sinon rien a desactiver, et zero risque
+# d'erreur de config).
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
 # --- Methode principale : mod_headers (par extension, donc independante de
 # --- la table MIME du serveur, qui ne connait pas toujours woff2).
 <IfModule mod_headers.c>
