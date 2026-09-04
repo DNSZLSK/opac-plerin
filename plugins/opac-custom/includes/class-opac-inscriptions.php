@@ -26,6 +26,13 @@ class OPAC_Inscriptions {
     const ACTION_EXPORT = 'opac_insc_export';
     const ACTION_SEND_EMAIL = 'opac_insc_send_email';
     const RATE_LIMIT_S  = 60;
+    // Rate-limit par IP, en plus de l'anti-doublon par signature : plafonne le
+    // nombre de soumissions VALIDES par IP sur une fenetre glissante. Volontai-
+    // rement genereux (une famille inscrit plusieurs enfants, des foyers parta-
+    // gent une IP en CGNAT mobile) : cible le flood automatise, pas l'affluence
+    // de rentree. A resserrer si du spam reel apparait.
+    const RL_IP_WINDOW_S = 600; // 10 minutes
+    const RL_IP_MAX      = 12;  // max inscriptions creees par IP / fenetre
     // Taille d'un lot d'envoi groupe : un seul wp_mail par lot, les inscrits en
     // Bcc. Evite un message unique a plusieurs centaines de Bcc (rejet SMTP /
     // classement spam / plafond d'envoi de l'hebergeur) sur une grosse liste.
@@ -53,6 +60,45 @@ class OPAC_Inscriptions {
         // masque de la liste) + handler d'envoi.
         add_action( 'admin_post_' . self::ACTION_SEND_EMAIL, [ __CLASS__, 'handle_send_email' ] );
         add_action( 'admin_menu', [ __CLASS__, 'register_email_page' ] );
+    }
+
+    /**
+     * Rate-limit par IP : true si l'IP a deja atteint le plafond
+     * (self::RL_IP_MAX) d'inscriptions creees sur la fenetre courante. Une IP
+     * vide (inconnue) n'est jamais bloquee, pour ne pas verrouiller a l'aveugle.
+     *
+     * Best-effort, PAS un semaphore : le couple get_transient / set_transient
+     * (dans ip_bump) n'est pas atomique. Deux requetes simultanees peuvent lire
+     * la meme valeur puis ecrire le meme increment, donc un burst parallele peut
+     * franchir le plafond. Frein pragmatique contre le flood sequentiel d'un bot,
+     * suffisant pour ce site ; le vrai anti-abus a forte concurrence se pose en
+     * amont (OVH / Cloudflare), hors PHP.
+     *
+     * Interne (private) : appelee seulement par handle_submit(). Le harnais la
+     * teste par ReflectionMethod, comme OPAC_Admin::next_unique_id, pour ne pas
+     * elargir l'API publique de la classe juste pour les tests.
+     */
+    private static function ip_over_limit( $ip ) {
+        if ( '' === (string) $ip ) {
+            return false;
+        }
+        $key = 'opac_insc_ip_' . md5( (string) $ip );
+        return (int) get_transient( $key ) >= self::RL_IP_MAX;
+    }
+
+    /**
+     * Incremente le compteur IP apres une inscription reellement creee, en
+     * (re)posant le TTL a self::RL_IP_WINDOW_S : la fenetre est donc glissante
+     * (elle repart de la derniere demande acceptee). No-op si l'IP est inconnue.
+     *
+     * Interne (private) : voir ip_over_limit(), meme raison.
+     */
+    private static function ip_bump( $ip ) {
+        if ( '' === (string) $ip ) {
+            return;
+        }
+        $key = 'opac_insc_ip_' . md5( (string) $ip );
+        set_transient( $key, (int) get_transient( $key ) + 1, self::RL_IP_WINDOW_S );
     }
 
     public static function handle_submit() {
@@ -169,11 +215,16 @@ class OPAC_Inscriptions {
             exit;
         }
 
-        // Rate-limit transient : bloque uniquement la soumission strictement
-        // identique (double-clic / refresh). La cle inclut atelier/stage +
-        // creneau + nom + prenom pour qu'un meme parent (meme email + meme IP)
-        // puisse inscrire plusieurs enfants, ou lui-meme, voire des freres au
-        // meme creneau, sans faux "doublon". L'anti-bot reste honeypot + nonce.
+        // Anti-doublon (signature exacte) : bloque uniquement la soumission
+        // strictement identique (double-clic / refresh). La cle inclut atelier/
+        // stage + creneau + nom + prenom pour qu'un meme parent (meme email +
+        // meme IP) puisse inscrire plusieurs enfants, ou lui-meme, voire des
+        // freres au meme creneau, sans faux "doublon". Le vrai frein anti-flood
+        // est le rate-limit par IP plus bas ; ici on se contente d'eviter les
+        // envois en double. Le transient est pose des maintenant (protege le
+        // double-clic pendant la validation), puis PURGE sur chaque chemin
+        // d'echec en aval (cible/creneau invalide, insert rate, quota IP) pour
+        // ne pas bloquer un retour legitime apres correction.
         if ( class_exists( 'OPAC_Security' ) ) {
             $ip = OPAC_Security::get_client_ip();
         } elseif ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
@@ -210,6 +261,7 @@ class OPAC_Inscriptions {
         // proposable au public, donc une inscription vers un tel id (connu par
         // devinette) doit etre refusee comme une cible invalide.
         if ( ! $cible_post || $cible_post->post_type !== $cible_type || 'publish' !== $cible_post->post_status ) {
+            delete_transient( $rl_key );
             wp_safe_redirect( add_query_arg( 'erreur', 'atelier', $back ) );
             exit;
         }
@@ -262,9 +314,21 @@ class OPAC_Inscriptions {
             // refuse plutot que d'enregistrer un id fantome, qui serait compte
             // comme capacite illimitee et echapperait a la liste d'attente.
             if ( ! $creneau_resolu ) {
+                delete_transient( $rl_key );
                 wp_safe_redirect( add_query_arg( 'erreur', 'creneau', $back ) );
                 exit;
             }
+        }
+
+        // Rate-limit par IP, independant du contenu du formulaire : contrairement
+        // a l'anti-doublon (signature exacte, contournable en variant un champ),
+        // il plafonne les inscriptions creees depuis une meme IP. Verifie juste
+        // avant l'insert + l'email (le cout reel). Voir ip_over_limit() pour la
+        // reserve d'atomicite.
+        if ( self::ip_over_limit( $ip ) ) {
+            delete_transient( $rl_key ); // ne pas laisser un faux "doublon" par-dessus le refus
+            wp_safe_redirect( add_query_arg( 'erreur', 'trop', $back ) );
+            exit;
         }
 
         // Cree le post opac_inscription.
@@ -275,9 +339,15 @@ class OPAC_Inscriptions {
             'post_title'  => $insc_title,
         ] );
         if ( ! $post_id || is_wp_error( $post_id ) ) {
+            delete_transient( $rl_key );
             wp_safe_redirect( add_query_arg( 'erreur', 'enregistrement', $back ) );
             exit;
         }
+
+        // Inscription reellement creee : incremente le compteur IP. SEUL site
+        // d'incrementation, place APRES le succes de l'insert : une cible/creneau
+        // invalide ou un insert rate ne compte donc jamais dans le quota IP.
+        self::ip_bump( $ip );
 
         update_post_meta( $post_id, 'opac_insc_nom',            $nom );
         update_post_meta( $post_id, 'opac_insc_prenom',         $prenom );
