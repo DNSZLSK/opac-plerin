@@ -1422,12 +1422,36 @@ class OPAC_Blocks {
      * et on propose la suite SANS reafficher le formulaire : l'action est terminee,
      * re-proposer une inscription seme le doute et provoque des doublons.
      */
+    /**
+     * Resout la cible (atelier / stage) depuis l'URL en ne gardant que des IDs
+     * PUBLIES et du bon type. Un id invalide (brouillon, prive, mauvais type,
+     * inexistant, devine ou forge) est normalise a 0. Source unique reutilisee
+     * par le formulaire ET la confirmation : tout l'aval le voit alors comme
+     * "pas de cible" au lieu d'un contexte a moitie rendu (aucun contexte, aucun
+     * champ cache, aucun select) ou d'un titre de contenu non publie affiche.
+     *
+     * @return int[] [ atelier_id, stage_id ], chacun 0 si absent ou invalide.
+     */
+    private static function resolve_public_target() {
+        $atelier_id = isset( $_GET['atelier'] ) ? absint( $_GET['atelier'] ) : 0;
+        $stage_id   = isset( $_GET['stage'] )   ? absint( $_GET['stage'] )   : 0;
+        if ( $atelier_id && ( 'opac_atelier' !== get_post_type( $atelier_id ) || 'publish' !== get_post_status( $atelier_id ) ) ) {
+            $atelier_id = 0;
+        }
+        if ( $stage_id && ( 'opac_stage' !== get_post_type( $stage_id ) || 'publish' !== get_post_status( $stage_id ) ) ) {
+            $stage_id = 0;
+        }
+        return [ $atelier_id, $stage_id ];
+    }
+
     private static function inscription_confirmation() {
         $waitlist = isset( $_GET['attente'] ) && '1' === $_GET['attente'];
 
-        $cible_id = isset( $_GET['atelier'] )
-            ? absint( $_GET['atelier'] )
-            : ( isset( $_GET['stage'] ) ? absint( $_GET['stage'] ) : 0 );
+        // Cible validee (publish + bon type) : une URL forgee ?envoye=1&atelier=ID
+        // pointant un brouillon/prive/autre type est normalisee a 0, donc pas de
+        // titre de contenu non publie dans le message de confirmation.
+        list( $atelier_id, $stage_id ) = self::resolve_public_target();
+        $cible_id = $atelier_id ? $atelier_id : $stage_id;
         $cible    = $cible_id ? get_the_title( $cible_id ) : '';
 
         if ( $waitlist ) {
@@ -1503,9 +1527,10 @@ class OPAC_Blocks {
             $notice = '<div class="opac-form-notice is-error" role="alert" aria-live="assertive">' . esc_html( $msg ) . '</div>';
         }
 
-        // Contexte pre-rempli depuis l'URL.
-        $atelier_id = isset( $_GET['atelier'] ) ? absint( $_GET['atelier'] ) : 0;
-        $stage_id   = isset( $_GET['stage'] )   ? absint( $_GET['stage'] )   : 0;
+        // Contexte pre-rempli depuis l'URL, deja normalise : un id invalide ou
+        // non publie vaut 0, donc le flux ci-dessous (contexte -> sinon select)
+        // se comporte comme s'il n'y avait pas de cible.
+        list( $atelier_id, $stage_id ) = self::resolve_public_target();
 
         $context_html = '';
         $hidden_inputs = '';
@@ -1513,11 +1538,9 @@ class OPAC_Blocks {
         $creneaux_struct = [];
         $seances_struct = [];
 
-        // On exige le statut publish, comme le handler de soumission : sans ce
-        // controle, un ?atelier=ID de brouillon/prive (ID devine) afficherait
-        // titre, tarif et creneaux d'un contenu non publie, puis serait rejete
-        // a l'envoi. Un id non publie retombe sur le select (publish-only) plus bas.
-        if ( $atelier_id && get_post_type( $atelier_id ) === 'opac_atelier' && 'publish' === get_post_status( $atelier_id ) ) {
+        // $atelier_id / $stage_id sont deja valides (publish + bon type) via
+        // resolve_public_target() : plus besoin de re-verifier ici.
+        if ( $atelier_id ) {
             $titre  = get_the_title( $atelier_id );
             $tarif  = (int) get_post_meta( $atelier_id, 'opac_tarif_annuel', true );
             $struct = get_post_meta( $atelier_id, 'opac_creneaux', true );
@@ -1545,7 +1568,7 @@ class OPAC_Blocks {
                 $tarif > 0 ? '<div class="opac-form-context-tarif">' . sprintf( esc_html__( 'Tarif annuel : %d € + adhésion', 'opac-custom' ), $tarif ) . '</div>' : ''
             );
             $hidden_inputs = '<input type="hidden" name="opac_atelier_id" value="' . esc_attr( $atelier_id ) . '" />';
-        } elseif ( $stage_id && get_post_type( $stage_id ) === 'opac_stage' && 'publish' === get_post_status( $stage_id ) ) {
+        } elseif ( $stage_id ) {
             $titre = get_the_title( $stage_id );
             $tarif = (int) get_post_meta( $stage_id, 'opac_tarif_seance', true );
             // Seances datees (modele hybride) : si l'ephemere en a, le visiteur
