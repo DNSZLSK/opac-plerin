@@ -10,6 +10,9 @@
  * - Masquage version WP (meta generator + ?ver= sur enqueues)
  * - Desactivation XMLRPC (vecteur brute-force standard)
  * - Filter REST API : opac_inscription deja non expose (show_in_rest=false)
+ * - Anti-enumeration d'utilisateur : REST users verrouille + archives auteur
+ *   (?author=N et /author/{login}/) renvoyees en 404 (le login ne fuite plus)
+ * - Rate-limit login par IP (transient), anti brute-force sans plugin tiers
  *
  * Constants additionnelles a mettre dans wp-config.php (manuel) :
  * - DISALLOW_FILE_EDIT = true (bloque editeur PHP dans /wp-admin)
@@ -54,6 +57,11 @@ class OPAC_Security {
         // Limite la divulgation d'info dans l'API REST (users endpoint).
         add_filter( 'rest_endpoints', [ __CLASS__, 'restrict_rest_users' ] );
 
+        // Bloque l'enumeration d'utilisateur via les archives auteur
+        // (?author=N + /author/{login}/), qui divulguent l'identifiant de
+        // connexion. Priorite 0 pour preceder redirect_canonical (priorite 10).
+        add_action( 'template_redirect', [ __CLASS__, 'block_author_enumeration' ], 0 );
+
         // Login rate-limit anti-brute-force (transient par IP).
         add_filter( 'authenticate', [ __CLASS__, 'check_login_attempts' ], 30, 1 );
         add_action( 'wp_login_failed', [ __CLASS__, 'increment_failed_login' ] );
@@ -96,6 +104,42 @@ class OPAC_Security {
         }
     }
 
+    /**
+     * Bloque l'enumeration d'utilisateur via les archives auteur.
+     *
+     * Deux vecteurs, fermes tous les deux en 404 :
+     * - /?author=N : WordPress resout l'auteur puis, via redirect_canonical,
+     *   renvoie un 301 vers /author/{login}/ -> l'identifiant de connexion
+     *   fuite dans l'URL. On agit en priorite 0 sur template_redirect (donc
+     *   avant redirect_canonical, priorite 10) et on retire cette redirection.
+     * - /author/{login}/ : l'archive elle-meme affiche le login dans le <title>.
+     *   Site associatif a auteur unique : aucune archive auteur n'a d'usage
+     *   public -> 404 franc, pas un simple noindex (qui laisse le login lisible).
+     *
+     * Complementaire de restrict_rest_users() (endpoint REST users) et du
+     * noindex auteur pose par OPAC_SEO::filter_robots(). is_admin() est exclu
+     * pour ne pas gener le back-office (filtre "par auteur" des listes).
+     */
+    public static function block_author_enumeration() {
+        if ( is_admin() ) {
+            return;
+        }
+        if ( ! isset( $_GET['author'] ) && ! is_author() ) {
+            return;
+        }
+
+        // Empeche la redirection canonique ?author=N -> /author/{login}/ qui
+        // divulguerait l'identifiant avant meme le rendu de la 404.
+        remove_action( 'template_redirect', 'redirect_canonical' );
+
+        global $wp_query;
+        if ( $wp_query instanceof WP_Query ) {
+            $wp_query->set_404();
+        }
+        status_header( 404 );
+        nocache_headers();
+    }
+
     public static function add_security_headers( $headers ) {
         // Masque la version PHP exposee par defaut (expose_php). En prod OVH,
         // doubler avec expose_php = Off dans le php.ini (cf. DEPLOY.md).
@@ -114,7 +158,10 @@ class OPAC_Security {
         // CSP : minimum viable pour ne rien casser. 'unsafe-inline' tolere
         // pour script + style car Gutenberg injecte beaucoup d'inline.
         // Polices auto-hebergees + carte OpenStreetMap : aucune origine Google
-        // (RGPD, pas de transfert d'IP). M10 : tightening avec nonces possible.
+        // (RGPD, pas de transfert d'IP). Le tightening des inline via nonces
+        // reste le residuel connu (couteux sous FSE, non fait volontairement).
+        // frame-ancestors 'self' double X-Frame-Options (equivalent moderne,
+        // couvre les navigateurs qui ignorent l'ancien header).
         $csp = [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline'",
@@ -125,8 +172,15 @@ class OPAC_Security {
             "connect-src 'self'",
             "form-action 'self'",
             "base-uri 'self'",
+            "frame-ancestors 'self'",
             "object-src 'none'",
         ];
+        // En HTTPS uniquement : auto-upgrade des sous-ressources http:// (defense
+        // en profondeur si un lien/media http traine dans le contenu edite), sans
+        // casser l'environnement local servi en http.
+        if ( is_ssl() ) {
+            $csp[] = 'upgrade-insecure-requests';
+        }
         $headers['Content-Security-Policy'] = implode( '; ', $csp );
 
         return $headers;
