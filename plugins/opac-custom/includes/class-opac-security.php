@@ -88,7 +88,7 @@ class OPAC_Security {
         }
         $uri  = strtok( (string) $_SERVER['REQUEST_URI'], '?' );
         $path = strtolower( basename( $uri ) );
-        $blocked = [ 'xmlrpc.php', 'readme.html', 'wp-config-sample.php' ];
+        $blocked = [ 'xmlrpc.php', 'readme.html', 'license.txt', 'wp-config-sample.php' ];
         if ( in_array( $path, $blocked, true ) ) {
             status_header( 403 );
             nocache_headers();

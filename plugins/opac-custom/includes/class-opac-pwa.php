@@ -42,7 +42,7 @@ class OPAC_PWA {
     const QV_SW         = 'opac_sw';
     const QV_MANIFEST   = 'opac_manifest';
     const REWRITE_FLAG  = 'opac_pwa_rewrite_v';
-    const REWRITE_VER   = '1'; // Incrementer si on modifie les regles de reecriture.
+    const REWRITE_VER   = '2'; // Incrementer si on modifie les regles de reecriture.
     const THEME_COLOR   = '#c0583a'; // Terracotta (palette theme.json : accent).
     const BG_COLOR      = '#faf9f6'; // Fond creme (palette theme.json : bg).
 
@@ -51,6 +51,7 @@ class OPAC_PWA {
         add_filter( 'query_vars', [ __CLASS__, 'add_query_vars' ] );
         add_action( 'init', [ __CLASS__, 'maybe_flush' ], 11 );
         add_action( 'template_redirect', [ __CLASS__, 'maybe_serve' ] );
+        add_filter( 'redirect_canonical', [ __CLASS__, 'disable_endpoint_canonical_redirect' ], 10, 2 );
         add_action( 'wp_head', [ __CLASS__, 'render_head' ], 2 );
         add_filter( 'site_icon_meta_tags', [ __CLASS__, 'override_site_icon_apple_touch' ] );
         add_action( 'wp_enqueue_scripts', [ __CLASS__, 'enqueue_registration' ] );
@@ -61,14 +62,29 @@ class OPAC_PWA {
      * regles de reecriture (index.php?opac_sw=1 / opac_manifest=1).
      */
     public static function add_rewrite_rules() {
-        add_rewrite_rule( '^' . self::SW_PATH . '$', 'index.php?' . self::QV_SW . '=1', 'top' );
-        add_rewrite_rule( '^' . self::MANIFEST_PATH . '$', 'index.php?' . self::QV_MANIFEST . '=1', 'top' );
+        add_rewrite_rule( '^' . self::SW_PATH . '/?$', 'index.php?' . self::QV_SW . '=1', 'top' );
+        add_rewrite_rule( '^' . self::MANIFEST_PATH . '/?$', 'index.php?' . self::QV_MANIFEST . '=1', 'top' );
     }
 
     public static function add_query_vars( $vars ) {
         $vars[] = self::QV_SW;
         $vars[] = self::QV_MANIFEST;
         return $vars;
+    }
+
+    /**
+     * Les endpoints PWA sont des ressources, pas des pages. WordPress ne doit
+     * pas leur imposer son slash final canonique.
+     */
+    public static function disable_endpoint_canonical_redirect( $redirect_url, $requested_url ) {
+        if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
+            return $redirect_url;
+        }
+        $path = trim( (string) wp_parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ), '/' );
+        if ( self::SW_PATH === $path || self::MANIFEST_PATH === $path ) {
+            return false;
+        }
+        return $redirect_url;
     }
 
     /**
