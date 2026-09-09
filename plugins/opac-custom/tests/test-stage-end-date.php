@@ -2,8 +2,8 @@
 /**
  * Harnais unitaire de la date de fin effective des ephemeres.
  *
- * Teste la priorite metier : derniere seance valide, sinon date de fin,
- * sinon date de debut. Verifie aussi le statut passe et l'index derive.
+ * Teste la regle metier : date valide la plus tardive parmi les seances et la
+ * plage generale. Verifie aussi le statut passe et l'index derive.
  */
 error_reporting(E_ALL & ~E_DEPRECATED);
 
@@ -50,22 +50,22 @@ foreach (range(1, 8) as $id) {
 
 $GLOBALS['post_meta'][1] = [
     'opac_stage_seances' => [
-        [ 'date' => '2026-09-11' ],
-        [ 'date' => '2026-09-03' ],
         [ 'date' => '2026-09-10' ],
+        [ 'date' => '2026-09-03' ],
+        [ 'date' => '2026-09-07' ],
     ],
-    'opac_date_fin'   => '2027-01-01',
+    'opac_date_fin'   => '2026-09-11',
     'opac_date_debut' => '2026-09-03',
 ];
-check('seances prioritaires, non triees', OPAC_Blocks::stage_end_date(1), '2026-09-11');
-check('encore actif avant la derniere seance', OPAC_Blocks::stage_is_past(1), false);
+check('plage finissant apres les debuts de seance', OPAC_Blocks::stage_end_date(1), '2026-09-11');
+check('encore actif avant la fin de la plage', OPAC_Blocks::stage_is_past(1), false);
 
 $GLOBALS['post_meta'][2] = [
     'opac_stage_seances' => [ [ 'date' => 'date-invalide' ] ],
     'opac_date_fin'      => '2026-09-12',
     'opac_date_debut'    => '2026-09-01',
 ];
-check('seances sans date valide, repli sur fin', OPAC_Blocks::stage_end_date(2), '2026-09-12');
+check('seances sans date valide, fin conservee', OPAC_Blocks::stage_end_date(2), '2026-09-12');
 
 $GLOBALS['post_meta'][3] = [ 'opac_date_debut' => '2026-09-08' ];
 check('repli sur debut', OPAC_Blocks::stage_end_date(3), '2026-09-08');
@@ -81,6 +81,13 @@ check('date du jour non passee', OPAC_Blocks::stage_is_past(4), false);
 $GLOBALS['post_meta'][5] = [];
 check('aucune date', OPAC_Blocks::stage_end_date(5), '');
 check('sans date traite actif', OPAC_Blocks::stage_is_past(5), false);
+
+$GLOBALS['post_meta'][5] = [
+    'opac_stage_seances' => [ [ 'date' => '2026-09-15' ] ],
+    'opac_date_fin'      => '2026-09-11',
+    'opac_date_debut'    => '2026-09-07',
+];
+check('seance plus tardive que la plage', OPAC_Blocks::stage_end_date(5), '2026-09-15');
 
 $GLOBALS['post_meta'][6] = [ 'opac_date_fin' => '2026-10-01' ];
 OPAC_Blocks::store_stage_end_date(6);
