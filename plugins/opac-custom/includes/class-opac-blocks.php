@@ -479,13 +479,7 @@ class OPAC_Blocks {
         );
     }
 
-    /**
-     * Grille des realisations (opac_gallery_item) liees a l'atelier courant
-     * via le meta opac_gallery_atelier_id. Rend la section complete (titre +
-     * grille) seulement s'il existe au moins une realisation, sinon '' pour
-     * masquer la section. Reutilise les classes .opac-gallery-grid /
-     * .opac-gallery-item (cadre opac-img-frame) deja stylees.
-     */
+    /** Carrousel des images selectionnees directement dans la fiche. */
     public static function render_gallery_grid( $attrs, $content, $block ) {
         $post_id = isset( $block->context['postId'] ) ? (int) $block->context['postId'] : (int) get_the_ID();
         if ( ! $post_id ) {
@@ -498,34 +492,32 @@ class OPAC_Blocks {
             return '';
         }
 
-        $items = get_posts( [
-            'post_type'      => 'opac_gallery_item',
-            'post_status'    => 'publish',
-            'posts_per_page' => -1,
-            'orderby'        => 'menu_order date',
-            'order'          => 'ASC',
-            'meta_key'       => 'opac_gallery_atelier_id',
-            'meta_value'     => $post_id,
-        ] );
-        if ( empty( $items ) ) {
+        $attachment_ids = OPAC_Gallery::attachment_ids( $post_id );
+        if ( empty( $attachment_ids ) ) {
             return '';
         }
 
+        // Les legendes de l'ancien systeme restent prioritaires pour les
+        // images migrees. Les nouvelles utilisent la legende de la mediatheque.
+        $legacy_captions = OPAC_Gallery::legacy_captions( $post_id );
+
         // Carrousel : toutes les vignettes dans un track scrollable (scroll-snap),
-        // navigables aux fleches ou au swipe. Chaque vignette est un <button>
+        // navigables aux fleches ou au swipe. Chaque vignette est un lien
         // portant data-full (grande image) pour la lightbox (cf. opac.js).
         // Vignettes en taille 'medium' (affichees petites) + decoding async.
         $cards    = '';
         $rendered = 0;
-        foreach ( $items as $item ) {
-            if ( ! has_post_thumbnail( $item->ID ) ) {
+        foreach ( $attachment_ids as $attachment_id ) {
+            $caption = isset( $legacy_captions[ $attachment_id ] )
+                ? $legacy_captions[ $attachment_id ]
+                : (string) wp_get_attachment_caption( $attachment_id );
+            $alt     = (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+            $alt     = $alt ?: ( $caption ?: get_the_title( $attachment_id ) );
+            $full    = (string) wp_get_attachment_image_url( $attachment_id, 'large' );
+            $img     = wp_get_attachment_image( $attachment_id, 'medium', false, [ 'alt' => $alt, 'loading' => 'lazy', 'decoding' => 'async' ] );
+            if ( '' === $full || '' === $img ) {
                 continue;
             }
-            $caption  = (string) get_post_meta( $item->ID, 'opac_gallery_caption', true );
-            $alt      = $caption ?: get_the_title( $item->ID );
-            $thumb_id = get_post_thumbnail_id( $item->ID );
-            $full     = (string) wp_get_attachment_image_url( $thumb_id, 'large' );
-            $img      = get_the_post_thumbnail( $item->ID, 'medium', [ 'alt' => $alt, 'loading' => 'lazy', 'decoding' => 'async' ] );
             // Lien vers l'image pleine taille (pas un <button>) : sans JS, le
             // clic ouvre directement la grande image (vraie amelioration
             // progressive). Avec JS, opac.js intercepte (preventDefault) pour
@@ -543,10 +535,10 @@ class OPAC_Blocks {
             return '';
         }
 
-        // Titre contextuel : "Realisations" pour un atelier, "En images" pour un
-        // evenement / une exposition (meme bloc, meme requete keyee sur l'ID courant).
-        $is_event = ( 'opac_event' === get_post_type( $post_id ) );
-        $heading  = $is_event ? __( 'En images', 'opac-custom' ) : __( 'Réalisations', 'opac-custom' );
+        // "Realisations" reste le libelle propre aux ateliers annuels. Pour un
+        // ephemere ou un evenement, le libelle neutre "En images" convient mieux.
+        $is_atelier = ( 'opac_atelier' === get_post_type( $post_id ) );
+        $heading     = $is_atelier ? __( 'Réalisations', 'opac-custom' ) : __( 'En images', 'opac-custom' );
 
         return sprintf(
             '<section class="wp-block-group alignwide opac-section-padded opac-gallery-section" style="border-top-color:var(--wp--preset--color--border);border-top-width:1px;border-top-style:solid">'
