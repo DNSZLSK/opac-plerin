@@ -118,6 +118,7 @@ class OPAC_Meta {
         register_post_meta( 'opac_stage', 'opac_tagline', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_notice', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_gallery_ids', self::args_gallery_ids() );
+        register_post_meta( 'opac_stage', 'opac_show_gallery', self::args_int() );
 
         // Seances datees optionnelles (modele hybride) : un ephemere peut se
         // tenir sur plusieurs dates, chacune avec sa capacite. Meme structure
@@ -153,6 +154,7 @@ class OPAC_Meta {
         register_post_meta( 'opac_event', 'opac_description_courte', self::args_string() );
         register_post_meta( 'opac_event', 'opac_lieu', self::args_string() );
         register_post_meta( 'opac_event', 'opac_gallery_ids', self::args_gallery_ids() );
+        register_post_meta( 'opac_event', 'opac_show_gallery', self::args_int() );
     }
 
     private static function register_person_meta() {
