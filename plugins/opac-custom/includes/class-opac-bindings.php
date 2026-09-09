@@ -272,6 +272,10 @@ class OPAC_Bindings {
         if ( ! $b ) {
             return sprintf( '%d %s %d', $a['j'], $months_fr[ $a['m'] ], $a['y'] );
         }
+        // Une plage d'un seul jour s'affiche comme une date simple.
+        if ( $a === $b ) {
+            return sprintf( '%d %s %d', $a['j'], $months_fr[ $a['m'] ], $a['y'] );
+        }
         // Même mois et même année.
         if ( $a['m'] === $b['m'] && $a['y'] === $b['y'] ) {
             return sprintf( 'Du %d au %d %s %d', $a['j'], $b['j'], $months_fr[ $b['m'] ], $b['y'] );
