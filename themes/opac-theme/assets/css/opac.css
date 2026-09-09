@@ -1275,6 +1275,14 @@ html:not(.js) .opac-event-tabs {
     word-break: break-word;
 }
 
+/* Les descriptions longues et notes sont saisies dans des champs multilignes.
+   Le navigateur reduit normalement leurs retours a la ligne a une espace :
+   pre-line restitue les paragraphes saisis sans conserver les espaces parasites. */
+.opac-detail-tagline,
+.opac-detail-notice {
+    white-space: pre-line;
+}
+
 .opac-info-item {
     min-width: 0;
 }
