@@ -373,7 +373,7 @@ class OPAC_SEO {
         // Date selon le post type.
         if ( $post_type === 'opac_stage' ) {
             $date_debut = (string) get_post_meta( $post_id, 'opac_date_debut', true );
-            $date_fin   = (string) get_post_meta( $post_id, 'opac_date_fin', true );
+            $date_fin   = OPAC_Blocks::stage_end_date( $post_id );
             if ( $date_debut ) {
                 $data['startDate'] = $date_debut;
             }

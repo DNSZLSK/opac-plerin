@@ -16,6 +16,36 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OPAC_Blocks {
 
+    /** Version de l'index derive opac_date_last. */
+    const STAGE_DATE_DB_VERSION = 1;
+
+    /** Filtre et ordonne les Query Loop des contenus metier. */
+    public static function filter_query_loop_vars( $query ) {
+        $post_type = isset( $query['post_type'] ) ? $query['post_type'] : '';
+
+        if ( 'opac_stage' === $post_type ) {
+            $meta_query = ( isset( $query['meta_query'] ) && is_array( $query['meta_query'] ) ) ? $query['meta_query'] : [];
+            $meta_query['opac_last'] = [
+                'key'     => 'opac_date_last',
+                'value'   => current_time( 'Y-m-d' ),
+                'compare' => '>=',
+                'type'    => 'DATE',
+            ];
+            $meta_query['opac_debut'] = [
+                'key'     => 'opac_date_debut',
+                'compare' => 'EXISTS',
+                'type'    => 'DATE',
+            ];
+            $query['meta_query'] = $meta_query;
+            $query['orderby']    = [ 'opac_debut' => 'ASC' ];
+        } elseif ( 'opac_atelier' === $post_type ) {
+            $query['orderby'] = 'title';
+            $query['order']   = 'ASC';
+        }
+
+        return $query;
+    }
+
     public static function register() {
         if ( ! function_exists( 'register_block_type' ) ) {
             return;
@@ -534,20 +564,87 @@ class OPAC_Blocks {
         );
     }
 
+    /** Vrai si une valeur est une date reelle au format ISO Y-m-d. */
+    private static function is_valid_ymd( $date ) {
+        return (bool) preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', (string) $date, $matches )
+            && checkdate( (int) $matches[2], (int) $matches[3], (int) $matches[1] );
+    }
+
     /**
-     * Vrai si le post est un atelier ephemere (opac_stage) dont la date de
-     * debut est passee. Centralise la logique "termine" reutilisee par le tag
-     * de statut, le bouton d'inscription et la liste showcase des ephemeres.
+     * Derniere date effective d'un ephemere.
+     *
+     * Les seances datees sont la source la plus precise. En leur absence, la
+     * plage generale est utilisee : date de fin, puis date de debut.
+     */
+    public static function stage_end_date( $post_id ) {
+        $seances = get_post_meta( $post_id, 'opac_stage_seances', true );
+        if ( is_array( $seances ) ) {
+            $dates = [];
+            foreach ( $seances as $seance ) {
+                if ( is_array( $seance ) && isset( $seance['date'] ) && self::is_valid_ymd( $seance['date'] ) ) {
+                    $dates[] = (string) $seance['date'];
+                }
+            }
+            if ( ! empty( $dates ) ) {
+                return max( $dates );
+            }
+        }
+
+        $date_fin = (string) get_post_meta( $post_id, 'opac_date_fin', true );
+        if ( self::is_valid_ymd( $date_fin ) ) {
+            return $date_fin;
+        }
+
+        $date_debut = (string) get_post_meta( $post_id, 'opac_date_debut', true );
+        return self::is_valid_ymd( $date_debut ) ? $date_debut : '';
+    }
+
+    /** Met a jour l'index SQL derive de la derniere date effective. */
+    public static function store_stage_end_date( $post_id ) {
+        $date = self::stage_end_date( $post_id );
+        if ( '' === $date ) {
+            delete_post_meta( $post_id, 'opac_date_last' );
+            return;
+        }
+        update_post_meta( $post_id, 'opac_date_last', $date );
+    }
+
+    /** Backfill versionne de l'index pour les ephemeres existants. */
+    public static function maybe_backfill_stage_dates() {
+        if ( (int) get_option( 'opac_stage_date_db_version', 0 ) >= self::STAGE_DATE_DB_VERSION ) {
+            return;
+        }
+
+        $ids = get_posts( [
+            'post_type'      => 'opac_stage',
+            'post_status'    => 'any',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+        ] );
+        foreach ( $ids as $id ) {
+            self::store_stage_end_date( $id );
+        }
+
+        update_option( 'opac_stage_date_db_version', self::STAGE_DATE_DB_VERSION );
+    }
+
+    /**
+     * Vrai si le post est un atelier ephemere dont la derniere date effective
+     * est passee. Centralise la logique reutilisee par le statut, le bouton
+     * d'inscription et la liste showcase des ephemeres.
      */
     public static function stage_is_past( $post_id ) {
         if ( get_post_type( $post_id ) !== 'opac_stage' ) {
             return false;
         }
-        $debut = (string) get_post_meta( $post_id, 'opac_date_debut', true );
-        if ( '' === $debut ) {
+        $date = (string) get_post_meta( $post_id, 'opac_date_last', true );
+        if ( ! self::is_valid_ymd( $date ) ) {
+            $date = self::stage_end_date( $post_id );
+        }
+        if ( '' === $date ) {
             return false;
         }
-        return $debut < current_time( 'Y-m-d' );
+        return $date < current_time( 'Y-m-d' );
     }
 
     /**
@@ -636,7 +733,6 @@ class OPAC_Blocks {
             'orderby'        => 'date',
             'order'          => 'ASC',
         ] );
-        $today   = current_time( 'Y-m-d' );
         $current = OPAC_Settings::current_saison();
 
         // Une ligne par stage : post + date + saison (fallback courante si
@@ -683,7 +779,7 @@ class OPAC_Blocks {
                 ];
             }
             $saisons[ $slug ]['posts'][] = $r['post'];
-            if ( '' === $r['date'] || $r['date'] >= $today ) {
+            if ( ! self::stage_is_past( $r['post']->ID ) ) {
                 $saisons[ $slug ]['has_upcoming'] = true;
             }
         }
@@ -697,7 +793,7 @@ class OPAC_Blocks {
         // (rows triees croissant) ; sinon la plus recente ; sinon la courante.
         $default_slug = null;
         foreach ( $rows as $r ) {
-            if ( '' === $r['date'] || $r['date'] >= $today ) {
+            if ( ! self::stage_is_past( $r['post']->ID ) ) {
                 $default_slug = $r['saison']['slug'];
                 break;
             }
@@ -804,12 +900,10 @@ class OPAC_Blocks {
 
         // A venir / en cours d'abord (deja triee ASC), puis passes du plus
         // recent au plus ancien. Un stage sans date est traite comme "a venir".
-        $today    = current_time( 'Y-m-d' );
         $upcoming = [];
         $past     = [];
         foreach ( $stages as $s ) {
-            $d = (string) get_post_meta( $s->ID, 'opac_date_debut', true );
-            if ( '' !== $d && $d < $today ) {
+            if ( self::stage_is_past( $s->ID ) ) {
                 $past[] = $s;
             } else {
                 $upcoming[] = $s;

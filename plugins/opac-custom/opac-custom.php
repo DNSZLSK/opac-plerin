@@ -48,6 +48,7 @@ add_action( 'init', [ 'OPAC_Taxonomies', 'register' ], 6 );
 add_action( 'init', [ 'OPAC_Meta', 'register' ], 7 );
 add_action( 'init', [ 'OPAC_Bindings', 'register' ], 8 );
 add_action( 'init', [ 'OPAC_Blocks', 'register' ], 9 );
+add_action( 'init', [ 'OPAC_Blocks', 'maybe_backfill_stage_dates' ], 10 );
 OPAC_Contact::register();
 OPAC_Inscriptions::register();
 OPAC_SEO::register();
@@ -64,11 +65,20 @@ add_action( 'admin_init', [ 'OPAC_Admin', 'boot' ] );
 add_action( 'admin_init', [ 'OPAC_Meta_Boxes', 'boot' ] );
 add_action( 'wp_dashboard_setup', [ 'OPAC_Admin', 'register_dashboard_widget' ] );
 
+// Recalcule l'index apres les deux sauvegardes de metas, hookees en priorite 10.
+add_action( 'save_post_opac_stage', static function ( $post_id ) {
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return;
+    }
+    OPAC_Blocks::store_stage_end_date( $post_id );
+}, 20, 1 );
+
 register_activation_hook( __FILE__, static function () {
     OPAC_CPTs::register();
     OPAC_Taxonomies::register();
     OPAC_Taxonomies::seed_default_terms();
     update_option( 'opac_tax_db_version', OPAC_Taxonomies::DB_VERSION );
+    OPAC_Blocks::maybe_backfill_stage_dates();
     OPAC_Settings::ensure_legal_pages();
     OPAC_RGPD::maybe_schedule();
     flush_rewrite_rules();
@@ -86,8 +96,8 @@ add_action( 'plugins_loaded', static function () {
 /**
  * Ordonne les listes (Query Loop blocks) des CPT metier, que le bloc Query
  * natif ne sait pas trier par meta :
- * - ateliers ephemeres (opac_stage) : par date d'activite (opac_date_debut),
- *   du plus proche au plus lointain, et les passes masques ;
+ * - ateliers ephemeres (opac_stage) : actifs d'apres leur date de fin
+ *   effective, tries par date de debut du plus proche au plus lointain ;
  * - ateliers a l'annee (opac_atelier) : ordre alphabetique stable (vs ordre
  *   de creation des fiches).
  *
@@ -95,31 +105,9 @@ add_action( 'plugins_loaded', static function () {
  * ce qui couvre d'un coup l'archive et les apercus d'accueil sans toucher au
  * markup des templates.
  */
-add_filter( 'query_loop_block_query_vars', static function ( $query ) {
-    $post_type = isset( $query['post_type'] ) ? $query['post_type'] : '';
-
-    if ( 'opac_stage' === $post_type ) {
-        // A venir / en cours uniquement (date de debut >= aujourd'hui), tries
-        // du plus proche au plus lointain. La clause nommee sert a la fois au
-        // filtre et au tri (un seul JOIN sur la meta).
-        $today      = current_time( 'Y-m-d' );
-        $meta_query = ( isset( $query['meta_query'] ) && is_array( $query['meta_query'] ) ) ? $query['meta_query'] : [];
-        $meta_query['opac_debut'] = [
-            'key'     => 'opac_date_debut',
-            'value'   => $today,
-            'compare' => '>=',
-            'type'    => 'DATE',
-        ];
-        $query['meta_query'] = $meta_query;
-        $query['orderby']    = [ 'opac_debut' => 'ASC' ];
-    } elseif ( 'opac_atelier' === $post_type ) {
-        // Pas de date d'activite : ordre alphabetique stable.
-        $query['orderby'] = 'title';
-        $query['order']   = 'ASC';
-    }
-
-    return $query;
-}, 10, 1 );
+// Pour les ephemeres : filtre sur la fin effective, tri par date de debut.
+// Pour les ateliers annuels : ordre alphabetique stable.
+add_filter( 'query_loop_block_query_vars', [ 'OPAC_Blocks', 'filter_query_loop_vars' ], 10, 1 );
 
 /**
  * Injecte la classe opac-period-<slug> sur chaque post opac_stage rendu par un
