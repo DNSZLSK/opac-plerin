@@ -118,7 +118,8 @@ class OPAC_Meta_Boxes {
     /**
      * Schema ordonne des champs d'un CPT.
      * Chaque champ : key, label, type, + desc/options/taxonomy/rows optionnels.
-     * Types : text, number, date, textarea, select, taxonomy, image, wysiwyg.
+     * Types : text, number, date, textarea, select, taxonomy, image, gallery,
+     * wysiwyg.
      * Cles speciales : '_thumbnail' (image mise en avant), '_content'
      * (post_content via wysiwyg).
      */
@@ -135,6 +136,7 @@ class OPAC_Meta_Boxes {
                     [ 'key' => 'opac_public_precision', 'type' => 'text', 'label' => __( 'Précision d\'âge', 'opac-custom' ), 'desc' => __( 'Optionnel. Ex : 6-10 ans, à partir de 8 ans. Affiché à côté de la catégorie (ex : « Enfants 6-10 ans »).', 'opac-custom' ) ],
                     [ 'key' => 'opac_places_dispo', 'type' => 'select', 'options' => self::places_options(), 'label' => __( 'Places', 'opac-custom' ) ],
                     [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale (encart sur la page)', 'opac-custom' ), 'desc' => __( 'Encart optionnel affiché sur la page de l\'atelier (ex : matériel à prévoir). Laisser vide pour masquer.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_gallery_ids', 'type' => 'gallery', 'label' => __( 'Photos du carrousel', 'opac-custom' ), 'desc' => __( 'Ajoutez plusieurs photos depuis votre ordinateur ou la médiathèque. Faites-les glisser pour changer leur ordre.', 'opac-custom' ) ],
                     [ 'key' => 'opac_show_gallery', 'type' => 'checkbox', 'label' => __( 'Afficher les réalisations', 'opac-custom' ), 'desc' => __( 'Décochez pour masquer la section Réalisations même si des photos sont liées. La section se masque de toute façon quand aucune photo n\'est liée.', 'opac-custom' ) ],
                 ];
 
@@ -153,6 +155,7 @@ class OPAC_Meta_Boxes {
                     [ 'key' => 'opac_period', 'type' => 'taxonomy', 'taxonomy' => 'opac_period', 'label' => __( 'Période', 'opac-custom' ), 'desc' => __( 'Classe l\'éphémère dans l\'onglet correspondant de la page éphémères. Pré-cochée automatiquement selon la date de début, corrigez si besoin.', 'opac-custom' ) ],
                     [ 'key' => 'opac_places_dispo', 'type' => 'select', 'options' => self::places_options(), 'label' => __( 'Places', 'opac-custom' ) ],
                     [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale (encart sur la page)', 'opac-custom' ), 'desc' => __( 'Encart optionnel affiché sur la page de l\'éphémère. Laisser vide pour masquer.', 'opac-custom' ) ],
+                    [ 'key' => 'opac_gallery_ids', 'type' => 'gallery', 'label' => __( 'Photos du carrousel', 'opac-custom' ), 'desc' => __( 'Ajoutez plusieurs photos depuis votre ordinateur ou la médiathèque. Faites-les glisser pour changer leur ordre.', 'opac-custom' ) ],
                 ];
 
             case 'opac_event':
@@ -163,6 +166,7 @@ class OPAC_Meta_Boxes {
                     [ 'key' => 'opac_event_cat', 'type' => 'taxonomy', 'taxonomy' => 'opac_event_cat', 'label' => __( 'Catégorie', 'opac-custom' ) ],
                     [ 'key' => 'opac_description_courte', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Description courte (aperçu dans l\'agenda)', 'opac-custom' ), 'desc' => __( 'Résumé affiché dans l\'agenda avant de cliquer sur l\'événement.', 'opac-custom' ) ],
                     [ 'key' => '_content', 'type' => 'wysiwyg', 'label' => __( 'Description complète (sur la page de l\'événement)', 'opac-custom' ), 'desc' => __( 'Texte complet affiché sur la page de l\'événement (quand on a cliqué dessus).', 'opac-custom' ) ],
+                    [ 'key' => 'opac_gallery_ids', 'type' => 'gallery', 'label' => __( 'Photos du carrousel', 'opac-custom' ), 'desc' => __( 'Ajoutez plusieurs photos depuis votre ordinateur ou la médiathèque. Faites-les glisser pour changer leur ordre.', 'opac-custom' ) ],
                 ];
 
             case 'opac_person':
@@ -241,7 +245,7 @@ class OPAC_Meta_Boxes {
         echo '<tr>';
         // Un groupe de checkboxes (taxonomy) n'a pas de controle unique a cibler :
         // libelle en texte simple plutot qu'un label[for] qui pointe dans le vide.
-        if ( 'taxonomy' === $type ) {
+        if ( in_array( $type, [ 'taxonomy', 'gallery' ], true ) ) {
             echo '<th scope="row">' . esc_html( $label ) . '</th>';
         } else {
             echo '<th scope="row"><label for="' . esc_attr( $control_id ) . '">' . esc_html( $label ) . '</label></th>';
@@ -318,6 +322,10 @@ class OPAC_Meta_Boxes {
 
             case 'image':
                 self::render_image_field( $post, $control_id );
+                break;
+
+            case 'gallery':
+                self::render_gallery_field( $post, $control_id );
                 break;
 
             case 'wysiwyg':
@@ -503,6 +511,28 @@ class OPAC_Meta_Boxes {
         <?php
     }
 
+    /** Selecteur multiple ordonne pour le carrousel de la fiche. */
+    private static function render_gallery_field( $post, $control_id ) {
+        $ids = OPAC_Gallery::attachment_ids( $post->ID );
+        ?>
+        <div class="opac-gallery-field" id="<?php echo esc_attr( $control_id ); ?>">
+            <ul class="opac-gallery-selection" aria-live="polite">
+                <?php foreach ( $ids as $attachment_id ) : ?>
+                    <li class="opac-gallery-selection-item" data-id="<?php echo (int) $attachment_id; ?>">
+                        <span class="dashicons dashicons-move opac-gallery-drag" aria-hidden="true"></span>
+                        <?php echo wp_get_attachment_image( $attachment_id, 'medium', false, [ 'loading' => 'lazy' ] ); ?>
+                        <span class="opac-gallery-image-title"><?php echo esc_html( get_the_title( $attachment_id ) ); ?></span>
+                        <button type="button" class="button-link-delete opac-gallery-remove"><?php esc_html_e( 'Retirer', 'opac-custom' ); ?></button>
+                        <input type="hidden" name="opac_gallery_ids[]" value="<?php echo (int) $attachment_id; ?>" />
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <p class="opac-gallery-empty"<?php echo $ids ? ' style="display:none"' : ''; ?>><?php esc_html_e( 'Aucune photo dans ce carrousel.', 'opac-custom' ); ?></p>
+            <p><button type="button" class="button opac-gallery-add"><?php esc_html_e( 'Ajouter des photos', 'opac-custom' ); ?></button></p>
+        </div>
+        <?php
+    }
+
     /* --------------------------------------------------------------------- *
      * Sauvegarde
      * --------------------------------------------------------------------- */
@@ -530,6 +560,12 @@ class OPAC_Meta_Boxes {
                 } else {
                     delete_post_thumbnail( $post_id );
                 }
+                continue;
+            }
+
+            if ( 'gallery' === $type ) {
+                $raw_ids = isset( $_POST[ $key ] ) ? (array) wp_unslash( $_POST[ $key ] ) : [];
+                update_post_meta( $post_id, $key, OPAC_Gallery::sanitize_attachment_ids( $raw_ids ) );
                 continue;
             }
 
@@ -671,6 +707,21 @@ class OPAC_Meta_Boxes {
         wp_localize_script( 'opac-admin-media', 'opacMedia', [
             'title'  => __( 'Choisir une image', 'opac-custom' ),
             'button' => __( 'Utiliser cette image', 'opac-custom' ),
+        ] );
+
+        wp_enqueue_script(
+            'opac-admin-gallery',
+            OPAC_CUSTOM_URL . 'assets/js/admin-gallery.js',
+            [ 'jquery', 'jquery-ui-sortable' ],
+            OPAC_CUSTOM_VERSION,
+            true
+        );
+        wp_localize_script( 'opac-admin-gallery', 'opacGallery', [
+            'title'       => __( 'Choisir les photos du carrousel', 'opac-custom' ),
+            'button'      => __( 'Ajouter au carrousel', 'opac-custom' ),
+            'remove'      => __( 'Retirer', 'opac-custom' ),
+            'empty'       => __( 'Aucune photo dans ce carrousel.', 'opac-custom' ),
+            'untitled'    => __( 'Photo sans titre', 'opac-custom' ),
         ] );
 
         // Comportements de la fiche : saisie libre d'animateur révélée à la

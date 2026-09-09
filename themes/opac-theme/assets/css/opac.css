@@ -2785,16 +2785,15 @@ a.opac-card-link,
 .opac-cta-band-desc { color: #ffffff; }
 
 /* ================================================================
- * Galerie realisations : vignettes cliquables (cap 4 + "Voir tout")
- * et lightbox maison. Les vignettes reutilisent le cadre
- * .opac-gallery-item (opac-img-frame) ; on neutralise juste le
- * style bouton par defaut.
+ * Galerie realisations : carrousel de vignettes cliquables et lightbox maison.
+ * Les vignettes reutilisent le cadre .opac-gallery-item (opac-img-frame).
  * ================================================================ */
-button.opac-gallery-item {
+a.opac-gallery-item {
     border: 0;
     padding: 0 !important;
     background: none;
     cursor: pointer;
+    text-decoration: none;
 }
 
 /* Carrousel : track scrollable horizontal (scroll-snap), swipe natif.

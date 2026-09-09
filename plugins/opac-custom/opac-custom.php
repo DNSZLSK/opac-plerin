@@ -3,7 +3,7 @@
  * Plugin Name: OPAC Custom
  * Plugin URI: https://opacplerin.fr
  * Description: Plugin métier pour le site OPAC Plérin. Déclare les CPTs (ateliers, stages, événements, équipe, inscriptions, galerie), les taxonomies, les meta fields, et les interfaces admin custom. Indépendant du thème - porte les données et la logique métier.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Author: DNSZLSK
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OPAC_CUSTOM_VERSION', '0.1.0' );
+define( 'OPAC_CUSTOM_VERSION', '0.2.0' );
 define( 'OPAC_CUSTOM_FILE', __FILE__ );
 define( 'OPAC_CUSTOM_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OPAC_CUSTOM_URL', plugin_dir_url( __FILE__ ) );
@@ -32,6 +32,7 @@ require_once OPAC_CUSTOM_PATH . 'includes/class-opac-labels.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-meta.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-admin.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-bindings.php';
+require_once OPAC_CUSTOM_PATH . 'includes/class-opac-gallery.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-blocks.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-contact.php';
 require_once OPAC_CUSTOM_PATH . 'includes/class-opac-inscriptions.php';
@@ -49,6 +50,7 @@ add_action( 'init', [ 'OPAC_Meta', 'register' ], 7 );
 add_action( 'init', [ 'OPAC_Bindings', 'register' ], 8 );
 add_action( 'init', [ 'OPAC_Blocks', 'register' ], 9 );
 add_action( 'init', [ 'OPAC_Blocks', 'maybe_backfill_stage_dates' ], 10 );
+add_action( 'init', [ 'OPAC_Gallery', 'maybe_migrate' ], 10 );
 OPAC_Contact::register();
 OPAC_Inscriptions::register();
 OPAC_SEO::register();
@@ -79,6 +81,7 @@ register_activation_hook( __FILE__, static function () {
     OPAC_Taxonomies::seed_default_terms();
     update_option( 'opac_tax_db_version', OPAC_Taxonomies::DB_VERSION );
     OPAC_Blocks::maybe_backfill_stage_dates();
+    OPAC_Gallery::maybe_migrate();
     OPAC_Settings::ensure_legal_pages();
     OPAC_RGPD::maybe_schedule();
     flush_rewrite_rules();

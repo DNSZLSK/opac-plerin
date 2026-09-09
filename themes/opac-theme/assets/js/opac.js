@@ -327,8 +327,8 @@
     }
 
     /**
-     * Galerie des realisations (fiche atelier) :
-     * - bouton "Voir tout (N)" : deplie les vignettes en surplus (cap 4).
+     * Galerie des realisations (fiches atelier, ephemere et evenement) :
+     * - carrousel horizontal avec fleches et swipe natif.
      * - lightbox maison (sans librairie) : clic sur une vignette = grande image
      *   en overlay, navigation fleches/Prev/Next, fermeture Echap / clic fond / X.
      *   A11y : role=dialog, focus sur Fermer a l'ouverture, focus rendu a l'appel.

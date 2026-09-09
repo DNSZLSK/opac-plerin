@@ -177,7 +177,9 @@ class OPAC_CPTs {
             'description' => __( 'Photos des réalisations des ateliers, liées à un atelier.', 'opac-custom' ),
             'public' => false,
             'show_ui' => true,
-            'show_in_menu' => true,
+            // Ancien ecran conserve pour les donnees historiques. Les photos
+            // se gerent maintenant directement dans chaque fiche metier.
+            'show_in_menu' => false,
             'show_in_rest' => true,
             'has_archive' => false,
             'supports' => [ 'title', 'thumbnail', 'custom-fields' ],

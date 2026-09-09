@@ -46,6 +46,15 @@ class OPAC_Meta {
         ];
     }
 
+    private static function args_gallery_ids() {
+        return [
+            'type'          => 'array',
+            'single'        => true,
+            'show_in_rest'  => false,
+            'auth_callback' => [ __CLASS__, 'auth_can_edit' ],
+        ];
+    }
+
     private static function register_atelier_meta() {
         register_post_meta( 'opac_atelier', 'opac_tarif_annuel', self::args_int() );
         register_post_meta( 'opac_atelier', 'opac_animator', self::args_string() );
@@ -87,17 +96,7 @@ class OPAC_Meta {
         register_post_meta( 'opac_atelier', 'opac_notice', self::args_string() );
         register_post_meta( 'opac_atelier', 'opac_show_gallery', self::args_int() );
 
-        register_post_meta( 'opac_atelier', 'opac_gallery_ids', [
-            'type' => 'array',
-            'single' => true,
-            'show_in_rest' => [
-                'schema' => [
-                    'type' => 'array',
-                    'items' => [ 'type' => 'integer' ],
-                ],
-            ],
-            'auth_callback' => [ __CLASS__, 'auth_can_edit' ],
-        ] );
+        register_post_meta( 'opac_atelier', 'opac_gallery_ids', self::args_gallery_ids() );
     }
 
     private static function register_stage_meta() {
@@ -118,6 +117,7 @@ class OPAC_Meta {
         register_post_meta( 'opac_stage', 'opac_card_color', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_tagline', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_notice', self::args_string() );
+        register_post_meta( 'opac_stage', 'opac_gallery_ids', self::args_gallery_ids() );
 
         // Seances datees optionnelles (modele hybride) : un ephemere peut se
         // tenir sur plusieurs dates, chacune avec sa capacite. Meme structure
@@ -152,6 +152,7 @@ class OPAC_Meta {
         register_post_meta( 'opac_event', 'opac_date_event', self::args_string() );
         register_post_meta( 'opac_event', 'opac_description_courte', self::args_string() );
         register_post_meta( 'opac_event', 'opac_lieu', self::args_string() );
+        register_post_meta( 'opac_event', 'opac_gallery_ids', self::args_gallery_ids() );
     }
 
     private static function register_person_meta() {

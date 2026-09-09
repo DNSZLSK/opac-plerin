@@ -140,6 +140,60 @@
     cursor: pointer;
 }
 
+/* Galerie multiple directement dans la fiche. */
+.opac-gallery-selection {
+    display: flex;
+    gap: 12px;
+    max-width: 760px;
+    margin: 0;
+    padding: 0 0 10px;
+    list-style: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+.opac-gallery-selection-item,
+.opac-gallery-sort-placeholder {
+    flex: 0 0 150px;
+    width: 150px;
+    min-height: 175px;
+    margin: 0;
+    padding: 8px;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    background: #fff;
+    box-sizing: border-box;
+}
+.opac-gallery-sort-placeholder {
+    border-style: dashed;
+    background: #f6f7f7;
+}
+.opac-gallery-selection-item img {
+    display: block;
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    margin-bottom: 6px;
+}
+.opac-gallery-drag {
+    display: block;
+    height: 22px;
+    cursor: move;
+    color: #646970;
+}
+.opac-gallery-image-title {
+    display: block;
+    overflow: hidden;
+    margin-bottom: 5px;
+    font-size: 12px;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.opac-gallery-empty {
+    margin-top: 0;
+    color: #646970;
+}
+
 /* Boite Publier allegee sur ces ecrans : on masque visibilite et
  * planification (deroutantes), on garde statut + bouton Enregistrer. */
 .post-type-opac_atelier .misc-pub-visibility,
