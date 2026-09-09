@@ -115,6 +115,16 @@ class OPAC_Meta_Boxes {
         return [ '' => __( '— Non précisé —', 'opac-custom' ) ] + OPAC_Labels::places();
     }
 
+    /** Case commune aux trois types de fiches possedant un carrousel. */
+    private static function gallery_visibility_field() {
+        return [
+            'key'   => 'opac_show_gallery',
+            'type'  => 'checkbox',
+            'label' => __( 'Afficher le carrousel', 'opac-custom' ),
+            'desc'  => __( 'Décochez pour masquer les photos. Le carrousel se masque automatiquement lorsqu’aucune photo n’est ajoutée.', 'opac-custom' ),
+        ];
+    }
+
     /**
      * Schema ordonne des champs d'un CPT.
      * Chaque champ : key, label, type, + desc/options/taxonomy/rows optionnels.
@@ -137,7 +147,7 @@ class OPAC_Meta_Boxes {
                     [ 'key' => 'opac_places_dispo', 'type' => 'select', 'options' => self::places_options(), 'label' => __( 'Places', 'opac-custom' ) ],
                     [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale (encart sur la page)', 'opac-custom' ), 'desc' => __( 'Encart optionnel affiché sur la page de l\'atelier (ex : matériel à prévoir). Laisser vide pour masquer.', 'opac-custom' ) ],
                     [ 'key' => 'opac_gallery_ids', 'type' => 'gallery', 'label' => __( 'Photos du carrousel', 'opac-custom' ), 'desc' => __( 'Ajoutez plusieurs photos depuis votre ordinateur ou la médiathèque. Faites-les glisser pour changer leur ordre.', 'opac-custom' ) ],
-                    [ 'key' => 'opac_show_gallery', 'type' => 'checkbox', 'label' => __( 'Afficher les réalisations', 'opac-custom' ), 'desc' => __( 'Décochez pour masquer la section Réalisations même si des photos sont liées. La section se masque de toute façon quand aucune photo n\'est liée.', 'opac-custom' ) ],
+                    self::gallery_visibility_field(),
                 ];
 
             case 'opac_stage':
@@ -156,6 +166,7 @@ class OPAC_Meta_Boxes {
                     [ 'key' => 'opac_places_dispo', 'type' => 'select', 'options' => self::places_options(), 'label' => __( 'Places', 'opac-custom' ) ],
                     [ 'key' => 'opac_notice', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Note spéciale (encart sur la page)', 'opac-custom' ), 'desc' => __( 'Encart optionnel affiché sur la page de l\'éphémère. Laisser vide pour masquer.', 'opac-custom' ) ],
                     [ 'key' => 'opac_gallery_ids', 'type' => 'gallery', 'label' => __( 'Photos du carrousel', 'opac-custom' ), 'desc' => __( 'Ajoutez plusieurs photos depuis votre ordinateur ou la médiathèque. Faites-les glisser pour changer leur ordre.', 'opac-custom' ) ],
+                    self::gallery_visibility_field(),
                 ];
 
             case 'opac_event':
@@ -167,6 +178,7 @@ class OPAC_Meta_Boxes {
                     [ 'key' => 'opac_description_courte', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Description courte (aperçu dans l\'agenda)', 'opac-custom' ), 'desc' => __( 'Résumé affiché dans l\'agenda avant de cliquer sur l\'événement.', 'opac-custom' ) ],
                     [ 'key' => '_content', 'type' => 'wysiwyg', 'label' => __( 'Description complète (sur la page de l\'événement)', 'opac-custom' ), 'desc' => __( 'Texte complet affiché sur la page de l\'événement (quand on a cliqué dessus).', 'opac-custom' ) ],
                     [ 'key' => 'opac_gallery_ids', 'type' => 'gallery', 'label' => __( 'Photos du carrousel', 'opac-custom' ), 'desc' => __( 'Ajoutez plusieurs photos depuis votre ordinateur ou la médiathèque. Faites-les glisser pour changer leur ordre.', 'opac-custom' ) ],
+                    self::gallery_visibility_field(),
                 ];
 
             case 'opac_person':
