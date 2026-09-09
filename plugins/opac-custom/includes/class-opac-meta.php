@@ -103,6 +103,8 @@ class OPAC_Meta {
     private static function register_stage_meta() {
         register_post_meta( 'opac_stage', 'opac_date_debut', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_date_fin', self::args_string() );
+        // Index derive pour les filtres SQL. Calcule cote serveur, jamais edite.
+        register_post_meta( 'opac_stage', 'opac_date_last', self::args_string( false ) );
         register_post_meta( 'opac_stage', 'opac_tarif_seance', self::args_int() );
         register_post_meta( 'opac_stage', 'opac_animator', self::args_string() );
         register_post_meta( 'opac_stage', 'opac_animator_id', self::args_int() );
