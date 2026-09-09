@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class OPAC_Blocks {
 
     /** Version de l'index derive opac_date_last. */
-    const STAGE_DATE_DB_VERSION = 1;
+    const STAGE_DATE_DB_VERSION = 2;
 
     /** Filtre et ordonne les Query Loop des contenus metier. */
     public static function filter_query_loop_vars( $query ) {
@@ -573,30 +573,32 @@ class OPAC_Blocks {
     /**
      * Derniere date effective d'un ephemere.
      *
-     * Les seances datees sont la source la plus precise. En leur absence, la
-     * plage generale est utilisee : date de fin, puis date de debut.
+     * Certaines lignes de seance couvrent plusieurs jours et n'en stockent que
+     * le premier. La fin effective est donc la plus tardive de toutes les dates
+     * connues : seances, fin de la plage et debut de la plage.
      */
     public static function stage_end_date( $post_id ) {
+        $dates   = [];
         $seances = get_post_meta( $post_id, 'opac_stage_seances', true );
         if ( is_array( $seances ) ) {
-            $dates = [];
             foreach ( $seances as $seance ) {
                 if ( is_array( $seance ) && isset( $seance['date'] ) && self::is_valid_ymd( $seance['date'] ) ) {
                     $dates[] = (string) $seance['date'];
                 }
             }
-            if ( ! empty( $dates ) ) {
-                return max( $dates );
-            }
         }
 
         $date_fin = (string) get_post_meta( $post_id, 'opac_date_fin', true );
         if ( self::is_valid_ymd( $date_fin ) ) {
-            return $date_fin;
+            $dates[] = $date_fin;
         }
 
         $date_debut = (string) get_post_meta( $post_id, 'opac_date_debut', true );
-        return self::is_valid_ymd( $date_debut ) ? $date_debut : '';
+        if ( self::is_valid_ymd( $date_debut ) ) {
+            $dates[] = $date_debut;
+        }
+
+        return empty( $dates ) ? '' : max( $dates );
     }
 
     /** Met a jour l'index SQL derive de la derniere date effective. */

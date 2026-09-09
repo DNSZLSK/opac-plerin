@@ -122,7 +122,8 @@ class OPAC_Meta {
         // Seances datees optionnelles (modele hybride) : un ephemere peut se
         // tenir sur plusieurs dates, chacune avec sa capacite. Meme structure
         // que opac_creneaux de l'atelier, mais 'date' (Y-m-d) au lieu de 'jour'.
-        // Vide => on retombe sur la plage opac_date_debut/opac_date_fin.
+        // La plage reste necessaire : une ligne peut representer plusieurs
+        // jours tout en ne stockant que la date du premier jour.
         register_post_meta( 'opac_stage', 'opac_stage_seances', [
             'type' => 'array',
             'single' => true,
