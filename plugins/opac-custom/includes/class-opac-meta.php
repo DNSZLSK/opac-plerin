@@ -15,6 +15,78 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OPAC_Meta {
 
+    const REVISION_POST_TYPES = [ 'opac_atelier', 'opac_stage', 'opac_event', 'opac_person' ];
+
+    private static function revision_taxonomies() {
+        return [
+            'opac_atelier' => [ 'opac_audience' ],
+            'opac_stage'   => [ 'opac_audience', 'opac_period' ],
+            'opac_event'   => [ 'opac_event_cat' ],
+            'opac_person'  => [ 'opac_person_type' ],
+        ];
+    }
+
+    /** Active l'historique des champs métier, de l'image et des taxonomies. */
+    public static function boot_revisions() {
+        add_filter( 'wp_post_revision_meta_keys', [ __CLASS__, 'revision_meta_keys' ], 10, 2 );
+        add_action( 'save_post', [ __CLASS__, 'snapshot_revision_taxonomies' ], 20, 2 );
+        add_action( 'wp_restore_post_revision', [ __CLASS__, 'restore_revision_taxonomies' ], 20, 2 );
+    }
+
+    /**
+     * Tous les champs enregistrés du type sont versionnés automatiquement.
+     * L'index de date reste exclu car il est recalculé depuis ses sources.
+     */
+    public static function revision_meta_keys( $keys, $post_type ) {
+        if ( ! in_array( $post_type, self::REVISION_POST_TYPES, true ) ) {
+            return $keys;
+        }
+
+        $registered = array_keys( get_registered_meta_keys( 'post', $post_type ) );
+        $registered = array_diff( $registered, [ 'opac_date_last' ] );
+        return array_values( array_unique( array_merge(
+            $keys,
+            $registered,
+            [ '_thumbnail_id', '_opac_revision_taxonomies' ]
+        ) ) );
+    }
+
+    /** Mémorise les termes courants avant que WordPress crée la révision. */
+    public static function snapshot_revision_taxonomies( $post_id, $post ) {
+        if ( ! $post || ! in_array( $post->post_type, self::REVISION_POST_TYPES, true )
+            || wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+            return;
+        }
+
+        $snapshot = [];
+        foreach ( self::revision_taxonomies()[ $post->post_type ] ?? [] as $taxonomy ) {
+            $ids = wp_get_object_terms( $post_id, $taxonomy, [ 'fields' => 'ids' ] );
+            $snapshot[ $taxonomy ] = is_wp_error( $ids ) ? [] : array_map( 'intval', $ids );
+        }
+        update_post_meta( $post_id, '_opac_revision_taxonomies', $snapshot );
+    }
+
+    /** Restaure les taxonomies absentes du mécanisme de révision natif. */
+    public static function restore_revision_taxonomies( $post_id, $revision_id ) {
+        $post_type = get_post_type( $post_id );
+        if ( ! in_array( $post_type, self::REVISION_POST_TYPES, true ) ) {
+            return;
+        }
+
+        $snapshot = get_post_meta( $revision_id, '_opac_revision_taxonomies', true );
+        if ( is_array( $snapshot ) ) {
+            foreach ( self::revision_taxonomies()[ $post_type ] ?? [] as $taxonomy ) {
+                if ( array_key_exists( $taxonomy, $snapshot ) ) {
+                    wp_set_object_terms( $post_id, array_map( 'intval', (array) $snapshot[ $taxonomy ] ), $taxonomy, false );
+                }
+            }
+        }
+
+        if ( 'opac_stage' === $post_type && class_exists( 'OPAC_Blocks' ) ) {
+            OPAC_Blocks::store_stage_end_date( $post_id );
+        }
+    }
+
     public static function register() {
         self::register_atelier_meta();
         self::register_stage_meta();
