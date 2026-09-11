@@ -593,6 +593,21 @@ class OPAC_Blocks {
         return empty( $dates ) ? '' : max( $dates );
     }
 
+    /**
+     * Dernière date effective d'un événement. La date de fin est facultative ;
+     * la date la plus tardive évite qu'une incohérence le masque trop tôt.
+     */
+    public static function event_end_date( $post_id ) {
+        $dates = [];
+        foreach ( [ 'opac_date_event', 'opac_date_event_fin' ] as $key ) {
+            $date = (string) get_post_meta( $post_id, $key, true );
+            if ( self::is_valid_ymd( $date ) ) {
+                $dates[] = $date;
+            }
+        }
+        return empty( $dates ) ? '' : max( $dates );
+    }
+
     /** Met a jour l'index SQL derive de la derniere date effective. */
     public static function store_stage_end_date( $post_id ) {
         $date = self::stage_end_date( $post_id );
@@ -1154,26 +1169,24 @@ class OPAC_Blocks {
      * cible cette classe pour show/hide.
      */
     public static function render_agenda_list( $attrs, $content, $block ) {
-        // Seulement les evenements a venir (date du jour incluse) : un agenda est
-        // tourne vers l'avenir. Les evenements passes sortent de la liste le
-        // lendemain, ce qui evite aussi que la page s'allonge sans fin au fil des
-        // annees. La homepage (bloc opac/upcoming-events) suit deja cette logique.
+        // Seulement les evenements en cours ou a venir (date du jour incluse).
+        // Le filtre porte sur la fin effective afin qu'un evenement multijour
+        // reste visible jusqu'a sa derniere journee incluse.
         // Une fiche d'evenement passe reste accessible par son URL directe.
         $today  = current_time( 'Y-m-d' );
         $events = get_posts( [
             'post_type'      => 'opac_event',
             'post_status'    => 'publish',
             'posts_per_page' => -1,
-            'meta_query'     => [
-                'date_event' => [
-                    'key'     => 'opac_date_event',
-                    'value'   => $today,
-                    'compare' => '>=',
-                    'type'    => 'DATE',
-                ],
-            ],
-            'orderby'        => [ 'date_event' => 'ASC' ],
+            'meta_key'       => 'opac_date_event',
+            'orderby'        => 'meta_value',
+            'order'          => 'ASC',
         ] );
+
+        $events = array_values( array_filter( $events, static function ( $event ) use ( $today ) {
+            $end = self::event_end_date( $event->ID );
+            return '' !== $end && $end >= $today;
+        } ) );
 
         if ( empty( $events ) ) {
             return '<p class="opac-empty">' . esc_html__( 'Aucun événement programmé pour le moment.', 'opac-custom' ) . '</p>';
@@ -2145,7 +2158,7 @@ class OPAC_Blocks {
 
     /**
      * Bloc upcoming events : affiche les N prochains opac_event a venir
-     * (date_event >= aujourd'hui), fallback sur les N derniers passes
+     * (fin effective >= aujourd'hui), fallback sur les N derniers passes
      * si pas assez d'a venir. Utilise pour la section "Actualités" homepage.
      */
     public static function render_upcoming_events( $attrs, $content, $block ) {
@@ -2166,7 +2179,7 @@ class OPAC_Blocks {
         $upcoming = [];
         $past     = [];
         foreach ( $all as $e ) {
-            $d = (string) get_post_meta( $e->ID, 'opac_date_event', true );
+            $d = self::event_end_date( $e->ID );
             if ( $d && $d >= $today ) {
                 $upcoming[] = $e;
             } elseif ( $d ) {
