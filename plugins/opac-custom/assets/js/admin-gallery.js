@@ -8,13 +8,19 @@
 		$field.find( '.opac-gallery-empty' ).toggle( $field.find( '.opac-gallery-selection-item' ).length === 0 );
 	}
 
+	function markFieldChanged( $field ) {
+		if ( $field.length ) {
+			$field[ 0 ].dispatchEvent( new Event( 'change', { bubbles: true } ) );
+		}
+	}
+
 	function attachmentUrl( attachment ) {
 		return attachment.sizes && attachment.sizes.medium ? attachment.sizes.medium.url : attachment.url;
 	}
 
 	function appendAttachment( $field, attachment ) {
 		if ( $field.find( '.opac-gallery-selection-item[data-id="' + attachment.id + '"]' ).length ) {
-			return;
+			return false;
 		}
 
 		var title = attachment.title || labels.untitled || 'Photo sans titre';
@@ -41,13 +47,17 @@
 		} ) );
 
 		$field.find( '.opac-gallery-selection' ).append( $item );
+		return true;
 	}
 
 	$( '.opac-gallery-selection' ).sortable( {
 		items: '> .opac-gallery-selection-item',
 		handle: '.opac-gallery-drag',
 		axis: 'x',
-		placeholder: 'opac-gallery-sort-placeholder'
+		placeholder: 'opac-gallery-sort-placeholder',
+		update: function () {
+			markFieldChanged( $( this ).closest( '.opac-gallery-field' ) );
+		}
 	} );
 
 	$( document ).on( 'click', '.opac-gallery-add', function ( event ) {
@@ -62,10 +72,14 @@
 		} );
 
 		frame.on( 'select', function () {
+			var changed = false;
 			frame.state().get( 'selection' ).each( function ( attachment ) {
-				appendAttachment( $field, attachment.toJSON() );
+				changed = appendAttachment( $field, attachment.toJSON() ) || changed;
 			} );
 			refreshEmptyState( $field );
+			if ( changed ) {
+				markFieldChanged( $field );
+			}
 		} );
 
 		frame.open();
@@ -76,6 +90,7 @@
 		var $field = $( this ).closest( '.opac-gallery-field' );
 		$( this ).closest( '.opac-gallery-selection-item' ).remove();
 		refreshEmptyState( $field );
+		markFieldChanged( $field );
 	} );
 
 }( jQuery ) );
