@@ -742,8 +742,14 @@ class OPAC_Meta_Boxes {
             'opac-admin-fiche',
             OPAC_CUSTOM_URL . 'assets/js/admin-fiche.js',
             [],
-            OPAC_CUSTOM_VERSION,
+            filemtime( OPAC_CUSTOM_PATH . 'assets/js/admin-fiche.js' ) ?: OPAC_CUSTOM_VERSION,
             true
         );
+        wp_localize_script( 'opac-admin-fiche', 'opacFiche', [
+            'dateRange'    => __( 'La date de fin doit être postérieure ou égale à la date de début.', 'opac-custom' ),
+            'timeRange'    => __( 'L’heure de fin doit être postérieure à l’heure de début.', 'opac-custom' ),
+            'sessionRange' => __( 'La séance doit être comprise entre les dates de début et de fin.', 'opac-custom' ),
+            'duplicate'    => __( 'Cette séance ou ce créneau existe déjà.', 'opac-custom' ),
+        ] );
     }
 }
