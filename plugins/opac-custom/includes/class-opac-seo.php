@@ -394,6 +394,10 @@ class OPAC_SEO {
             if ( $date_event ) {
                 $data['startDate'] = $date_event;
             }
+            $date_fin = OPAC_Blocks::event_end_date( $post_id );
+            if ( $date_fin && $date_fin !== $date_event ) {
+                $data['endDate'] = $date_fin;
+            }
         }
 
         $lieu = (string) get_post_meta( $post_id, 'opac_lieu', true );

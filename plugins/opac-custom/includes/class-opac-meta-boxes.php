@@ -172,7 +172,8 @@ class OPAC_Meta_Boxes {
             case 'opac_event':
                 return [
                     [ 'key' => '_thumbnail', 'type' => 'image', 'label' => __( 'Image mise en avant', 'opac-custom' ) ],
-                    [ 'key' => 'opac_date_event', 'type' => 'date', 'label' => __( 'Date', 'opac-custom' ) ],
+                    [ 'key' => 'opac_date_event', 'type' => 'date', 'label' => __( 'Date de début', 'opac-custom' ) ],
+                    [ 'key' => 'opac_date_event_fin', 'type' => 'date', 'label' => __( 'Date de fin', 'opac-custom' ), 'desc' => __( 'Facultative. Laissez vide pour un événement sur une seule journée.', 'opac-custom' ) ],
                     [ 'key' => 'opac_lieu', 'type' => 'text', 'label' => __( 'Lieu', 'opac-custom' ) ],
                     [ 'key' => 'opac_event_cat', 'type' => 'taxonomy', 'taxonomy' => 'opac_event_cat', 'label' => __( 'Catégorie', 'opac-custom' ) ],
                     [ 'key' => 'opac_description_courte', 'type' => 'textarea', 'rows' => 2, 'label' => __( 'Description courte (aperçu dans l\'agenda)', 'opac-custom' ), 'desc' => __( 'Résumé affiché dans l\'agenda avant de cliquer sur l\'événement.', 'opac-custom' ) ],

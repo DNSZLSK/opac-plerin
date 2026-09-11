@@ -247,7 +247,7 @@ class OPAC_Bindings {
      *   début seul              : "15 juin 2026"
      *   rien                    : ""
      */
-    private static function format_date_range( $debut, $fin ) {
+    public static function format_date_range( $debut, $fin ) {
         // Mois en minuscules (milieu de phrase) derives de la source unique.
         $months_fr = array_map( 'strtolower', OPAC_Calendar::months() );
         $parse = static function ( $d ) {
@@ -310,6 +310,12 @@ class OPAC_Bindings {
         $value = get_post_meta( $post_id, $key, true );
 
         switch ( $key ) {
+            case 'opac_date_event_range':
+                return self::format_date_range(
+                    (string) get_post_meta( $post_id, 'opac_date_event', true ),
+                    (string) get_post_meta( $post_id, 'opac_date_event_fin', true )
+                );
+
             case 'opac_date_event':
                 if ( ! $value ) {
                     return '';

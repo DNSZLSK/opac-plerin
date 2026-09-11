@@ -100,6 +100,23 @@ check('index derive supprime sans source', isset($GLOBALS['post_meta'][7]['opac_
 $GLOBALS['post_types'][8] = 'opac_event';
 check('autre type jamais passe', OPAC_Blocks::stage_is_past(8), false);
 
+$GLOBALS['post_meta'][8] = [
+    'opac_date_event'     => '2026-09-08',
+    'opac_date_event_fin' => '2026-09-12',
+];
+check('agenda multijour reste actif jusqu a sa fin', OPAC_Blocks::event_end_date(8), '2026-09-12');
+
+$GLOBALS['post_types'][9] = 'opac_event';
+$GLOBALS['post_meta'][9] = [ 'opac_date_event' => '2026-09-10' ];
+check('agenda un jour se replie sur son debut', OPAC_Blocks::event_end_date(9), '2026-09-10');
+
+$GLOBALS['post_types'][10] = 'opac_event';
+$GLOBALS['post_meta'][10] = [
+    'opac_date_event'     => '2026-09-10',
+    'opac_date_event_fin' => 'date-invalide',
+];
+check('agenda ignore une fin invalide', OPAC_Blocks::event_end_date(10), '2026-09-10');
+
 $query = OPAC_Blocks::filter_query_loop_vars([ 'post_type' => 'opac_stage' ]);
 check('Query Loop filtre sur la fin effective', $query['meta_query']['opac_last']['key'], 'opac_date_last');
 check('Query Loop inclut la date du jour', $query['meta_query']['opac_last']['value'], '2026-09-09');

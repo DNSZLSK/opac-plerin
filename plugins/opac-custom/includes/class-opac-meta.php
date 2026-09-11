@@ -151,6 +151,7 @@ class OPAC_Meta {
 
     private static function register_event_meta() {
         register_post_meta( 'opac_event', 'opac_date_event', self::args_string() );
+        register_post_meta( 'opac_event', 'opac_date_event_fin', self::args_string() );
         register_post_meta( 'opac_event', 'opac_description_courte', self::args_string() );
         register_post_meta( 'opac_event', 'opac_lieu', self::args_string() );
         register_post_meta( 'opac_event', 'opac_gallery_ids', self::args_gallery_ids() );
