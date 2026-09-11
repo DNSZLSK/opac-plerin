@@ -47,6 +47,7 @@ require_once OPAC_CUSTOM_PATH . 'includes/class-opac-rgpd.php';
 add_action( 'init', [ 'OPAC_CPTs', 'register' ], 5 );
 add_action( 'init', [ 'OPAC_Taxonomies', 'register' ], 6 );
 add_action( 'init', [ 'OPAC_Meta', 'register' ], 7 );
+OPAC_Meta::boot_revisions();
 add_action( 'init', [ 'OPAC_Bindings', 'register' ], 8 );
 add_action( 'init', [ 'OPAC_Blocks', 'register' ], 9 );
 add_action( 'init', [ 'OPAC_Blocks', 'maybe_backfill_stage_dates' ], 10 );

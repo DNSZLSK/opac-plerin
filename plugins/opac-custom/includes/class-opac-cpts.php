@@ -94,7 +94,7 @@ class OPAC_CPTs {
             'has_archive' => 'agenda',
             'rewrite' => [ 'slug' => 'agenda', 'with_front' => false ],
             // Sans 'editor' : description complete editee dans le formulaire OPAC_Meta_Boxes.
-            'supports' => [ 'title', 'thumbnail' ],
+            'supports' => [ 'title', 'thumbnail', 'revisions' ],
             'menu_icon' => 'dashicons-calendar',
             'menu_position' => 23,
         ] );
@@ -124,7 +124,7 @@ class OPAC_CPTs {
             'exclude_from_search' => true,
             'publicly_queryable' => false,
             // Sans 'editor' : edition via le formulaire OPAC_Meta_Boxes (pas de Gutenberg).
-            'supports' => [ 'title', 'thumbnail' ],
+            'supports' => [ 'title', 'thumbnail', 'revisions' ],
             'menu_icon' => 'dashicons-groups',
             'menu_position' => 24,
         ] );
