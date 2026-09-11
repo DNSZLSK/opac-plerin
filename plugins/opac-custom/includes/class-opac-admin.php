@@ -1624,11 +1624,11 @@ class OPAC_Admin {
             add.addEventListener('click',function(){
                 var tmp=document.createElement('tbody');
                 tmp.innerHTML=tpl.innerHTML.replace(/__i__/g,'n'+(n++)).trim();
-                if(tmp.firstElementChild){rows.appendChild(tmp.firstElementChild);}
+                if(tmp.firstElementChild){rows.appendChild(tmp.firstElementChild);rows.dispatchEvent(new Event('change',{bubbles:true}));}
             });
             rows.addEventListener('click',function(e){
                 var b=e.target.closest('.opac-creneau-del');
-                if(b){e.preventDefault();var tr=b.closest('tr');if(tr){tr.parentNode.removeChild(tr);}}
+                if(b){e.preventDefault();var tr=b.closest('tr');if(tr){tr.parentNode.removeChild(tr);rows.dispatchEvent(new Event('change',{bubbles:true}));}}
             });
         })();
         </script>
@@ -1882,11 +1882,11 @@ class OPAC_Admin {
             add.addEventListener('click',function(){
                 var tmp=document.createElement('tbody');
                 tmp.innerHTML=tpl.innerHTML.replace(/__i__/g,'n'+(n++)).trim();
-                if(tmp.firstElementChild){rows.appendChild(tmp.firstElementChild);}
+                if(tmp.firstElementChild){rows.appendChild(tmp.firstElementChild);rows.dispatchEvent(new Event('change',{bubbles:true}));}
             });
             rows.addEventListener('click',function(e){
                 var b=e.target.closest('.opac-creneau-del');
-                if(b){e.preventDefault();var tr=b.closest('tr');if(tr){tr.parentNode.removeChild(tr);}}
+                if(b){e.preventDefault();var tr=b.closest('tr');if(tr){tr.parentNode.removeChild(tr);rows.dispatchEvent(new Event('change',{bubbles:true}));}}
             });
         })();
         </script>

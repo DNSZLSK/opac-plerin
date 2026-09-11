@@ -10,6 +10,7 @@
  */
 ( function () {
 	'use strict';
+	var labels = window.opacFiche || {};
 
 	// --- 1. Saisie libre d'animateur, révélée à la demande.
 	var selects = document.querySelectorAll( '.opac-person-select' );
@@ -25,7 +26,76 @@
 		sync();
 	} );
 
-	// --- 2. Suggestion de période d'après la date de début.
+	// --- 2. Cohérence des plages, horaires et séances répétées.
+	var postForm = document.getElementById( 'post' );
+	if ( postForm && postForm.querySelector( '.opac-fiche' ) ) {
+		var valueOf = function ( row, suffix ) {
+			var input = row.querySelector( 'input[name$="[' + suffix + ']"]' );
+			return input ? input.value : '';
+		};
+
+		var validateSchedule = function () {
+			var startDate = document.getElementById( 'opac_date_debut' );
+			var endDate = document.getElementById( 'opac_date_fin' );
+			var eventStart = document.getElementById( 'opac_date_event' );
+			var eventEnd = document.getElementById( 'opac_date_event_fin' );
+			var ranges = [ [ startDate, endDate ], [ eventStart, eventEnd ] ];
+
+			ranges.forEach( function ( range ) {
+				if ( range[ 1 ] ) {
+					range[ 1 ].setCustomValidity( '' );
+					if ( range[ 0 ] && range[ 0 ].value && range[ 1 ].value && range[ 1 ].value < range[ 0 ].value ) {
+						range[ 1 ].setCustomValidity( labels.dateRange || 'La date de fin doit être postérieure ou égale à la date de début.' );
+					}
+				}
+			} );
+
+			var seen = {};
+			postForm.querySelectorAll( '.opac-creneaux-editor tbody tr' ).forEach( function ( row ) {
+				var dateInput = row.querySelector( 'input[name$="[date]"]' );
+				var dayInput = row.querySelector( 'select[name$="[jour]"]' );
+				var startInput = row.querySelector( 'input[name$="[debut]"]' );
+				var endInput = row.querySelector( 'input[name$="[fin]"]' );
+				var anchorInput = dateInput || dayInput;
+
+				if ( anchorInput ) {
+					anchorInput.setCustomValidity( '' );
+				}
+				if ( endInput ) {
+					endInput.setCustomValidity( '' );
+				}
+
+				if ( startInput && endInput && startInput.value && endInput.value && endInput.value <= startInput.value ) {
+					endInput.setCustomValidity( labels.timeRange || 'L’heure de fin doit être postérieure à l’heure de début.' );
+				}
+
+				if ( dateInput && dateInput.value
+					&& ( ( startDate && startDate.value && dateInput.value < startDate.value )
+						|| ( endDate && endDate.value && dateInput.value > endDate.value ) ) ) {
+					dateInput.setCustomValidity( labels.sessionRange || 'La séance doit être comprise entre les dates de début et de fin.' );
+				}
+
+				var anchor = anchorInput ? anchorInput.value : '';
+				var start = valueOf( row, 'debut' );
+				var end = valueOf( row, 'fin' );
+				if ( anchor && start && end ) {
+					var kind = dateInput ? 'stage' : 'atelier';
+					var key = kind + '|' + anchor + '|' + start + '|' + end;
+					if ( seen[ key ] && anchorInput ) {
+						anchorInput.setCustomValidity( labels.duplicate || 'Cette séance ou ce créneau existe déjà.' );
+					} else {
+						seen[ key ] = true;
+					}
+				}
+			} );
+		};
+
+		postForm.addEventListener( 'input', validateSchedule );
+		postForm.addEventListener( 'change', validateSchedule );
+		validateSchedule();
+	}
+
+	// --- 3. Suggestion de période d'après la date de début.
 	var dateInput = document.getElementById( 'opac_date_debut' );
 	var checkboxes = document.querySelectorAll( 'input[name="opac_tax_opac_period[]"]' );
 	if ( ! dateInput || ! checkboxes.length ) {
