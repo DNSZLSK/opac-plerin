@@ -725,7 +725,7 @@ class OPAC_Meta_Boxes {
             'opac-admin-gallery',
             OPAC_CUSTOM_URL . 'assets/js/admin-gallery.js',
             [ 'jquery', 'jquery-ui-sortable' ],
-            OPAC_CUSTOM_VERSION,
+            filemtime( OPAC_CUSTOM_PATH . 'assets/js/admin-gallery.js' ) ?: OPAC_CUSTOM_VERSION,
             true
         );
         wp_localize_script( 'opac-admin-gallery', 'opacGallery', [
