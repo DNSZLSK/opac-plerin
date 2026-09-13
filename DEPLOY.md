@@ -2,6 +2,43 @@
 
 Ce dépôt versionne uniquement `wp-content/` (thème + plugin custom). Plusieurs hardening de sécurité doivent être appliqués à des fichiers **hors `wp-content/`** au moment du déploiement.
 
+**Nouveau sur le projet ?** Le déploiement du code est automatisé : voir la section 0 ci-dessous. Les sections 1 à 4 décrivent la configuration serveur, à faire une seule fois. Les sections 5 à 7 sont des réglages qui vivent en base de données, donc jamais transportés par le déploiement.
+
+## 0. Déployer le code (script automatisé)
+
+Le déploiement **n'est pas manuel** : il est fait par `tools/deploy-demo.ps1`, versionné
+dans ce dépôt.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "<dépôt>/tools/deploy-demo.ps1"
+powershell -ExecutionPolicy Bypass -File "<dépôt>/tools/deploy-demo.ps1" -PluginOnly
+```
+
+Le script résout ses chemins par rapport à lui-même : il fonctionne depuis n'importe
+quel clone, sans rien y modifier. Prérequis : le client OpenSSH de Windows (`sftp`) et
+un accès SFTP OVH. Le mot de passe est demandé à chaque exécution, rien n'est stocké
+dans le fichier.
+
+Ce qu'il fait : upload SFTP récursif de dossiers entiers (jamais fichier par fichier,
+pour ne pas laisser un `.php` tronqué casser le site), garde-fou sur la branche git
+courante, avertissement sur les branches non fusionnées dans `develop`, confirmation
+interactive, puis contrôle de santé sur `opacplerin.fr` (pages **et** assets statiques,
+car un `.htaccess` illisible met tout le statique en 403 pendant que les pages
+continuent de répondre 200).
+
+**Ce qu'il ne fait pas**, et qui reste donc à faire à la main :
+
+- il ne migre ni la base de données, ni les `uploads/` ;
+- il téléverse sans supprimer : un fichier retiré en local reste en ligne sur OVH ;
+- il ne déploie **pas** tout le thème. Les cibles sont listées explicitement en tête
+  du script. À ce jour : `plugins/opac-custom`, `themes/opac-theme/templates`,
+  `themes/opac-theme/assets` et `wp-content/.htaccess`. Tout le reste du thème
+  (`functions.php`, `theme.json`, `style.css`, `parts/`, `patterns/`) n'est pas
+  couvert et doit être téléversé séparément.
+
+Le dossier `tools/` lui-même n'est jamais téléversé, puisqu'il ne figure pas dans les
+cibles.
+
 ## 1. `.htaccess` racine du site
 
 À la racine du site (au même niveau que `wp-config.php`), avant le bloc `# BEGIN WordPress`, ajouter :
