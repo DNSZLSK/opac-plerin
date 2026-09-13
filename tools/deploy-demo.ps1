@@ -25,8 +25,9 @@
     Prerequis : client OpenSSH (sftp) installe, et un acces SFTP OVH. Le mot
     de passe est demande a chaque execution, rien n'est stocke ici.
 
-    ATTENTION : ce script ne fait que POUSSER LE CODE (plugin, templates,
-    assets, .htaccess). Il ne migre NI la base de donnees, NI les uploads, et
+    ATTENTION : ce script ne fait que POUSSER LE CODE (plugin opac-custom,
+    theme opac-theme en entier, .htaccess de wp-content). Il ne migre NI la
+    base de donnees, NI les uploads, et
     ne reecrit PAS les URLs demo.opacplerin.fr -> opacplerin.fr en base. La
     bascule du domaine (OVH/DNS) et la base restent a faire a cote.
 
@@ -95,14 +96,30 @@ if (-not $PluginOnly) {
     # 2026-07-27 : toute modif de CSS, de JS ou de police n'etait donc jamais
     # deployee par ce script.
     $Targets += @{ LocalParent = "$LocalWpContent/themes/opac-theme"; Dir = 'assets';    RemoteParent = "$RemoteBase/themes/opac-theme" }
+    # parts/ (header, footer) et patterns/ : absents de la liste jusqu'au
+    # 2026-09-13, meme oubli que assets/ avant le 2026-07-27. Consequence
+    # constatee en ligne : la prod servait encore le header d'avant le passage
+    # du menu "S'inscrire" en <details> natif (accessibilite sans JavaScript),
+    # alors que le CSS et le JS correspondants, eux, etaient bien deployes.
+    # Le theme est desormais couvert en entier.
+    $Targets += @{ LocalParent = "$LocalWpContent/themes/opac-theme"; Dir = 'parts';     RemoteParent = "$RemoteBase/themes/opac-theme" }
+    $Targets += @{ LocalParent = "$LocalWpContent/themes/opac-theme"; Dir = 'patterns';  RemoteParent = "$RemoteBase/themes/opac-theme" }
 }
 
-# Fichiers isoles a la racine de wp-content. Exception assumee au principe
-# "dossiers entiers" ci-dessus : .htaccess n'appartient a aucun dossier
-# deployable, et sans lui le cache navigateur reste a 15 minutes.
-$RootFiles = @()
+# Fichiers isoles. Exception assumee au principe "dossiers entiers" ci-dessus :
+# ces fichiers n'appartiennent a aucun dossier deployable.
+#
+# Chaque entree porte sa propre destination, car ils ne vivent pas au meme
+# endroit : .htaccess est a la racine de wp-content, les trois autres a la
+# racine du theme. Sans .htaccess, le cache navigateur reste a 15 minutes.
+# functions.php, theme.json et style.css n'etaient couverts par aucune cible
+# jusqu'au 2026-09-13 : toute modification y restait locale.
+$SingleFiles = @()
 if (-not $PluginOnly) {
-    $RootFiles += '.htaccess'
+    $SingleFiles += @{ LocalParent = "$LocalWpContent"; File = '.htaccess';     RemoteParent = $RemoteBase }
+    $SingleFiles += @{ LocalParent = "$LocalWpContent/themes/opac-theme"; File = 'functions.php'; RemoteParent = "$RemoteBase/themes/opac-theme" }
+    $SingleFiles += @{ LocalParent = "$LocalWpContent/themes/opac-theme"; File = 'theme.json';    RemoteParent = "$RemoteBase/themes/opac-theme" }
+    $SingleFiles += @{ LocalParent = "$LocalWpContent/themes/opac-theme"; File = 'style.css';     RemoteParent = "$RemoteBase/themes/opac-theme" }
 }
 
 # --- Verifications preliminaires -----------------------------------------
@@ -119,8 +136,8 @@ foreach ($t in $Targets) {
         exit 1
     }
 }
-foreach ($f in $RootFiles) {
-    $local = Join-Path $LocalWpContent $f
+foreach ($f in $SingleFiles) {
+    $local = Join-Path $f.LocalParent $f.File
     if (-not (Test-Path $local)) {
         Write-Host "ERREUR : fichier local introuvable : $local" -ForegroundColor Red
         exit 1
@@ -164,8 +181,8 @@ Write-Host "  Cibles    :"
 foreach ($t in $Targets) {
     Write-Host ("    - {0}/  ->  {1}/{2}/" -f (Join-Path $t.LocalParent $t.Dir), $t.RemoteParent, $t.Dir)
 }
-foreach ($f in $RootFiles) {
-    Write-Host ("    - {0}   ->  {1}/{2}" -f (Join-Path $LocalWpContent $f), $RemoteBase, $f)
+foreach ($f in $SingleFiles) {
+    Write-Host ("    - {0}   ->  {1}/{2}" -f (Join-Path $f.LocalParent $f.File), $f.RemoteParent, $f.File)
 }
 
 # Ce script envoie l'etat du DISQUE, pas celui d'un commit. Si l'arbre de
@@ -228,22 +245,20 @@ foreach ($t in $Targets) {
     }
 }
 
-if ($RootFiles.Count -gt 0) {
-    $batchLines += "lcd `"$LocalWpContent`""
-    $batchLines += "cd $RemoteBase"
-    foreach ($f in $RootFiles) {
-        $batchLines += "put $f"
-        # Droits explicites : un .htaccess qu'Apache ne peut pas LIRE fait
-        # tomber tout le repertoire en 403 ("Server unable to read htaccess
-        # file, denying access to be safe"). C'est exactement ce qui bloque
-        # deja plugins/opac-custom/ sur la demo.
-        #
-        # Prefixe "-" : en mode batch (sftp -b), la premiere commande en
-        # echec avorte tout le deploiement. Si le serveur refuse le chmod, on
-        # continue quand meme, le controle de sante en fin de script se
-        # chargera de detecter un statique inaccessible.
-        $batchLines += "-chmod 644 $f"
-    }
+foreach ($f in $SingleFiles) {
+    $batchLines += "lcd `"$($f.LocalParent)`""
+    $batchLines += "cd $($f.RemoteParent)"
+    $batchLines += "put $($f.File)"
+    # Droits explicites : un .htaccess qu'Apache ne peut pas LIRE fait
+    # tomber tout le repertoire en 403 ("Server unable to read htaccess
+    # file, denying access to be safe"). C'est exactement ce qui bloque
+    # deja plugins/opac-custom/ sur la demo.
+    #
+    # Prefixe "-" : en mode batch (sftp -b), la premiere commande en
+    # echec avorte tout le deploiement. Si le serveur refuse le chmod, on
+    # continue quand meme, le controle de sante en fin de script se
+    # chargera de detecter un statique inaccessible.
+    $batchLines += "-chmod 644 $($f.File)"
 }
 $batchLines += "bye"
 
@@ -315,5 +330,10 @@ if ($allOk) {
     Write-Host "Rollback rapide en SFTP :" -ForegroundColor Yellow
     Write-Host "  cd $RemoteBase/plugins ; rename opac-custom opac-custom-off" -ForegroundColor Yellow
     Write-Host "  (le site revient a l'etat sans plugin, puis on rebascule sur develop et on redeploie)" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Si la panne vient du THEME (page blanche, mise en page cassee), renommer" -ForegroundColor Yellow
+    Write-Host "  le dossier ne suffit pas : WordPress tomberait sur un theme absent. Il faut" -ForegroundColor Yellow
+    Write-Host "  restaurer les fichiers, d'ou la sauvegarde a prendre AVANT un deploiement" -ForegroundColor Yellow
+    Write-Host "  complet :  sftp> get -r $RemoteBase/themes/opac-theme" -ForegroundColor Yellow
     exit 2
 }
