@@ -1,0 +1,38 @@
+# OPAC Plerin - Securite : interdit l'acces web aux harnais de test.
+#
+# Ces fichiers sont concus pour la ligne de commande : ils definissent eux-memes
+# ABSPATH et simulent les fonctions WordPress, donc le garde-fou habituel
+# (`if ( ! defined( 'ABSPATH' ) ) exit;`) ne les protege pas. Servis par Apache,
+# ils s'executent et affichent leur sortie a n'importe quel visiteur.
+#
+# Constate en production le 2026-09-13 : les 16 harnais repondaient 200, et
+# test-login-lockout.php publiait "LOGIN_MAX_ATTEMPTS = 10, fenetre = 900 s",
+# soit exactement ce qu'il faut pour calibrer un brute-force sous le seuil.
+# D'autres exposent la logique des rate-limits et de l'anti-doublon.
+#
+# Pourquoi ici plutot qu'en excluant tests/ du deploiement : le script pousse
+# des dossiers entiers, jamais fichier par fichier, et c'est un choix delibere
+# (un envoi partiel peut laisser un .php tronque qui casse le site). Ce fichier
+# voyage donc avec le dossier et protege aussi toute copie faite ailleurs.
+#
+# Sans effet en local : nginx (Local by Flywheel) ignore les .htaccess, et le
+# harnais doit y rester lancable en CLI de toute facon.
+
+# Apache 2.4+
+<FilesMatch "\.(php|phtml|inc)$">
+    Require all denied
+</FilesMatch>
+
+# Repli Apache 2.2
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.(php|phtml|inc)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# Pour nginx, si l'hebergement change un jour, ajouter au server block :
+#   location ~* /wp-content/plugins/opac-custom/tests/ {
+#       deny all;
+#       return 403;
+#   }
