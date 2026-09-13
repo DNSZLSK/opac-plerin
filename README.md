@@ -1,4 +1,4 @@
-# Association OPAC — refonte du site opacplerin.fr
+# Association OPAC, refonte du site opacplerin.fr
 
 Refonte complète du site de l'**Association OPAC** (Office Plérinais d'Action Culturelle),
 association loi 1901 à Plérin (22), qui propose des ateliers culturels et artistiques à
@@ -171,7 +171,7 @@ statiques. Détail complet et configuration serveur dans [`DEPLOY.md`](DEPLOY.md
 Projet réalisé pendant un stage de la formation **Concepteur Développeur d'Applications**
 (AFPA), du cadrage du besoin avec l'association jusqu'à la mise en production.
 
-Développement : **DNSZLSK** — [kewin.io](https://kewin.io)
+Développement : **DNSZLSK** ([kewin.io](https://kewin.io))
 
 ## Licence
 
