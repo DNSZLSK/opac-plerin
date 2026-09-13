@@ -36,6 +36,11 @@ En pratique, ça se traduit par :
 | Application installable | `class-opac-pwa.php` | SuperPWA |
 | Mise en page | `theme.json` + templates FSE | Elementor / Divi |
 
+Une nuance, pour que la formule reste exacte : la production ne charge **aucune** extension
+tierce, ce qui se vérifie de l'extérieur. Les courriels partent par `wp_mail()` et le relais
+de l'hébergeur. Si ce relais venait à poser problème, un plugin SMTP serait le repli, et il
+serait la seule exception : la procédure est documentée dans [`DEPLOY.md`](DEPLOY.md).
+
 Ça a aussi un effet sur la sécurité : la très grande majorité des compromissions WordPress
 passe par une faille d'extension tierce. Sans extension tierce, cette surface disparaît.
 

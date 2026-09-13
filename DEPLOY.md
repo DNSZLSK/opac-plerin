@@ -143,11 +143,27 @@ expose_php = Off
 
 Supprime le header HTTP `X-Powered-By: PHP/X.Y.Z` qui leakait la version PHP exacte (utile pour les exploits ciblés).
 
-## 4. WP Mail SMTP (configurer après accès OVH)
+## 4. Envoi des courriels, et repli SMTP **si nécessaire**
 
-Les 2 formulaires custom (Contact + Inscription) envoient via `wp_mail()`. OVH bloque souvent le relay sans authentification.
+Les 2 formulaires custom (Contact + Inscription) envoient via `wp_mail()`.
 
-Installer le plugin `WP Mail SMTP` (officiel, validé en P0 du projet), configurer avec :
+**État constaté le 2026-09-13 : aucune extension SMTP n'est installée en production**, et les
+courriels partent bien par le relais de l'hébergeur. Cette section est donc un **repli**, à
+n'appliquer que si les envois cessent d'arriver : ne pas installer le plugin « au cas où ».
+C'est ce qui permet de tenir la promesse du projet, à savoir zéro extension tierce (cf. le
+[`README`](README.md)).
+
+Pour vérifier l'état réel à tout moment, sans accès à l'administration :
+
+```bash
+# 404 = absent (situation nominale) ; 200 ou 403 = installé
+curl -s -o /dev/null -w "%{http_code}\n" https://opacplerin.fr/wp-content/plugins/wp-mail-smtp/readme.txt
+# Témoin de la méthode : doit répondre 200
+curl -s -o /dev/null -w "%{http_code}\n" https://opacplerin.fr/wp-content/plugins/opac-custom/readme.txt
+```
+
+Si le repli devient nécessaire : installer le plugin `WP Mail SMTP` (officiel, validé en P0 du
+projet), configurer avec :
 - SMTP host : `ssl0.ovh.net` (ou similaire selon hébergement OVH)
 - Port : 465 (SSL) ou 587 (TLS)
 - From : `contact@opacplerin.fr`
