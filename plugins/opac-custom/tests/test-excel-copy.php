@@ -10,6 +10,13 @@
  * Y-m-d -> d/m/Y, la neutralisation d'injection de formule et le nettoyage des
  * tabulations/retours a la ligne.
  *
+ * RGPD : toutes les identites de ce fichier sont FICTIVES et doivent le rester.
+ * Le depot est pousse sur un remote, un jeu d'essai y est donc publie aussi
+ * longtemps que l'historique existe. Les emails utilisent example.org (domaine
+ * reserve par la RFC 2606) et les portables la plage 06 39 98 XX XX, reservee
+ * par l'ARCEP a la fiction : aucune chance de tomber sur un vrai abonne. Ne
+ * jamais recopier ici une inscription reelle, meme pour reproduire un bug.
+ *
  * Teste le VRAI code en isolation : get_post_meta / wp_get_object_terms sont
  * mockes. Aucune base, aucun site lance.
  *
@@ -88,7 +95,7 @@ echo "\n=== B. Liste d'attente : ligne contact courte A..I ===\n";
 
 $GLOBALS['post_meta'][2] = [
     'opac_insc_nom'         => 'MARTIN',
-    'opac_insc_prenom'      => 'Laurence',
+    'opac_insc_prenom'      => 'Dominique',
     'opac_insc_code_postal' => '22190',
     'opac_insc_commune'     => 'PLERIN',
     'opac_insc_telephone'   => '06 39 98 56 78',
@@ -101,7 +108,7 @@ $GLOBALS['post_meta'][2] = [
 $GLOBALS['post_status'][2] = ['liste-attente'];
 
 $attendu = tsv([
-    '', 'MARTIN', 'Laurence', '', '', '22190', 'PLERIN', '06 39 98 56 78',
+    '', 'MARTIN', 'Dominique', '', '', '22190', 'PLERIN', '06 39 98 56 78',
     'dominique.martin@example.org',
 ]);
 check("ligne d'attente s'arrete au Mail", OPAC_Inscriptions::excel_tsv_line(2), $attendu);
