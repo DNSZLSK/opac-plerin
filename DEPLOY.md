@@ -30,14 +30,41 @@ continuent de répondre 200).
 
 - il ne migre ni la base de données, ni les `uploads/` ;
 - il téléverse sans supprimer : un fichier retiré en local reste en ligne sur OVH ;
-- il ne déploie **pas** tout le thème. Les cibles sont listées explicitement en tête
-  du script. À ce jour : `plugins/opac-custom`, `themes/opac-theme/templates`,
-  `themes/opac-theme/assets` et `wp-content/.htaccess`. Tout le reste du thème
-  (`functions.php`, `theme.json`, `style.css`, `parts/`, `patterns/`) n'est pas
-  couvert et doit être téléversé séparément.
+- il ne pousse que le plugin `opac-custom` et le thème `opac-theme`. Tout autre
+  plugin ou thème installé en prod est ignoré.
 
-Le dossier `tools/` lui-même n'est jamais téléversé, puisqu'il ne figure pas dans les
-cibles.
+Les cibles sont listées explicitement en tête du script : cinq dossiers poussés en
+récursif (`plugins/opac-custom`, et `templates/`, `assets/`, `parts/`, `patterns/`
+du thème) et quatre fichiers isolés (`wp-content/.htaccess`, plus `functions.php`,
+`theme.json` et `style.css` à la racine du thème). Le dossier `tools/` n'en fait pas
+partie, il n'est donc jamais téléversé.
+
+**Historique, à lire avant d'ajouter un fichier au thème.** Cette liste a oublié des
+cibles deux fois. `assets/` jusqu'au 2026-07-27 : aucune modification de CSS, de JS ou
+de police n'était déployée. Puis `parts/`, `patterns/` et les trois fichiers racine du
+thème jusqu'au 2026-09-13 : la prod a servi pendant neuf jours l'ancien markup du menu
+« S'inscrire » alors que le CSS et le JS correspondants, eux, étaient bien partis. Le
+symptôme est silencieux, le site continue de répondre 200. **Tout nouveau fichier ou
+dossier ajouté au thème doit être ajouté aux cibles dans le même commit.**
+
+### Sauvegarde avant un déploiement du thème
+
+Le script ne sauvegarde rien. Avant un déploiement qui touche `functions.php` ou
+`theme.json`, récupérer une copie de secours, car une erreur fatale dans l'un des deux
+donne un écran blanc et le rollback par renommage de dossier ne marche pas pour un
+thème (WordPress tomberait sur un thème absent) :
+
+```
+sftp opacpler@ftp.cluster115.hosting.ovh.net
+sftp> get -r /home/opacpler/demo/wp-content/themes/opac-theme
+```
+
+### Et si la prod ne reflète toujours pas les fichiers
+
+Un template-part modifié depuis `/wp-admin > Apparence > Éditeur` est enregistré **en
+base**, et il prime alors sur le fichier du thème. Le déploiement n'y changera rien,
+puisque la base n'est jamais transportée. Dans ce cas, ouvrir l'élément dans l'éditeur
+de site et choisir « Effacer les personnalisations » pour revenir au fichier.
 
 ## 1. `.htaccess` racine du site
 
