@@ -13,6 +13,7 @@
  * - Anti-enumeration d'utilisateur : REST users verrouille + archives auteur
  *   (?author=N et /author/{login}/) renvoyees en 404 (le login ne fuite plus)
  * - Rate-limit login par IP (transient), anti brute-force sans plugin tiers
+ * - Mots de passe d'application desactives (voie REST hors du rate-limit)
  *
  * Constants additionnelles a mettre dans wp-config.php (manuel) :
  * - DISALLOW_FILE_EDIT = true (bloque editeur PHP dans /wp-admin)
@@ -27,7 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OPAC_Security {
 
-    const LOGIN_MAX_ATTEMPTS = 5;
+    const LOGIN_MAX_ATTEMPTS = 10;
     const LOGIN_WINDOW_S     = 900; // 15 minutes
 
     public static function register() {
@@ -62,10 +63,21 @@ class OPAC_Security {
         // connexion. Priorite 0 pour preceder redirect_canonical (priorite 10).
         add_action( 'template_redirect', [ __CLASS__, 'block_author_enumeration' ], 0 );
 
-        // Login rate-limit anti-brute-force (transient par IP).
+        // Login rate-limit anti-brute-force (transient par IP). Priorite 30,
+        // donc APRES les handlers du coeur (priorite 20) : cf. le piege
+        // documente sur check_login_attempts(), une WP_Error posee avant eux
+        // serait purement et simplement ecrasee.
         add_filter( 'authenticate', [ __CLASS__, 'check_login_attempts' ], 30, 1 );
         add_action( 'wp_login_failed', [ __CLASS__, 'increment_failed_login' ] );
         add_action( 'wp_login', [ __CLASS__, 'reset_login_attempts' ] );
+
+        // Desactive les mots de passe d'application (WP les active par defaut).
+        // Ils authentifient via la REST par wp_authenticate_application_password(),
+        // qui ne declenche jamais wp_login_failed : ces tentatives echappent donc
+        // au compteur ci-dessus, ce qui rouvre une voie de brute-force sans
+        // limite. Aucun usage dans le projet (pas de client REST externe), on
+        // ferme la porte plutot que de dupliquer le rate-limit dessus.
+        add_filter( 'wp_is_application_passwords_available', '__return_false' );
 
         // Francise le skip link WP (texte par defaut "Skip to the content").
         add_filter( 'gettext', [ __CLASS__, 'translate_skip_link' ], 10, 2 );
@@ -254,34 +266,55 @@ class OPAC_Security {
     }
 
     /**
-     * Anti brute-force login : transient WP par IP, max 5 tentatives
-     * sur 15 minutes. Au-dela, retourne une erreur a authenticate()
-     * AVANT que WP teste le mot de passe (bloque l'attaque sans
-     * meme charger le user). Pattern leger, pas de plugin tiers.
+     * Anti brute-force login : transient WP par IP, LOGIN_MAX_ATTEMPTS
+     * tentatives sur LOGIN_WINDOW_S. Pattern leger, pas de plugin tiers.
+     *
+     * Le refus est INCONDITIONNEL pendant la fenetre de blocage, y compris
+     * quand les identifiants sont bons. C'est tout l'interet du garde-fou et
+     * c'est ce qui manquait : la version precedente n'entrait dans le test que
+     * si $user etait deja une WP_Error, donc elle rejetait les mauvais essais
+     * (qui l'auraient ete de toute facon) mais laissait passer le bon mot de
+     * passe des que l'attaquant tombait dessus. Autrement dit, elle ne limitait
+     * pas le nombre de mots de passe testables, soit exactement ce qu'un
+     * anti-brute-force doit faire.
+     *
+     * Piege verifie en conditions reelles : le filtre DOIT rester en priorite 30,
+     * apres les handlers du coeur. Poser la WP_Error plus tot (priorite 1) ne
+     * marche pas, car wp_authenticate_username_password() ne rend la main sur une
+     * erreur deja presente que si l'identifiant ou le mot de passe sont vides ;
+     * sinon il refait son propre get_user_by() + wp_check_password() et ECRASE
+     * notre erreur, laissant la connexion passer. Consequence assumee : le hash
+     * est calcule avant qu'on refuse. Ca coute un peu de CPU par tentative, mais
+     * ca n'affaiblit rien, puisqu'on repond la meme erreur que le mot de passe
+     * soit bon ou mauvais : l'attaquant n'apprend rien et n'entre pas.
+     *
+     * Contrepartie assumee : le verrou devient reel, donc une equipe derriere une
+     * meme IP publique (bureau OPAC) peut se bloquer sur des fautes de frappe.
+     * D'ou un seuil a 10 et non 5 : large pour un humain, hors de portee d'un
+     * brute-force utile. Le transient expire seul au bout de LOGIN_WINDOW_S.
      *
      * En prod, Cloudflare/OVH rate-limit en plus est recommande
      * pour bloquer en amont (avant que la requete touche PHP).
      */
     public static function check_login_attempts( $user ) {
-        if ( is_wp_error( $user ) || ! $user ) {
-            $ip = self::get_client_ip();
-            if ( ! $ip ) {
-                return $user;
-            }
-            $key      = 'opac_login_fail_' . md5( $ip );
-            $attempts = (int) get_transient( $key );
-            if ( $attempts >= self::LOGIN_MAX_ATTEMPTS ) {
-                return new WP_Error(
-                    'opac_too_many_attempts',
-                    sprintf(
-                        /* translators: %d : minutes restantes */
-                        __( 'Trop de tentatives de connexion. Merci de réessayer dans %d minutes.', 'opac-custom' ),
-                        (int) ceil( self::LOGIN_WINDOW_S / 60 )
-                    )
-                );
-            }
+        $ip = self::get_client_ip();
+        if ( ! $ip ) {
+            return $user;
         }
-        return $user;
+
+        $attempts = (int) get_transient( 'opac_login_fail_' . md5( $ip ) );
+        if ( $attempts < self::LOGIN_MAX_ATTEMPTS ) {
+            return $user;
+        }
+
+        return new WP_Error(
+            'opac_too_many_attempts',
+            sprintf(
+                /* translators: %d : minutes restantes */
+                __( 'Trop de tentatives de connexion. Merci de réessayer dans %d minutes.', 'opac-custom' ),
+                (int) ceil( self::LOGIN_WINDOW_S / 60 )
+            )
+        );
     }
 
     public static function increment_failed_login() {
