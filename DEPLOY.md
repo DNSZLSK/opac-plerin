@@ -229,4 +229,14 @@ curl -I https://opacplerin.fr/ | grep -i powered
 
 # Sitemap accessible
 curl https://opacplerin.fr/wp-sitemap.xml
+
+# Harnais de test NON exposés (doit répondre 403)
+curl -s -o /dev/null -w "%{http_code}\n" \
+  https://opacplerin.fr/wp-content/plugins/opac-custom/tests/test-login-lockout.php
 ```
+
+À propos du dernier contrôle : les harnais de `tests/` sont écrits pour la ligne de commande et
+définissent eux-mêmes `ABSPATH`, donc le garde-fou habituel ne les protège pas. Servis par Apache, ils
+s'exécutent et publient leur sortie. Constaté en production le 2026-09-13 : les 16 répondaient 200, et
+celui du verrou de connexion affichait son seuil et sa fenêtre, soit de quoi calibrer un brute-force
+juste en dessous. Fermé par `plugins/opac-custom/tests/.htaccess`, qui voyage avec le dossier.
