@@ -100,6 +100,17 @@ Après import du thème + plugin OPAC :
 
 Vérifier que `/ateliers/`, `/ephemeres/`, `/agenda/`, `/association/`, `/contact/`, `/inscription/`, `/mentions-legales/`, `/politique-de-confidentialite/` répondent toutes en 200.
 
+## 5 bis. Thèmes par défaut à supprimer en prod
+
+Action **manuelle en prod**, à faire une fois : `/wp-admin > Apparence`, supprimer
+tout thème `twentytwenty*` encore présent. Le site tourne sur `opac-theme`, qui est
+autonome (pas de thème parent) : aucun de ces thèmes n'est utilisé, mais un thème
+inactif reste du code exécutable le jour où une faille y est publiée.
+
+Pourquoi ce n'est pas automatique : ces dossiers sont exclus du dépôt
+(cf. `.gitignore`), donc les supprimer en local ne les retire pas d'OVH, et le
+déploiement SFTP téléverse sans supprimer.
+
 ## 6. Migration BDD
 
 Avant la mise en prod :
