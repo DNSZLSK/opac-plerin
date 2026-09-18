@@ -1225,9 +1225,13 @@ html:not(.js) .opac-event-tabs {
     color: var(--opac-border);
 }
 
+/* Colonne photo plus ETROITE que la colonne texte : le contenu (titre,
+   description, tarif, public, créneaux, boutons, notices) fait le gros du
+   volume vertical, la photo n'est qu'un appui. L'inverse laissait le vide dans
+   la colonne la plus large de la grille. */
 .opac-detail {
     display: grid;
-    grid-template-columns: 1.4fr 1fr;
+    grid-template-columns: 1fr 1.4fr;
     gap: 32px;
     align-items: start;
 }
@@ -1243,8 +1247,43 @@ html:not(.js) .opac-event-tabs {
 }
 
 .opac-detail-photo {
-    height: 280px !important;
     border-radius: var(--opac-radius);
+}
+
+/* Hauteur de la photo de fiche.
+   Le template pose .opac-detail-photo ET .opac-card-cover sur le meme element.
+   Or .opac-card-cover impose height:200px !important plus bas dans ce fichier
+   (systeme opac-img-frame) : a specificite egale c'est lui qui gagnait par
+   ordre source, et le height:280px pose ici ne s'appliquait jamais. La photo
+   d'une fiche etait donc dimensionnee comme une vignette de listing. Mesure a
+   1280px : 632px de large pour 200px de haut, face a une colonne de contenu de
+   670px, soit 470px de vide sous la photo.
+   On reprend la main avec une specificite superieure (0,2,0 contre 0,1,0, les
+   deux en !important) et une hauteur qui suit la largeur au lieu d'etre figee. */
+.opac-detail .opac-detail-photo {
+    height: auto !important;
+    aspect-ratio: 4 / 5;
+}
+
+/* Fiche sans photo : le cadre ne contient alors que le fond coloré de secours
+   (.opac-card-cover-fill), et l'équipe publie régulièrement des fiches avant
+   d'avoir la photo. Un aplat de 565px de haut deviendrait la pièce dominante
+   de la page, plus haute que le texte lui-même (mesuré : 565 contre 300). On
+   le ramène à une bande. Le sélecteur cible l'absence d'<img>, le bloc
+   post-featured-image n'étant tout simplement pas rendu sans vignette. */
+.opac-detail .opac-detail-photo:not(:has(img)) {
+    aspect-ratio: auto;
+    height: 240px !important;
+}
+
+/* En une seule colonne, un ratio 4/5 donnerait une photo haute de plusieurs
+   centaines de pixels avant le moindre texte. On revient a une bande, comme
+   les vignettes. */
+@media (max-width: 768px) {
+    .opac-detail .opac-detail-photo {
+        aspect-ratio: auto;
+        height: 240px !important;
+    }
 }
 
 .opac-detail-content {

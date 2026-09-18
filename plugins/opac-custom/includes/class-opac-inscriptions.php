@@ -495,8 +495,14 @@ class OPAC_Inscriptions {
             $a_id = (int) get_post_meta( $id, 'opac_insc_atelier_id', true );
             $c_id = (string) get_post_meta( $id, 'opac_insc_creneau_id', true );
             if ( $a_id && '' !== $c_id ) {
-                $cap = self::creneau_capacite( $a_id, $c_id );
-                if ( $cap > 0 && self::count_validees( $a_id, $c_id ) > $cap ) {
+                // Comptage brut (et non places_restantes, qui plafonne a 0 et ne
+                // distingue donc pas « exactement plein » de « depasse »), inscrits
+                // hors site compris : sans eux l'alerte ne partirait jamais sur un
+                // creneau rempli au guichet.
+                $row  = self::creneau_row( $a_id, $c_id );
+                $cap  = is_array( $row ) && isset( $row['capacite'] ) ? (int) $row['capacite'] : 0;
+                $hors = is_array( $row ) && isset( $row['deja_inscrits'] ) ? max( 0, (int) $row['deja_inscrits'] ) : 0;
+                if ( $cap > 0 && ( $hors + self::count_validees( $a_id, $c_id ) ) > $cap ) {
                     $redirect_args['opac_insc_over'] = '1';
                 }
             }
@@ -571,7 +577,7 @@ class OPAC_Inscriptions {
                 (string) get_post_meta( $id, 'opac_insc_code_postal', true ),
                 (string) get_post_meta( $id, 'opac_insc_commune', true ),
                 $atelier,
-                (string) get_post_meta( $id, 'opac_insc_creneau', true ),
+                self::creneau_display( $id ),
                 $adh_label,
                 $statut,
                 (string) get_post_meta( $id, 'opac_insc_date_submitted', true ),
@@ -1245,27 +1251,126 @@ class OPAC_Inscriptions {
     }
 
     /**
+     * Places restantes sur un creneau / une seance, ou null si le creneau n'a
+     * pas de limite (capacite 0, ou id absent donc comptage impossible).
+     * Jamais negatif : un depassement rend 0, pas -3.
+     *
+     * Trois termes, et le deuxieme est le seul non evident :
+     *
+     *   restant = capacite - deja_inscrits - inscriptions validees en base
+     *
+     * « deja_inscrits » est le nombre d'inscrits pris HORS du site : les
+     * reinscriptions de l'annee precedente, les inscriptions prises au guichet
+     * ou par telephone. Sans ce terme, la base part de zero a chaque refonte ou
+     * chaque saison et considere pleins d'espace des creneaux qui affichent
+     * complet depuis septembre. Consequences observees : aucun badge « Complet »
+     * sur la fiche, et surtout la liste d'attente automatique (cf. handle_submit)
+     * qui ne se declenche jamais, donc chaque demande arrive en « en attente »
+     * sur un atelier sature et doit etre reclassee a la main.
+     *
+     * Le champ se saisit une fois en debut de saison dans le tableau des
+     * creneaux ; les validations faites ensuite depuis l'admin s'ajoutent
+     * toutes seules via count_validees(). Laisse vide, il vaut 0 et le calcul
+     * est exactement celui d'avant : aucune fiche existante ne change d'etat.
+     *
+     * @param int   $cible_id Atelier a l'annee ou ephemere.
+     * @param array $creneau  Creneau / seance structure (id, capacite, deja_inscrits).
+     * @return int|null Places restantes, ou null si pas de limite.
+     */
+    public static function places_restantes( $cible_id, $creneau ) {
+        if ( ! is_array( $creneau ) ) {
+            return null;
+        }
+        $cap = isset( $creneau['capacite'] ) ? (int) $creneau['capacite'] : 0;
+        $id  = isset( $creneau['id'] ) ? (string) $creneau['id'] : '';
+        if ( $cap <= 0 || '' === $id ) {
+            return null;
+        }
+        $hors_site = isset( $creneau['deja_inscrits'] ) ? (int) $creneau['deja_inscrits'] : 0;
+        if ( $hors_site < 0 ) {
+            $hors_site = 0;
+        }
+        $restant = $cap - $hors_site - self::count_validees( $cible_id, $id );
+        return $restant > 0 ? $restant : 0;
+    }
+
+    /**
      * Vrai si le creneau a atteint sa capacite (capacite 0 = pas de limite).
-     * $creneau = tableau structure (id, capacite, ...).
+     * $creneau = tableau structure (id, capacite, deja_inscrits, ...).
      */
     public static function creneau_is_full( $atelier_id, $creneau ) {
-        if ( ! is_array( $creneau ) ) {
-            return false;
+        $restant = self::places_restantes( $atelier_id, $creneau );
+        return ( null !== $restant && $restant <= 0 );
+    }
+
+    /**
+     * Retrouve un creneau / une seance structure par son id dans la cible.
+     * Check explicite par type (pas de else catch-all) : on ne lit que la meta
+     * que la cible possede. Null si introuvable ou type non gere.
+     *
+     * @return array|null Le creneau structure complet (capacite, deja_inscrits...).
+     */
+    public static function creneau_row( $cible_id, $creneau_id ) {
+        $cible_id   = (int) $cible_id;
+        $creneau_id = (string) $creneau_id;
+        if ( ! $cible_id || '' === $creneau_id ) {
+            return null;
         }
-        if ( isset( $creneau['capacite'] ) ) {
-            $cap = (int) $creneau['capacite'];
+        $type = get_post_type( $cible_id );
+        if ( 'opac_atelier' === $type ) {
+            $struct = get_post_meta( $cible_id, 'opac_creneaux', true );
+        } elseif ( 'opac_stage' === $type ) {
+            $struct = get_post_meta( $cible_id, 'opac_stage_seances', true );
         } else {
-            $cap = 0;
+            return null;
         }
-        if ( isset( $creneau['id'] ) ) {
-            $id = (string) $creneau['id'];
-        } else {
-            $id = '';
+        if ( ! is_array( $struct ) ) {
+            return null;
         }
-        if ( $cap <= 0 || '' === $id ) {
-            return false;
+        foreach ( $struct as $c ) {
+            if ( is_array( $c ) && isset( $c['id'] ) && (string) $c['id'] === $creneau_id ) {
+                return $c;
+            }
         }
-        return self::count_validees( $atelier_id, $id ) >= $cap;
+        return null;
+    }
+
+    /**
+     * Libelle du creneau d'une inscription, pour affichage et export.
+     *
+     * opac_insc_creneau est un INSTANTANE : le libelle tel qu'il se lisait au
+     * moment de la demande. Il ne suit donc pas les retouches faites ensuite sur
+     * la fiche (horaire corrige, rythme renseigne apres coup), et deux
+     * inscriptions sur le MEME creneau peuvent s'exporter avec deux textes
+     * differents selon leur anciennete. Comme l'identifiant du creneau est
+     * stocke a cote, on recompose le libelle depuis la fiche quand il s'y
+     * retrouve : l'export redevient homogene, et les lignes se regroupent.
+     *
+     * L'instantane reste le repli, et il sert dans deux cas reels : les
+     * inscriptions prises sur l'ancien champ texte libre (aucun id), et celles
+     * dont le creneau a ete supprime de la fiche depuis. Mieux vaut un libelle
+     * date qu'une cellule vide dans un dossier de subvention.
+     */
+    public static function creneau_display( $insc_id ) {
+        $insc_id = (int) $insc_id;
+        $stored  = (string) get_post_meta( $insc_id, 'opac_insc_creneau', true );
+
+        $cible_id   = (int) get_post_meta( $insc_id, 'opac_insc_atelier_id', true );
+        $creneau_id = (string) get_post_meta( $insc_id, 'opac_insc_creneau_id', true );
+        if ( ! $cible_id || '' === $creneau_id ) {
+            return $stored;
+        }
+
+        $row = self::creneau_row( $cible_id, $creneau_id );
+        if ( ! is_array( $row ) ) {
+            return $stored;
+        }
+
+        $label = ( 'opac_stage' === get_post_type( $cible_id ) )
+            ? OPAC_Calendar::seance_label( $row )
+            : OPAC_Calendar::creneau_label( $row );
+
+        return ( '' !== $label ) ? $label : $stored;
     }
 
     /**
@@ -1275,27 +1380,11 @@ class OPAC_Inscriptions {
      * (pas de else catch-all) : on ne lit que la meta que la cible possede.
      */
     public static function creneau_capacite( $cible_id, $creneau_id ) {
-        $cible_id   = (int) $cible_id;
-        $creneau_id = (string) $creneau_id;
-        if ( ! $cible_id || '' === $creneau_id ) {
+        $row = self::creneau_row( $cible_id, $creneau_id );
+        if ( ! is_array( $row ) ) {
             return 0;
         }
-        $type = get_post_type( $cible_id );
-        if ( 'opac_atelier' === $type ) {
-            $struct = get_post_meta( $cible_id, 'opac_creneaux', true );
-        } elseif ( 'opac_stage' === $type ) {
-            $struct = get_post_meta( $cible_id, 'opac_stage_seances', true );
-        } else {
-            return 0;
-        }
-        if ( is_array( $struct ) ) {
-            foreach ( $struct as $c ) {
-                if ( is_array( $c ) && isset( $c['id'] ) && (string) $c['id'] === $creneau_id ) {
-                    return isset( $c['capacite'] ) ? (int) $c['capacite'] : 0;
-                }
-            }
-        }
-        return 0;
+        return isset( $row['capacite'] ) ? (int) $row['capacite'] : 0;
     }
 
     /**

@@ -152,8 +152,14 @@ class OPAC_Meta {
                             'jour' => [ 'type' => 'string' ],
                             'debut' => [ 'type' => 'string' ],
                             'fin' => [ 'type' => 'string' ],
+                            // Alternance de deux groupes sur le meme horaire
+                            // (cf. OPAC_Calendar::rythmes).
+                            'rythme' => [ 'type' => 'string' ],
                             'tarif' => [ 'type' => 'integer' ],
                             'capacite' => [ 'type' => 'integer' ],
+                            // Inscrits pris hors du site (reinscriptions,
+                            // secretariat) : cf. OPAC_Inscriptions::places_restantes.
+                            'deja_inscrits' => [ 'type' => 'integer' ],
                             'note' => [ 'type' => 'string' ],
                         ],
                     ],
@@ -212,6 +218,9 @@ class OPAC_Meta {
                             'fin' => [ 'type' => 'string' ],
                             'tarif' => [ 'type' => 'integer' ],
                             'capacite' => [ 'type' => 'integer' ],
+                            // Inscrits pris hors du site (secretariat, telephone) :
+                            // cf. OPAC_Inscriptions::places_restantes.
+                            'deja_inscrits' => [ 'type' => 'integer' ],
                             'note' => [ 'type' => 'string' ],
                         ],
                     ],

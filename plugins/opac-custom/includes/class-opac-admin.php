@@ -527,8 +527,11 @@ class OPAC_Admin {
                 }
                 break;
             case 'opac_insc_creneau':
-                $creneau = get_post_meta( $post_id, 'opac_insc_creneau', true );
-                echo $creneau ? esc_html( $creneau ) : '-';
+                // Libelle recompose depuis la fiche quand le creneau s'y
+                // retrouve : deux inscriptions sur le meme creneau se lisent
+                // pareil, quelle que soit leur anciennete.
+                $creneau = OPAC_Inscriptions::creneau_display( $post_id );
+                echo '' !== $creneau ? esc_html( $creneau ) : '-';
                 break;
             case 'opac_insc_priorite':
                 self::render_priorite_cell( $post_id );
@@ -854,8 +857,15 @@ class OPAC_Admin {
                 continue;
             }
             $tarif = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
-            $text  = $tarif > 0 ? $label . ' (' . OPAC_Labels::euros( $tarif ) . ')' : $label;
-            $cid   = isset( $c['id'] ) ? (string) $c['id'] : '';
+            // Note incluse : sans elle, deux creneaux de meme horaire (groupes en
+            // alternance) donnent deux options identiques et la saisie se fait au
+            // hasard, sur un ecran ou l'erreur n'est pas rattrapable par l'inscrit.
+            $text = OPAC_Calendar::choice_label(
+                $label,
+                $c,
+                $tarif > 0 ? OPAC_Labels::euros( $tarif ) : ''
+            );
+            $cid  = isset( $c['id'] ) ? (string) $c['id'] : '';
             $opts[] = [ 'v' => ( '' !== $cid ) ? $cid : $label, 't' => $text ];
         }
         return $opts;
@@ -882,8 +892,12 @@ class OPAC_Admin {
             if ( '' === $label ) {
                 continue;
             }
-            $tarif = isset( $s['tarif'] ) ? (int) $s['tarif'] : 0;
-            $text  = $tarif > 0 ? $label . ' (' . OPAC_Labels::euros( $tarif ) . ')' : $label;
+            $tarif  = isset( $s['tarif'] ) ? (int) $s['tarif'] : 0;
+            $text   = OPAC_Calendar::choice_label(
+                $label,
+                $s,
+                $tarif > 0 ? OPAC_Labels::euros( $tarif ) : ''
+            );
             $opts[] = [ 'v' => (string) $s['id'], 't' => $text ];
         }
         return $opts;
@@ -1585,6 +1599,12 @@ class OPAC_Admin {
         <p class="description">
             <?php esc_html_e( 'Un créneau par ligne (jour + horaires). Tarif et capacité servent au formulaire d\'inscription et à l\'affichage des places (capacité 0 = pas de limite). Si vide, l\'ancien champ texte « Créneaux » reste utilisé.', 'opac-custom' ); ?>
         </p>
+        <p class="description">
+            <?php esc_html_e( '« Déjà inscrits » : le nombre de personnes inscrites en dehors du site (réinscriptions, inscriptions prises au secrétariat ou par téléphone). À renseigner une fois en début de saison : les inscriptions validées ensuite depuis le site s\'ajoutent automatiquement. Laissé vide, il vaut 0.', 'opac-custom' ); ?>
+        </p>
+        <p class="description">
+            <?php esc_html_e( '« Rythme » : à utiliser quand deux groupes se partagent le même jour et le même horaire en alternance. Créez alors deux lignes, une par groupe, chacune avec sa propre capacité.', 'opac-custom' ); ?>
+        </p>
         <?php if ( $prefilled ) : ?>
         <p class="description" style="color:#996800">
             <?php esc_html_e( 'Horaires repris automatiquement de l\'ancien champ texte. Vérifiez les lignes ci-dessous puis cliquez sur « Mettre à jour » pour les convertir au nouveau format.', 'opac-custom' ); ?>
@@ -1596,8 +1616,10 @@ class OPAC_Admin {
                     <th><?php esc_html_e( 'Jour', 'opac-custom' ); ?></th>
                     <th><?php esc_html_e( 'Début', 'opac-custom' ); ?></th>
                     <th><?php esc_html_e( 'Fin', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Rythme', 'opac-custom' ); ?></th>
                     <th><?php esc_html_e( 'Tarif (€)', 'opac-custom' ); ?></th>
                     <th><?php esc_html_e( 'Capacité', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Déjà inscrits', 'opac-custom' ); ?></th>
                     <th><?php esc_html_e( 'Note', 'opac-custom' ); ?></th>
                     <th></th>
                 </tr>
@@ -1647,6 +1669,9 @@ class OPAC_Admin {
         $fin      = isset( $row['fin'] ) ? (string) $row['fin'] : '';
         $tarif    = isset( $row['tarif'] ) && '' !== $row['tarif'] ? (int) $row['tarif'] : '';
         $capacite = isset( $row['capacite'] ) && '' !== $row['capacite'] ? (int) $row['capacite'] : '';
+        $deja     = isset( $row['deja_inscrits'] ) && '' !== $row['deja_inscrits'] ? (int) $row['deja_inscrits'] : '';
+        $rythme   = isset( $row['rythme'] ) ? (string) $row['rythme'] : '';
+        $rythmes  = OPAC_Calendar::rythmes();
         $note     = isset( $row['note'] ) ? (string) $row['note'] : '';
         $base     = 'opac_creneaux[' . $index . ']';
 
@@ -1663,8 +1688,16 @@ class OPAC_Admin {
             </td>
             <td><input type="time" name="<?php echo esc_attr( $base ); ?>[debut]" value="<?php echo esc_attr( $debut ); ?>" /></td>
             <td><input type="time" name="<?php echo esc_attr( $base ); ?>[fin]" value="<?php echo esc_attr( $fin ); ?>" /></td>
+            <td>
+                <select name="<?php echo esc_attr( $base ); ?>[rythme]">
+                    <?php foreach ( $rythmes as $val => $lab ) : ?>
+                        <option value="<?php echo esc_attr( $val ); ?>" <?php selected( $rythme, $val ); ?>><?php echo esc_html( $lab ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </td>
             <td><input type="number" min="0" step="1" class="small-text" name="<?php echo esc_attr( $base ); ?>[tarif]" value="<?php echo esc_attr( $tarif ); ?>" /></td>
             <td><input type="number" min="0" step="1" class="small-text" name="<?php echo esc_attr( $base ); ?>[capacite]" value="<?php echo esc_attr( $capacite ); ?>" /></td>
+            <td><input type="number" min="0" step="1" class="small-text" name="<?php echo esc_attr( $base ); ?>[deja_inscrits]" value="<?php echo esc_attr( $deja ); ?>" /></td>
             <td><input type="text" name="<?php echo esc_attr( $base ); ?>[note]" value="<?php echo esc_attr( $note ); ?>" /></td>
             <td><button type="button" class="button-link opac-creneau-del" aria-label="<?php esc_attr_e( 'Retirer le créneau', 'opac-custom' ); ?>">&times;</button></td>
         </tr>
@@ -1797,14 +1830,24 @@ class OPAC_Admin {
                 $id = self::next_unique_id( 'c', $used );
             }
             $used[ $id ] = true;
+
+            // Rythme : liste fermee, toute valeur inconnue retombe sur le defaut
+            // hebdomadaire (qui n'ajoute rien au libelle).
+            $rythme = isset( $row['rythme'] ) ? sanitize_key( $row['rythme'] ) : '';
+            if ( ! in_array( $rythme, OPAC_Calendar::rythmes_keys(), true ) ) {
+                $rythme = 'chaque';
+            }
+
             $clean[] = [
-                'id'       => $id,
-                'jour'     => $jour,
-                'debut'    => $debut,
-                'fin'      => $fin,
-                'tarif'    => isset( $row['tarif'] ) ? absint( $row['tarif'] ) : 0,
-                'capacite' => isset( $row['capacite'] ) ? absint( $row['capacite'] ) : 0,
-                'note'     => isset( $row['note'] ) ? sanitize_text_field( $row['note'] ) : '',
+                'id'            => $id,
+                'jour'          => $jour,
+                'debut'         => $debut,
+                'fin'           => $fin,
+                'rythme'        => $rythme,
+                'tarif'         => isset( $row['tarif'] ) ? absint( $row['tarif'] ) : 0,
+                'capacite'      => isset( $row['capacite'] ) ? absint( $row['capacite'] ) : 0,
+                'deja_inscrits' => isset( $row['deja_inscrits'] ) ? absint( $row['deja_inscrits'] ) : 0,
+                'note'          => isset( $row['note'] ) ? sanitize_text_field( $row['note'] ) : '',
             ];
         }
         if ( empty( $clean ) ) {
@@ -1848,6 +1891,9 @@ class OPAC_Admin {
         <p class="description">
             <?php esc_html_e( 'La « Date de début » de la fiche pilote l\'affichage sur la carte et l\'onglet de période : renseignez-la même si vous détaillez des séances.', 'opac-custom' ); ?>
         </p>
+        <p class="description">
+            <?php esc_html_e( '« Déjà inscrits » : le nombre de personnes inscrites en dehors du site (inscriptions prises au secrétariat ou par téléphone). Les inscriptions validées depuis le site s\'ajoutent automatiquement. Laissé vide, il vaut 0.', 'opac-custom' ); ?>
+        </p>
         <table class="widefat opac-creneaux-editor">
             <thead>
                 <tr>
@@ -1856,6 +1902,7 @@ class OPAC_Admin {
                     <th><?php esc_html_e( 'Fin', 'opac-custom' ); ?></th>
                     <th><?php esc_html_e( 'Tarif (€)', 'opac-custom' ); ?></th>
                     <th><?php esc_html_e( 'Capacité', 'opac-custom' ); ?></th>
+                    <th><?php esc_html_e( 'Déjà inscrits', 'opac-custom' ); ?></th>
                     <th><?php esc_html_e( 'Note', 'opac-custom' ); ?></th>
                     <th></th>
                 </tr>
@@ -1905,6 +1952,7 @@ class OPAC_Admin {
         $fin      = isset( $row['fin'] ) ? (string) $row['fin'] : '';
         $tarif    = isset( $row['tarif'] ) && '' !== $row['tarif'] ? (int) $row['tarif'] : '';
         $capacite = isset( $row['capacite'] ) && '' !== $row['capacite'] ? (int) $row['capacite'] : '';
+        $deja     = isset( $row['deja_inscrits'] ) && '' !== $row['deja_inscrits'] ? (int) $row['deja_inscrits'] : '';
         $note     = isset( $row['note'] ) ? (string) $row['note'] : '';
         $base     = 'opac_stage_seances[' . $index . ']';
 
@@ -1919,6 +1967,7 @@ class OPAC_Admin {
             <td><input type="time" name="<?php echo esc_attr( $base ); ?>[fin]" value="<?php echo esc_attr( $fin ); ?>" /></td>
             <td><input type="number" min="0" step="1" class="small-text" name="<?php echo esc_attr( $base ); ?>[tarif]" value="<?php echo esc_attr( $tarif ); ?>" /></td>
             <td><input type="number" min="0" step="1" class="small-text" name="<?php echo esc_attr( $base ); ?>[capacite]" value="<?php echo esc_attr( $capacite ); ?>" /></td>
+            <td><input type="number" min="0" step="1" class="small-text" name="<?php echo esc_attr( $base ); ?>[deja_inscrits]" value="<?php echo esc_attr( $deja ); ?>" /></td>
             <td><input type="text" name="<?php echo esc_attr( $base ); ?>[note]" value="<?php echo esc_attr( $note ); ?>" /></td>
             <td><button type="button" class="button-link opac-creneau-del" aria-label="<?php esc_attr_e( 'Retirer la séance', 'opac-custom' ); ?>">&times;</button></td>
         </tr>
@@ -1964,13 +2013,14 @@ class OPAC_Admin {
             }
             $used[ $id ] = true;
             $clean[] = [
-                'id'       => $id,
-                'date'     => $date,
-                'debut'    => isset( $row['debut'] ) ? sanitize_text_field( $row['debut'] ) : '',
-                'fin'      => isset( $row['fin'] ) ? sanitize_text_field( $row['fin'] ) : '',
-                'tarif'    => isset( $row['tarif'] ) ? absint( $row['tarif'] ) : 0,
-                'capacite' => isset( $row['capacite'] ) ? absint( $row['capacite'] ) : 0,
-                'note'     => isset( $row['note'] ) ? sanitize_text_field( $row['note'] ) : '',
+                'id'            => $id,
+                'date'          => $date,
+                'debut'         => isset( $row['debut'] ) ? sanitize_text_field( $row['debut'] ) : '',
+                'fin'           => isset( $row['fin'] ) ? sanitize_text_field( $row['fin'] ) : '',
+                'tarif'         => isset( $row['tarif'] ) ? absint( $row['tarif'] ) : 0,
+                'capacite'      => isset( $row['capacite'] ) ? absint( $row['capacite'] ) : 0,
+                'deja_inscrits' => isset( $row['deja_inscrits'] ) ? absint( $row['deja_inscrits'] ) : 0,
+                'note'          => isset( $row['note'] ) ? sanitize_text_field( $row['note'] ) : '',
             ];
         }
 

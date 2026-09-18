@@ -127,7 +127,7 @@ class OPAC_RGPD {
                     [ 'name' => __( 'Prénom', 'opac-custom' ),          'value' => get_post_meta( $id, 'opac_insc_prenom', true ) ],
                     [ 'name' => __( 'Email', 'opac-custom' ),           'value' => get_post_meta( $id, 'opac_insc_email', true ) ],
                     [ 'name' => __( 'Téléphone', 'opac-custom' ),       'value' => get_post_meta( $id, 'opac_insc_telephone', true ) ],
-                    [ 'name' => __( 'Créneau', 'opac-custom' ),         'value' => get_post_meta( $id, 'opac_insc_creneau', true ) ],
+                    [ 'name' => __( 'Créneau', 'opac-custom' ),         'value' => OPAC_Inscriptions::creneau_display( $id ) ],
                     [ 'name' => __( 'Code postal', 'opac-custom' ),     'value' => get_post_meta( $id, 'opac_insc_code_postal', true ) ],
                     [ 'name' => __( 'Commune', 'opac-custom' ),         'value' => get_post_meta( $id, 'opac_insc_commune', true ) ],
                     [ 'name' => __( 'Message', 'opac-custom' ),         'value' => get_post_meta( $id, 'opac_insc_message', true ) ],

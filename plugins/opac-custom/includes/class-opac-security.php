@@ -82,6 +82,13 @@ class OPAC_Security {
         // Francise le skip link WP (texte par defaut "Skip to the content").
         add_filter( 'gettext', [ __CLASS__, 'translate_skip_link' ], 10, 2 );
 
+        // security.txt (RFC 9116). Servi par le plugin et non par un fichier
+        // statique : deploy-demo.ps1 ne pousse que wp-content, un fichier pose
+        // a la racine du site ne serait donc jamais deploye et disparaitrait au
+        // premier transfert. Priorite 0, comme le blocage d'enumeration : il
+        // faut passer avant que WordPress ne decide d'un 404.
+        add_action( 'template_redirect', [ __CLASS__, 'serve_security_txt' ], 0 );
+
         // Block early access aux endpoints sensibles (PHP-level fallback
         // pour les envs sans .htaccess Apache : nginx, Local by Flywheel).
         // En prod Apache OVH, le .htaccess racine prend le relais et bloque
@@ -100,6 +107,53 @@ class OPAC_Security {
             return 'fr_FR';
         }
         return $locale;
+    }
+
+    /**
+     * Sert /.well-known/security.txt (RFC 9116).
+     *
+     * A quoi ca sert concretement : quand quelqu'un trouve une faille sur le
+     * site, il cherche a qui la dire. Sans ce fichier il ecrit au hasard, ou
+     * n'ecrit pas. Pour une association qui heberge des donnees d'adherents,
+     * apprendre un probleme par son auteur plutot que par ses consequences
+     * vaut les quinze lignes que voici.
+     *
+     * L'adresse de contact est celle des Reglages OPAC (opac_org_email), pas
+     * une adresse security@ dediee : l'association n'a pas de boite dediee, et
+     * annoncer une adresse que personne ne releve serait pire que rien.
+     *
+     * Expires est obligatoire dans la RFC et doit rester dans le futur, sinon
+     * le fichier est considere perime. Il est donc calcule (un an glissant) et
+     * non ecrit en dur : un fichier statique aurait expire sans que personne
+     * ne s'en apercoive.
+     */
+    public static function serve_security_txt() {
+        $uri  = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = strtok( $uri, '?' );
+        if ( '/.well-known/security.txt' !== rtrim( (string) $path, '/' ) ) {
+            return;
+        }
+
+        $email = class_exists( 'OPAC_Settings' ) ? (string) OPAC_Settings::get( 'opac_org_email' ) : '';
+        if ( ! is_email( $email ) ) {
+            $email = 'contact@opacplerin.fr';
+        }
+
+        // Fuseau nomme cote WP, mais l'horodatage RFC 9116 s'ecrit en UTC.
+        $expires = gmdate( 'Y-m-d\TH:i:s\Z', time() + YEAR_IN_SECONDS );
+
+        $lines = [
+            'Contact: mailto:' . $email,
+            'Expires: ' . $expires,
+            'Preferred-Languages: fr, en',
+            'Canonical: ' . home_url( '/.well-known/security.txt' ),
+        ];
+
+        nocache_headers();
+        header( 'Content-Type: text/plain; charset=utf-8' );
+        status_header( 200 );
+        echo implode( "\n", $lines ) . "\n";
+        exit;
     }
 
     public static function block_sensitive_endpoints() {
@@ -161,6 +215,11 @@ class OPAC_Security {
         $headers['X-Content-Type-Options'] = 'nosniff';
         $headers['Referrer-Policy']        = 'strict-origin-when-cross-origin';
         $headers['Permissions-Policy']     = 'geolocation=(), microphone=(), camera=(), payment=()';
+        // Isole le contexte de navigation : une page ouverte depuis le site
+        // (lien HelloAsso, reseaux sociaux) ne garde pas de reference
+        // manipulable vers la fenetre d'origine. Aucun usage de window.opener
+        // ici, donc same-origin ne casse rien.
+        $headers['Cross-Origin-Opener-Policy'] = 'same-origin';
 
         // HSTS uniquement en HTTPS (sinon casse l'env local en HTTP).
         if ( is_ssl() ) {
