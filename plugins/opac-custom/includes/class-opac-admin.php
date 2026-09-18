@@ -527,8 +527,11 @@ class OPAC_Admin {
                 }
                 break;
             case 'opac_insc_creneau':
-                $creneau = get_post_meta( $post_id, 'opac_insc_creneau', true );
-                echo $creneau ? esc_html( $creneau ) : '-';
+                // Libelle recompose depuis la fiche quand le creneau s'y
+                // retrouve : deux inscriptions sur le meme creneau se lisent
+                // pareil, quelle que soit leur anciennete.
+                $creneau = OPAC_Inscriptions::creneau_display( $post_id );
+                echo '' !== $creneau ? esc_html( $creneau ) : '-';
                 break;
             case 'opac_insc_priorite':
                 self::render_priorite_cell( $post_id );

@@ -577,7 +577,7 @@ class OPAC_Inscriptions {
                 (string) get_post_meta( $id, 'opac_insc_code_postal', true ),
                 (string) get_post_meta( $id, 'opac_insc_commune', true ),
                 $atelier,
-                (string) get_post_meta( $id, 'opac_insc_creneau', true ),
+                self::creneau_display( $id ),
                 $adh_label,
                 $statut,
                 (string) get_post_meta( $id, 'opac_insc_date_submitted', true ),
@@ -1333,6 +1333,44 @@ class OPAC_Inscriptions {
             }
         }
         return null;
+    }
+
+    /**
+     * Libelle du creneau d'une inscription, pour affichage et export.
+     *
+     * opac_insc_creneau est un INSTANTANE : le libelle tel qu'il se lisait au
+     * moment de la demande. Il ne suit donc pas les retouches faites ensuite sur
+     * la fiche (horaire corrige, rythme renseigne apres coup), et deux
+     * inscriptions sur le MEME creneau peuvent s'exporter avec deux textes
+     * differents selon leur anciennete. Comme l'identifiant du creneau est
+     * stocke a cote, on recompose le libelle depuis la fiche quand il s'y
+     * retrouve : l'export redevient homogene, et les lignes se regroupent.
+     *
+     * L'instantane reste le repli, et il sert dans deux cas reels : les
+     * inscriptions prises sur l'ancien champ texte libre (aucun id), et celles
+     * dont le creneau a ete supprime de la fiche depuis. Mieux vaut un libelle
+     * date qu'une cellule vide dans un dossier de subvention.
+     */
+    public static function creneau_display( $insc_id ) {
+        $insc_id = (int) $insc_id;
+        $stored  = (string) get_post_meta( $insc_id, 'opac_insc_creneau', true );
+
+        $cible_id   = (int) get_post_meta( $insc_id, 'opac_insc_atelier_id', true );
+        $creneau_id = (string) get_post_meta( $insc_id, 'opac_insc_creneau_id', true );
+        if ( ! $cible_id || '' === $creneau_id ) {
+            return $stored;
+        }
+
+        $row = self::creneau_row( $cible_id, $creneau_id );
+        if ( ! is_array( $row ) ) {
+            return $stored;
+        }
+
+        $label = ( 'opac_stage' === get_post_type( $cible_id ) )
+            ? OPAC_Calendar::seance_label( $row )
+            : OPAC_Calendar::creneau_label( $row );
+
+        return ( '' !== $label ) ? $label : $stored;
     }
 
     /**

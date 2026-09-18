@@ -116,6 +116,12 @@ check("12 places, 10 hors site + 2 validees -> 0",
 check("depassement saisi (15 sur 12) -> 0, jamais negatif",
     OPAC_Inscriptions::places_restantes(10, creneau('c-a7', [ 'capacite' => 12, 'deja_inscrits' => 15 ])), 0);
 
+// Depassement STRICT avec les deux termes actifs : 10 + 5 = 15 sur 12 places.
+// Le cas reel du secretariat qui valide une inscription de trop sur un creneau
+// deja rempli au guichet. Le calcul brut donnerait -3.
+check("depassement par les deux termes (10 + 5 sur 12) -> 0",
+    OPAC_Inscriptions::places_restantes(10, creneau('c-a10', [ 'capacite' => 12, 'deja_inscrits' => 10 ], 5)), 0);
+
 check("deja_inscrits negatif traite comme 0",
     OPAC_Inscriptions::places_restantes(10, creneau('c-a8', [ 'capacite' => 12, 'deja_inscrits' => -3 ])), 12);
 
@@ -200,6 +206,55 @@ $b = [ 'jour' => 'jeudi', 'debut' => '14:00', 'fin' => '16:00', 'note' => 'confi
 check("meme horaire, notes differentes -> options DIFFERENTES",
     OPAC_Calendar::choice_label(OPAC_Calendar::creneau_label($a), $a)
         !== OPAC_Calendar::choice_label(OPAC_Calendar::creneau_label($b), $b), true);
+
+// ---------------------------------------------------------------------------
+echo "\n=== E. creneau_display : libelle recompose depuis la fiche ===\n";
+
+// L'atelier 10 porte un creneau en semaines paires ; l'ephemere 20 une seance.
+$GLOBALS['post_meta'][10]['opac_creneaux'] = [
+    [ 'id' => 'c-e1', 'jour' => 'jeudi', 'debut' => '14:00', 'fin' => '16:00', 'rythme' => 'paires' ],
+];
+$GLOBALS['post_types'][20] = 'opac_stage';
+$GLOBALS['post_meta'][20]['opac_stage_seances'] = [
+    [ 'id' => 's-e1', 'date' => '2026-04-12', 'debut' => '14:30', 'fin' => '17:30' ],
+];
+
+/** Declare une inscription (instantane + cible + id de creneau). */
+function inscription($id, $stored, $cible, $creneau_id) {
+    $GLOBALS['post_meta'][$id] = [
+        'opac_insc_creneau'    => $stored,
+        'opac_insc_atelier_id' => $cible,
+        'opac_insc_creneau_id' => $creneau_id,
+    ];
+    return $id;
+}
+
+// Le cas signale : une inscription d'avant l'ajout du rythme porte encore
+// l'ancien instantane, mais s'exporte avec le libelle a jour.
+check("instantane perime -> libelle a jour",
+    OPAC_Inscriptions::creneau_display(inscription(100, 'Jeudi 14h - 16h', 10, 'c-e1')),
+    'Jeudi 14h - 16h, semaines paires');
+
+check("deux inscriptions du meme creneau -> meme libelle",
+    OPAC_Inscriptions::creneau_display(inscription(101, 'Jeudi 14h - 16h', 10, 'c-e1'))
+        === OPAC_Inscriptions::creneau_display(inscription(102, 'Jeudi 14h - 16h, semaines paires', 10, 'c-e1')),
+    true);
+
+check("creneau supprime de la fiche -> repli sur l'instantane",
+    OPAC_Inscriptions::creneau_display(inscription(103, 'Lundi 9h - 11h', 10, 'c-disparu')),
+    'Lundi 9h - 11h');
+
+check("aucun id (ancien champ texte) -> repli sur l'instantane",
+    OPAC_Inscriptions::creneau_display(inscription(104, 'Mercredi 14h (enfants)', 10, '')),
+    'Mercredi 14h (enfants)');
+
+check("cible absente -> repli sur l'instantane",
+    OPAC_Inscriptions::creneau_display(inscription(105, 'Jeudi 14h - 16h', 0, 'c-e1')),
+    'Jeudi 14h - 16h');
+
+check("ephemere -> libelle de seance datee",
+    OPAC_Inscriptions::creneau_display(inscription(106, '', 20, 's-e1')),
+    '12 avril 2026, 14h30 - 17h30');
 
 echo "\n";
 printf("RESULTAT : %d cas, %d OK, %d FAIL\n", $n, $pass, $fail);
