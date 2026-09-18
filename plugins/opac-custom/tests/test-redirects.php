@@ -53,6 +53,15 @@ check("acces-plan -> contact",     r('/acces-plan/'),            '/contact/');
 check("telethon -> agenda",        r('/telethon/'),              '/agenda/');
 check("actus -> agenda",           r('/actus/'),                 '/agenda/');
 
+// Les quatre chemins du sitemap de old.opacplerin.fr qui tombaient encore en
+// 404 sur la prod. Ils doivent etre couverts AVANT la mise hors service de
+// old.opacplerin.fr, qui redirigera en preservant le chemin : sans eux, le
+// visiteur venant de Google arriverait sur une erreur.
+check("charte -> association",     r('/charte-des-ateliers/'),        '/association/');
+check("partenariats -> association", r('/les-actions-en-partenariat/'), '/association/');
+check("slug auto saison -> agenda", r('/8332-2/'),                    '/agenda/');
+check("newsletter -> contact",     r('/newsletter/'),                 '/contact/');
+
 echo "\n=== D. Query string, casse ===\n";
 check("query string ignoree",      r('/les-ateliers/anglais/?utm_source=google'), '/ateliers/anglais/');
 check("casse normalisee",          r('/LES-ATELIERS/Anglais/'),  '/ateliers/anglais/');

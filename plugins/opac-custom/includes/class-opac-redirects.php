@@ -49,6 +49,17 @@ class OPAC_Redirects {
         'expos-fin-dannee'                => 'agenda',
         'sorties-expositions-exterieures' => 'agenda',
         'stages-de-printemps'             => 'ephemeres',
+
+        // Complement releve en confrontant le sitemap de old.opacplerin.fr
+        // (37 URLs) a la prod : ces quatre chemins etaient les seuls a tomber
+        // encore en 404. Ils comptent parce que la mise hors service de
+        // old.opacplerin.fr passe par une 301 preservant le chemin vers le
+        // domaine principal : chaque trou de cette table redevient un 404 pour
+        // un visiteur venant de Google ou d'un favori.
+        'charte-des-ateliers'             => 'association', // charte publiee sur la page Association
+        'les-actions-en-partenariat'      => 'association',
+        '8332-2'                          => 'agenda',      // slug auto WP, page « Saison culturelle »
+        'newsletter'                      => 'contact',     // pas de newsletter sur la refonte
     ];
 
     /**
