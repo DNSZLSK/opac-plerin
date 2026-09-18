@@ -1026,12 +1026,12 @@ class OPAC_Blocks {
                     ? ' <span class="opac-creneau-note">' . esc_html( (string) $c['note'] ) . '</span>'
                     : '';
                 $state_html = '';
-                $cap = isset( $c['capacite'] ) ? (int) $c['capacite'] : 0;
-                if ( $cap > 0 && ! empty( $c['id'] ) && class_exists( 'OPAC_Inscriptions' ) ) {
-                    $left = $cap - OPAC_Inscriptions::count_validees( $post_id, (string) $c['id'] );
-                    if ( $left <= 0 ) {
+                if ( class_exists( 'OPAC_Inscriptions' ) ) {
+                    // null = pas de limite sur ce creneau : aucun badge.
+                    $left = OPAC_Inscriptions::places_restantes( $post_id, $c );
+                    if ( null !== $left && $left <= 0 ) {
                         $state_html = ' <span class="opac-creneau-state is-full">' . esc_html__( 'Complet', 'opac-custom' ) . '</span>';
-                    } elseif ( $left <= 2 ) {
+                    } elseif ( null !== $left && $left <= 2 ) {
                         $state_html = ' <span class="opac-creneau-state is-few">' . esc_html__( 'Dernières places', 'opac-custom' ) . '</span>';
                     }
                 }
@@ -1084,12 +1084,12 @@ class OPAC_Blocks {
                 ? ' <span class="opac-creneau-note">' . esc_html( (string) $s['note'] ) . '</span>'
                 : '';
             $state_html = '';
-            $cap = isset( $s['capacite'] ) ? (int) $s['capacite'] : 0;
-            if ( $cap > 0 && ! empty( $s['id'] ) && class_exists( 'OPAC_Inscriptions' ) ) {
-                $left = $cap - OPAC_Inscriptions::count_validees( $post_id, (string) $s['id'] );
-                if ( $left <= 0 ) {
+            if ( class_exists( 'OPAC_Inscriptions' ) ) {
+                // null = pas de limite sur cette seance : aucun badge.
+                $left = OPAC_Inscriptions::places_restantes( $post_id, $s );
+                if ( null !== $left && $left <= 0 ) {
                     $state_html = ' <span class="opac-creneau-state is-full">' . esc_html__( 'Complet', 'opac-custom' ) . '</span>';
-                } elseif ( $left <= 2 ) {
+                } elseif ( null !== $left && $left <= 2 ) {
                     $state_html = ' <span class="opac-creneau-state is-few">' . esc_html__( 'Dernières places', 'opac-custom' ) . '</span>';
                 }
             }
@@ -1803,10 +1803,14 @@ class OPAC_Blocks {
                     continue;
                 }
                 $tarif_c = isset( $c['tarif'] ) ? (int) $c['tarif'] : 0;
-                $opt     = OPAC_Calendar::creneau_label( $c );
-                if ( $tarif_c > 0 ) {
-                    $opt .= ' (' . OPAC_Labels::euros( $tarif_c ) . ')';
-                }
+                // Note incluse (choice_label) : deux creneaux de meme jour et
+                // meme horaire (groupes en alternance, creneau adapte) ne se
+                // distinguent que par elle dans une <option>.
+                $opt = OPAC_Calendar::choice_label(
+                    OPAC_Calendar::creneau_label( $c ),
+                    $c,
+                    $tarif_c > 0 ? OPAC_Labels::euros( $tarif_c ) : ''
+                );
                 if ( class_exists( 'OPAC_Inscriptions' ) && OPAC_Inscriptions::creneau_is_full( $atelier_id, $c ) ) {
                     $opt .= ' - ' . __( 'Complet (liste d\'attente)', 'opac-custom' );
                 }
@@ -1835,10 +1839,11 @@ class OPAC_Blocks {
                     continue;
                 }
                 $tarif_s = isset( $s['tarif'] ) ? (int) $s['tarif'] : 0;
-                $opt     = OPAC_Calendar::seance_label( $s );
-                if ( $tarif_s > 0 ) {
-                    $opt .= ' (' . OPAC_Labels::euros( $tarif_s ) . ')';
-                }
+                $opt     = OPAC_Calendar::choice_label(
+                    OPAC_Calendar::seance_label( $s ),
+                    $s,
+                    $tarif_s > 0 ? OPAC_Labels::euros( $tarif_s ) : ''
+                );
                 if ( class_exists( 'OPAC_Inscriptions' ) && OPAC_Inscriptions::creneau_is_full( $stage_id, $s ) ) {
                     $opt .= ' - ' . __( 'Complet (liste d\'attente)', 'opac-custom' );
                 }

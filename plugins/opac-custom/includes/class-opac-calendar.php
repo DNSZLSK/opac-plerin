@@ -34,6 +34,34 @@ class OPAC_Calendar {
         return array_keys( self::jours() );
     }
 
+    /**
+     * Rythme d'un creneau hebdomadaire : slug => libelle FR.
+     *
+     * Pourquoi ce champ existe : un meme atelier peut tenir deux groupes au
+     * MEME jour et au MEME horaire, en alternance (semaines paires / impaires).
+     * Ce sont deux creneaux distincts, avec chacun sa capacite et ses inscrits,
+     * mais « Jeudi 14h - 16h » ne permet pas de les distinguer dans une liste
+     * deroulante : le visiteur comme le secretariat choisiraient au hasard.
+     * Le rythme fait donc partie du LIBELLE du creneau (cf. creneau_label),
+     * contrairement a la note qui reste editoriale.
+     *
+     * 'chaque' est le defaut et n'ajoute rien au libelle : la grande majorite
+     * des creneaux sont hebdomadaires, les afficher tous en « toutes les
+     * semaines » alourdirait les fiches sans rien apprendre a personne.
+     */
+    public static function rythmes() {
+        return [
+            'chaque'   => __( 'Toutes les semaines', 'opac-custom' ),
+            'paires'   => __( 'Semaines paires', 'opac-custom' ),
+            'impaires' => __( 'Semaines impaires', 'opac-custom' ),
+        ];
+    }
+
+    /** Slugs de rythme valides (validation des saisies). */
+    public static function rythmes_keys() {
+        return array_keys( self::rythmes() );
+    }
+
     /** Mois en toutes lettres (capitalises) : 1..12 => libelle. */
     public static function months() {
         return [
@@ -93,8 +121,14 @@ class OPAC_Calendar {
     }
 
     /**
-     * Libelle lisible d'un creneau structure : "Lundi 14h30 - 17h30".
-     * $c = tableau (jour, debut, fin). Jour inconnu : ucfirst du slug.
+     * Libelle lisible d'un creneau structure : "Lundi 14h30 - 17h30", suffixe
+     * du rythme quand il n'est pas hebdomadaire : "Jeudi 14h - 16h, semaines
+     * paires". $c = tableau (jour, debut, fin, rythme). Jour inconnu : ucfirst
+     * du slug, rythme inconnu ou absent : aucun suffixe (cf. rythmes()).
+     *
+     * Note : lcfirst suffit pour la mise en minuscule du rythme en milieu de
+     * phrase, seule l'initiale des libelles etant en ASCII majuscule (meme
+     * raisonnement que la forme 'lower' des mois).
      */
     public static function creneau_label( $c ) {
         if ( ! is_array( $c ) ) {
@@ -107,7 +141,52 @@ class OPAC_Calendar {
             isset( $c['debut'] ) ? $c['debut'] : '',
             isset( $c['fin'] ) ? $c['fin'] : ''
         );
-        return trim( $jour . ' ' . $h );
+        $label = trim( $jour . ' ' . $h );
+
+        $rythmes = self::rythmes();
+        $rythme  = isset( $c['rythme'] ) ? (string) $c['rythme'] : '';
+        if ( '' !== $label && 'chaque' !== $rythme && isset( $rythmes[ $rythme ] ) ) {
+            $label .= ', ' . lcfirst( $rythmes[ $rythme ] );
+        }
+
+        return $label;
+    }
+
+    /**
+     * Libelle d'un creneau/seance pour une liste deroulante : le libelle de
+     * base, suivi entre parentheses de la note puis du complement eventuel
+     * (tarif), separes par une virgule.
+     *
+     *   "Jeudi 14h - 16h, semaines paires (atelier adapté, 335 €)"
+     *
+     * Pourquoi la note ici et pas dans creneau_label : sur la fiche publique
+     * elle est rendue dans son propre <span> (style distinct), alors qu'une
+     * <option> ne peut porter que du texte plat. Sans elle, deux creneaux de
+     * meme horaire donnent deux options identiques, seule difference visible
+     * entre eux : c'est le cas qui rend le choix impossible.
+     *
+     * @param string $label Libelle de base (creneau_label / seance_label).
+     * @param array  $c     Creneau ou seance structure (lu : note).
+     * @param string $extra Complement facultatif deja formate (ex : "335 €").
+     */
+    public static function choice_label( $label, $c, $extra = '' ) {
+        $label = trim( (string) $label );
+        if ( '' === $label ) {
+            return '';
+        }
+        $bits = [];
+        $note = ( is_array( $c ) && isset( $c['note'] ) ) ? trim( (string) $c['note'] ) : '';
+        if ( '' !== $note ) {
+            $bits[] = $note;
+        }
+        $extra = trim( (string) $extra );
+        if ( '' !== $extra ) {
+            $bits[] = $extra;
+        }
+        if ( empty( $bits ) ) {
+            return $label;
+        }
+        return $label . ' (' . implode( ', ', $bits ) . ')';
     }
 
     /**
