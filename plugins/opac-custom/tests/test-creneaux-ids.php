@@ -108,6 +108,27 @@ check("ligne sans horaire ignoree",          count($clean), 1);
 $clean = save_creneaux([ [ 'jour' => 'lundi', 'debut' => '', 'fin' => '' ] ]);
 check_true("tout vide -> delete_post_meta",  in_array('opac_creneaux', $GLOBALS['deleted'], true));
 
+// Rythme et inscrits hors site : le chemin d'ECRITURE. Le rythme est une liste
+// fermee (une valeur forgee ne doit pas atteindre le libelle public) et les
+// inscrits hors site un entier positif (absint), sous peine de fausser le
+// calcul des places dans l'autre sens.
+$clean = save_creneaux([
+    [ 'jour' => 'jeudi', 'debut' => '14:00', 'fin' => '16:00', 'rythme' => 'paires',   'capacite' => 12, 'deja_inscrits' => 12 ],
+    [ 'jour' => 'jeudi', 'debut' => '14:00', 'fin' => '16:00', 'rythme' => 'impaires', 'capacite' => 12, 'deja_inscrits' => '10' ],
+    [ 'jour' => 'mardi', 'debut' => '10:00', 'fin' => '12:00', 'rythme' => '<script>', 'capacite' => 8 ],
+    [ 'jour' => 'vendredi', 'debut' => '17:00', 'fin' => '18:00', 'deja_inscrits' => -5 ],
+]);
+check("rythme paires conserve",              $clean[0]['rythme'], 'paires');
+check("rythme impaires conserve",            $clean[1]['rythme'], 'impaires');
+check("rythme hors liste -> defaut 'chaque'", $clean[2]['rythme'], 'chaque');
+check("rythme absent -> defaut 'chaque'",    $clean[3]['rythme'], 'chaque');
+check("deja_inscrits entier",                $clean[0]['deja_inscrits'], 12);
+check("deja_inscrits texte -> entier",       $clean[1]['deja_inscrits'], 10);
+check("deja_inscrits absent -> 0",           $clean[2]['deja_inscrits'], 0);
+check("deja_inscrits negatif -> absint",     $clean[3]['deja_inscrits'], 5);
+check_true("2 groupes de meme horaire -> 2 ids distincts",
+    $clean[0]['id'] !== $clean[1]['id']);
+
 // ---------------------------------------------------------------------------
 echo "\n=== B. Seances d'ephemere : unicite + tri + dates ===\n";
 
