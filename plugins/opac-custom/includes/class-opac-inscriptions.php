@@ -56,6 +56,11 @@ class OPAC_Inscriptions {
         // Export CSV des inscriptions (bouton liste admin).
         add_action( 'admin_post_' . self::ACTION_EXPORT, [ __CLASS__, 'handle_export' ] );
 
+        // Gel des bilans de saison, sur le cron quotidien du RGPD et AVANT la
+        // purge (priorite 5 contre 10) : aucune inscription ne peut ainsi etre
+        // supprimee sans que les chiffres de sa saison aient ete sauvegardes.
+        add_action( OPAC_RGPD::CRON_HOOK, [ __CLASS__, 'archive_finished_saisons' ], 5 );
+
         // Envoi d'un email groupe aux inscrits : ecran de redaction cache (sous-menu
         // masque de la liste) + handler d'envoi.
         add_action( 'admin_post_' . self::ACTION_SEND_EMAIL, [ __CLASS__, 'handle_send_email' ] );
@@ -548,9 +553,42 @@ class OPAC_Inscriptions {
         exit;
     }
 
-    /** Ecrit une ligne du bilan. Separateur point-virgule : cf. write_bilan. */
+    /**
+     * Ecrit une ligne du bilan. Separateur point-virgule : cf. write_bilan.
+     *
+     * Les entites HTML sont decodees AVANT l'ecriture. Les titres saisis dans
+     * l'editeur passent par wptexturize, qui remplace l'apostrophe droite par
+     * &rsquo; : « Tapisserie d'ameublement » sortait litteralement en
+     * « Tapisserie d&rsquo;ameublement » dans le tableur. Le decodage precede
+     * csv_safe(), pour qu'une valeur decodee commencant par « = » reste
+     * neutralisee.
+     */
     private static function csv_line( $out, array $cells ) {
+        $cells = array_map(
+            static function ( $c ) {
+                return is_string( $c ) ? html_entity_decode( $c, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) : $c;
+            },
+            $cells
+        );
         fputcsv( $out, array_map( [ __CLASS__, 'csv_safe' ], $cells ), ';' );
+    }
+
+    /**
+     * Cle de regroupement d'une commune saisie librement au formulaire.
+     *
+     * « Plérin », « Plerin », « PLÉRIN » et « PLERIN » designent la meme
+     * commune et se retrouvaient sur quatre lignes distinctes du bilan. Or la
+     * part de Plerinais est LE chiffre que regardent la mairie et
+     * l'agglomeration : quatre lignes de 1 au lieu d'une ligne de 4 sous-estime
+     * chaque commune et rend le tableau inexploitable.
+     *
+     * On replie les accents (remove_accents), la casse, et les separateurs
+     * internes (« Saint-Brieuc » et « SAINT BRIEUC » se rejoignent).
+     */
+    private static function commune_key( $commune ) {
+        $c = remove_accents( trim( (string) $commune ) );
+        $c = preg_replace( '/[\s\-\']+/u', ' ', $c );
+        return strtoupper( trim( (string) $c ) );
     }
 
     /**
@@ -645,8 +683,18 @@ class OPAC_Inscriptions {
                 $commune = trim( (string) get_post_meta( $id, 'opac_insc_commune', true ) );
                 $cp      = trim( (string) get_post_meta( $id, 'opac_insc_code_postal', true ) );
                 if ( '' !== $commune || '' !== $cp ) {
-                    $cle = $cp . '|' . $commune;
-                    $s['communes'][ $cle ] = ( $s['communes'][ $cle ] ?? 0 ) + 1;
+                    // Regroupement sur une cle normalisee (cf. commune_key), mais
+                    // on retient les orthographes rencontrees pour afficher la
+                    // plus frequente : « Plérin » plutot que « PLERIN ».
+                    $cle = $cp . '|' . self::commune_key( $commune );
+                    if ( ! isset( $s['communes'][ $cle ] ) ) {
+                        $s['communes'][ $cle ] = [ 'n' => 0, 'cp' => $cp, 'libelles' => [] ];
+                    }
+                    $s['communes'][ $cle ]['n']++;
+                    if ( '' !== $commune ) {
+                        $s['communes'][ $cle ]['libelles'][ $commune ] =
+                            ( $s['communes'][ $cle ]['libelles'][ $commune ] ?? 0 ) + 1;
+                    }
                 }
             }
             unset( $s );
@@ -690,9 +738,41 @@ class OPAC_Inscriptions {
             return;
         }
 
-        foreach ( $saisons as $slug => $s ) {
+        $archive = self::bilan_archive();
+
+        // L'union des saisons encore en base et des saisons archivees, et non
+        // les seules premieres : une fois la purge RGPD passee, une saison
+        // gelee n'a plus aucune inscription et disparaitrait du bilan, ce qui
+        // viderait justement l'historique que le gel sert a preserver.
+        $slugs = array_unique( array_merge( array_keys( $saisons ), array_keys( $archive ) ) );
+        rsort( $slugs );
+
+        foreach ( $slugs as $slug ) {
+            $s       = $saisons[ $slug ] ?? [ 'statuts' => [], 'adhesion' => [], 'cibles' => [], 'communes' => [] ];
+            $est_cur = ( $slug === $slug_cur );
+
+            // Saison close et deja gelee : on reimprime le bloc archive tel
+            // quel. C'est ce qui permet au bilan de rester juste apres que la
+            // purge RGPD a supprime les inscriptions qui l'ont produit.
+            if ( ! $est_cur && isset( $archive[ $slug ]['csv'] ) ) {
+                fwrite( $out, (string) $archive[ $slug ]['csv'] );
+                continue;
+            }
+
+            self::write_saison_block( $out, $slug, $s, $est_cur );
+        }
+    }
+
+    /**
+     * Ecrit le bloc CSV d'une saison : entete, synthese, detail par atelier,
+     * detail par creneau, repartition par commune.
+     *
+     * Isole de write_bilan() pour pouvoir etre rendu soit vers le fichier
+     * telecharge, soit vers un flux memoire dont le texte est archive
+     * (cf. freeze_saison).
+     */
+    private static function write_saison_block( $out, $slug, array $s, $est_cur ) {
             $saison     = OPAC_Settings::saison_by_start_year( (int) substr( $slug, 0, 4 ) );
-            $est_cur    = ( $slug === $slug_cur );
             $validees   = (int) ( $s['statuts']['validee'] ?? 0 );
             $attente    = (int) ( $s['statuts']['liste-attente'] ?? 0 );
             $en_attente = (int) ( $s['statuts']['en-attente'] ?? 0 );
@@ -837,12 +917,110 @@ class OPAC_Inscriptions {
                 __( 'Commune', 'opac-custom' ),
                 __( 'Inscrits', 'opac-custom' ),
             ] );
-            arsort( $s['communes'] );
-            foreach ( $s['communes'] as $cle => $n ) {
-                list( $cp, $commune ) = array_pad( explode( '|', $cle, 2 ), 2, '' );
-                self::csv_line( $out, [ $cp, $commune, $n ] );
+            uasort( $s['communes'], static function ( $a, $b ) {
+                return $b['n'] <=> $a['n'];
+            } );
+            foreach ( $s['communes'] as $c ) {
+                // Orthographe la plus frequente parmi celles rencontrees ; une
+                // commune laissee vide reste comptee, sous une mention explicite
+                // plutot que sur une ligne sans libelle.
+                $libelle = __( '(commune non renseignée)', 'opac-custom' );
+                if ( ! empty( $c['libelles'] ) ) {
+                    // La plus frequente ; a egalite, celle qui n'est pas tout en
+                    // capitales, plus proche de l'usage (« Saint-Brieuc » plutot
+                    // que « SAINT BRIEUC »).
+                    $best = '';
+                    $note = -1;
+                    foreach ( $c['libelles'] as $graphie => $n ) {
+                        $graphie = trim( (string) $graphie );
+                        if ( '' === $graphie ) {
+                            continue;
+                        }
+                        $score = ( $n * 2 ) + ( $graphie === mb_strtoupper( $graphie, 'UTF-8' ) ? 0 : 1 );
+                        if ( $score > $note ) {
+                            $note = $score;
+                            $best = $graphie;
+                        }
+                    }
+                    if ( '' !== $best ) {
+                        $libelle = $best;
+                    }
+                }
+                self::csv_line( $out, [ $c['cp'], $libelle, $c['n'] ] );
             }
+    }
+
+    /**
+     * Option d'archivage des bilans de saison.
+     *
+     * Contenu : slug de saison => [ 'csv' => <bloc CSV>, 'gele_le' => <date> ].
+     * Aucune donnee personnelle, uniquement des effectifs agreges : le tableau
+     * peut donc etre conserve indefiniment, contrairement aux inscriptions qui
+     * l'ont produit.
+     */
+    const ARCHIVE_OPTION = 'opac_bilan_archive';
+
+    /** @return array<string,array{csv:string,gele_le:string}> */
+    public static function bilan_archive() {
+        $a = get_option( self::ARCHIVE_OPTION, [] );
+        return is_array( $a ) ? $a : [];
+    }
+
+    /**
+     * Gele le bilan des saisons terminees qui ne le sont pas encore.
+     *
+     * Pourquoi c'est necessaire : le bilan recompte les inscriptions a chaque
+     * generation, alors que la purge RGPD les supprime passe
+     * opac_insc_purge_months (24 mois). Sans gel, cliquer sur « Exporter le
+     * bilan » en 2029 rendrait des zeros pour 2026-2027, et personne ne
+     * pourrait plus reconstituer ces chiffres. On enregistre donc une fois,
+     * a la cloture, le bloc CSV deja compose : des nombres, aucun nom.
+     *
+     * Accroche AVANT la purge (priorite 5 contre 10 sur le meme cron, cf.
+     * OPAC_RGPD::CRON_HOOK) : l'ordre garantit qu'aucune inscription ne peut
+     * etre supprimee sans que les chiffres de sa saison aient ete sauvegardes.
+     *
+     * Idempotent : une saison deja gelee n'est jamais recalculee, sans quoi le
+     * passage suivant du cron la reecrirait avec des donnees deja amputees.
+     */
+    public static function archive_finished_saisons() {
+        $archive  = self::bilan_archive();
+        $courante = OPAC_Settings::current_saison();
+        $slug_cur = is_array( $courante ) ? $courante['slug'] : '';
+        $today    = current_time( 'Y-m-d' );
+        $modifie  = false;
+
+        foreach ( self::bilan_data() as $slug => $s ) {
+            if ( $slug === $slug_cur || isset( $archive[ $slug ] ) ) {
+                continue;
+            }
+            $saison = OPAC_Settings::saison_by_start_year( (int) substr( $slug, 0, 4 ) );
+            // Saison encore en cours ou a venir (inscriptions prises d'avance
+            // pour la rentree) : rien a figer, les chiffres bougent encore.
+            if ( $saison['end'] >= $today ) {
+                continue;
+            }
+
+            $archive[ $slug ] = [
+                'csv'     => self::render_saison_block( $slug, $s, false ),
+                'gele_le' => $today,
+            ];
+            $modifie = true;
         }
+
+        if ( $modifie ) {
+            update_option( self::ARCHIVE_OPTION, $archive, false );
+        }
+    }
+
+    /** Rend le bloc CSV d'une saison sous forme de chaine (flux memoire). */
+    private static function render_saison_block( $slug, array $s, $est_cur ) {
+        $tmp = fopen( 'php://temp', 'r+' );
+        self::write_saison_block( $tmp, $slug, $s, $est_cur );
+        rewind( $tmp );
+        $csv = (string) stream_get_contents( $tmp );
+        fclose( $tmp );
+        return $csv;
     }
 
     /** Creneaux (atelier) ou seances (ephemere) structures d'une cible. */
