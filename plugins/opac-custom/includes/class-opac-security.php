@@ -10,6 +10,9 @@
  * - Masquage version WP (meta generator + ?ver= sur enqueues)
  * - Desactivation XMLRPC (vecteur brute-force standard)
  * - Filter REST API : opac_inscription deja non expose (show_in_rest=false)
+ * - REST fermee aux anonymes (liste blanche oEmbed), flux RSS/Atom en 404 et
+ *   commentaires fermes partout : aucun des trois n'a d'usage sur ce site, et
+ *   ils exposaient la structure du site ou du contenu de demonstration WP
  * - Anti-enumeration d'utilisateur : REST users verrouille + archives auteur
  *   (?author=N et /author/{login}/) renvoyees en 404 (le login ne fuite plus)
  * - Rate-limit login par IP (transient), anti brute-force sans plugin tiers
@@ -57,6 +60,28 @@ class OPAC_Security {
 
         // Limite la divulgation d'info dans l'API REST (users endpoint).
         add_filter( 'rest_endpoints', [ __CLASS__, 'restrict_rest_users' ] );
+
+        // REST fermee aux visiteurs anonymes (cf. block_anonymous_rest).
+        add_filter( 'rest_authentication_errors', [ __CLASS__, 'block_anonymous_rest' ] );
+        // Liens de decouverte de la REST : sans interet une fois l'API fermee,
+        // et ils annoncent la surface a qui la cherche.
+        remove_action( 'wp_head', 'rest_output_link_wp_head', 10 );
+        remove_action( 'template_redirect', 'rest_output_link_header', 11 );
+
+        // Commentaires : fermes partout (cf. close_comments).
+        add_filter( 'comments_open', '__return_false', 20 );
+        add_filter( 'pings_open', '__return_false', 20 );
+        add_filter( 'comments_array', '__return_empty_array', 20 );
+        add_action( 'admin_menu', [ __CLASS__, 'hide_comments_menu' ] );
+        add_action( 'wp_before_admin_bar_render', [ __CLASS__, 'hide_comments_admin_bar' ] );
+
+        // Flux RSS/Atom : desactives (cf. disable_feeds).
+        foreach ( [ 'rdf', 'rss', 'rss2', 'atom', 'rss2_comments', 'atom_comments' ] as $feed ) {
+            add_action( 'do_feed_' . $feed, [ __CLASS__, 'disable_feeds' ], 1 );
+        }
+        add_action( 'do_feed', [ __CLASS__, 'disable_feeds' ], 1 );
+        remove_action( 'wp_head', 'feed_links', 2 );
+        remove_action( 'wp_head', 'feed_links_extra', 3 );
 
         // Bloque l'enumeration d'utilisateur via les archives auteur
         // (?author=N + /author/{login}/), qui divulguent l'identifiant de
@@ -454,5 +479,106 @@ class OPAC_Security {
             }
         }
         return $endpoints;
+    }
+
+    /**
+     * Routes REST laissees ouvertes aux visiteurs anonymes.
+     *
+     * Une seule : oEmbed, qui sert quand un tiers (la mairie, un partenaire,
+     * un reseau social) colle un lien vers le site et attend un apercu. La
+     * fermer casserait quelque chose d'utile chez quelqu'un d'autre, sans rien
+     * proteger : elle ne rend que le titre et l'auteur d'une page publique.
+     */
+    const REST_PUBLIC_PREFIXES = [ '/oembed/1.0' ];
+
+    /**
+     * Vrai si la route demandee reste accessible sans etre connecte.
+     * Pure (aucun appel WordPress) pour rester testable au harnais.
+     *
+     * @param string $route Route REST demandee (ex: '/wp/v2/posts').
+     */
+    public static function is_public_rest_route( $route ) {
+        $route = '/' . ltrim( (string) $route, '/' );
+        foreach ( self::REST_PUBLIC_PREFIXES as $prefix ) {
+            if ( $route === $prefix || 0 === strpos( $route, $prefix . '/' ) ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Ferme l'API REST aux visiteurs anonymes.
+     *
+     * Pourquoi : rien sur ce site n'appelle la REST depuis le front (aucun
+     * apiFetch ni wp-json dans les assets du theme et du plugin), et l'editeur
+     * FSE ne s'en sert qu'une fois connecte. Ouverte, elle publiait 161 routes
+     * et 300 Ko d'index a n'importe qui : le contenu y est certes deja public,
+     * mais l'index decrit la structure du site, les types de contenu et les
+     * extensions actives, et /wp/v2/media laissait fuiter l'ID numerique de
+     * l'auteur. Aucune de ces informations n'a de destinataire legitime.
+     *
+     * Ce qui n'est PAS ferme ici : les inscriptions (opac_inscription n'est
+     * pas expose du tout, show_in_rest => false, c'est-a-dire le seul endroit
+     * ou il y a des donnees personnelles), et oEmbed (cf. REST_PUBLIC_PREFIXES).
+     *
+     * Pour rouvrir une route un jour (un partenaire qui voudrait recuperer
+     * l'agenda), il suffit d'ajouter son prefixe a REST_PUBLIC_PREFIXES.
+     *
+     * @param WP_Error|null|true $result Resultat d'authentification en cours.
+     */
+    public static function block_anonymous_rest( $result ) {
+        // Une erreur (ou une autorisation) deja posee par le coeur ou un autre
+        // filtre fait foi : on ne l'ecrase pas.
+        if ( null !== $result && true !== $result ) {
+            return $result;
+        }
+        if ( is_user_logged_in() ) {
+            return $result;
+        }
+
+        $route = '';
+        if ( ! empty( $GLOBALS['wp']->query_vars['rest_route'] ) ) {
+            $route = (string) $GLOBALS['wp']->query_vars['rest_route'];
+        }
+        if ( self::is_public_rest_route( $route ) ) {
+            return $result;
+        }
+
+        return new WP_Error(
+            'rest_not_logged_in',
+            __( 'L\'API REST de ce site n\'est pas ouverte au public.', 'opac-custom' ),
+            [ 'status' => 401 ]
+        );
+    }
+
+    /**
+     * Flux RSS / Atom : 404 franc.
+     *
+     * Le site n'a pas de blog. Le seul flux servi etait celui de l'article de
+     * demonstration livre avec WordPress, et un flux vide reste servi en 200
+     * meme apres suppression de l'article : il faut donc le couper
+     * explicitement, la suppression du contenu ne suffit pas.
+     */
+    public static function disable_feeds() {
+        status_header( 404 );
+        nocache_headers();
+        wp_die(
+            esc_html__( 'Ce site ne publie pas de flux. Retrouvez l\'actualité de l\'association sur la page Agenda.', 'opac-custom' ),
+            esc_html__( 'Flux indisponible', 'opac-custom' ),
+            [ 'response' => 404 ]
+        );
+    }
+
+    /** Retire l'entree Commentaires du menu d'administration. */
+    public static function hide_comments_menu() {
+        remove_menu_page( 'edit-comments.php' );
+    }
+
+    /** Retire le compteur de commentaires de la barre d'administration. */
+    public static function hide_comments_admin_bar() {
+        if ( isset( $GLOBALS['wp_admin_bar'] ) ) {
+            $GLOBALS['wp_admin_bar']->remove_menu( 'comments' );
+        }
     }
 }
