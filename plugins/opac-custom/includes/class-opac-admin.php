@@ -1499,7 +1499,7 @@ class OPAC_Admin {
         printf(
             '<a class="button" href="%s">%s</a> ',
             esc_url( add_query_arg( $export_args, admin_url( 'admin-post.php' ) ) ),
-            esc_html__( 'Exporter en CSV', 'opac-custom' )
+            esc_html__( 'Exporter le bilan (CSV)', 'opac-custom' )
         );
 
         // Bouton « Copier pour Excel » : cote client (admin-insc-copy-excel.js), copie
