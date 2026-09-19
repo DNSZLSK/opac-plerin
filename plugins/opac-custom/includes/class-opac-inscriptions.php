@@ -356,8 +356,12 @@ class OPAC_Inscriptions {
         update_post_meta( $post_id, 'opac_insc_atelier_id',     $cible_id );
         update_post_meta( $post_id, 'opac_insc_creneau',        $creneau );
         update_post_meta( $post_id, 'opac_insc_message',        $message );
-        update_post_meta( $post_id, 'opac_insc_date_submitted', current_time( 'mysql' ) );
+        $date_submitted = current_time( 'mysql' );
+        update_post_meta( $post_id, 'opac_insc_date_submitted', $date_submitted );
         update_post_meta( $post_id, 'opac_insc_source',         'form-frontend' );
+        // Saison figee a la creation (cf. resolve_saison) : c'est elle qui
+        // regroupe les inscriptions dans le bilan annuel, pas la date de demande.
+        update_post_meta( $post_id, 'opac_insc_saison', self::resolve_saison( $cible_id, $date_submitted ) );
         if ( $adhesion ) {
             update_post_meta( $post_id, 'opac_insc_adhesion', $adhesion );
         }
@@ -528,13 +532,7 @@ class OPAC_Inscriptions {
             wp_die( esc_html__( 'Lien d\'export invalide ou expiré.', 'opac-custom' ) );
         }
 
-        // Memes filtres que la liste admin (statut, atelier, recherche, mois) :
-        // on exporte tout ce qui matche, pas seulement la page affichee.
-        $posts = get_posts( self::query_args_from_request() );
-
-        $adh_labels = OPAC_Labels::adhesions();
-
-        $filename = 'inscriptions-opac-' . current_time( 'Y-m-d' ) . '.csv';
+        $filename = 'bilan-opac-' . current_time( 'Y-m-d' ) . '.csv';
 
         nocache_headers();
         header( 'Content-Type: text/csv; charset=UTF-8' );
@@ -544,49 +542,320 @@ class OPAC_Inscriptions {
         // BOM UTF-8 : Excel detecte l'encodage et affiche les accents correctement.
         fwrite( $out, "\xEF\xBB\xBF" );
 
-        fputcsv( $out, [
-            __( 'Nom', 'opac-custom' ),
-            __( 'Prénom', 'opac-custom' ),
-            __( 'Email', 'opac-custom' ),
-            __( 'Téléphone', 'opac-custom' ),
-            __( 'Code postal', 'opac-custom' ),
-            __( 'Commune', 'opac-custom' ),
-            __( 'Atelier', 'opac-custom' ),
-            __( 'Créneau', 'opac-custom' ),
-            __( 'Adhésion', 'opac-custom' ),
-            __( 'Statut', 'opac-custom' ),
-            __( 'Date', 'opac-custom' ),
-            __( 'Message', 'opac-custom' ),
-        ] );
-
-        foreach ( $posts as $p ) {
-            $id         = $p->ID;
-            $atelier_id = (int) get_post_meta( $id, 'opac_insc_atelier_id', true );
-            $atelier    = ( $atelier_id && get_post( $atelier_id ) ) ? get_the_title( $atelier_id ) : '';
-            $adhesion   = (string) get_post_meta( $id, 'opac_insc_adhesion', true );
-            $adh_label  = ( '' !== $adhesion && isset( $adh_labels[ $adhesion ] ) ) ? $adh_labels[ $adhesion ] : $adhesion;
-
-            $status_terms = wp_get_object_terms( $id, 'opac_inscription_status', [ 'fields' => 'names' ] );
-            $statut       = ( ! is_wp_error( $status_terms ) && ! empty( $status_terms ) ) ? implode( ', ', $status_terms ) : '';
-
-            fputcsv( $out, array_map( [ __CLASS__, 'csv_safe' ], [
-                (string) get_post_meta( $id, 'opac_insc_nom', true ),
-                (string) get_post_meta( $id, 'opac_insc_prenom', true ),
-                (string) get_post_meta( $id, 'opac_insc_email', true ),
-                (string) get_post_meta( $id, 'opac_insc_telephone', true ),
-                (string) get_post_meta( $id, 'opac_insc_code_postal', true ),
-                (string) get_post_meta( $id, 'opac_insc_commune', true ),
-                $atelier,
-                self::creneau_display( $id ),
-                $adh_label,
-                $statut,
-                (string) get_post_meta( $id, 'opac_insc_date_submitted', true ),
-                (string) get_post_meta( $id, 'opac_insc_message', true ),
-            ] ) );
-        }
+        self::write_bilan( $out, self::bilan_data() );
 
         fclose( $out );
         exit;
+    }
+
+    /** Ecrit une ligne du bilan. Separateur point-virgule : cf. write_bilan. */
+    private static function csv_line( $out, array $cells ) {
+        fputcsv( $out, array_map( [ __CLASS__, 'csv_safe' ], $cells ), ';' );
+    }
+
+    /**
+     * "2026-09-01" => "01/09/2026". Decoupage direct de la chaine (pas de
+     * strtotime) : une date de saison n'a pas a subir de conversion horaire.
+     */
+    private static function date_fr( $ymd ) {
+        if ( preg_match( '/^(\d{4})-(\d{2})-(\d{2})/', (string) $ymd, $m ) ) {
+            return $m[3] . '/' . $m[2] . '/' . $m[1];
+        }
+        return (string) $ymd;
+    }
+
+    /** "93 %" a partir d'un effectif et d'une capacite (vide si pas de capacite). */
+    private static function taux( $effectif, $capacite ) {
+        $capacite = (int) $capacite;
+        if ( $capacite <= 0 ) {
+            return '';
+        }
+        return round( ( (int) $effectif / $capacite ) * 100 ) . ' %';
+    }
+
+    /**
+     * Agrege les inscriptions par saison, pour le bilan annuel.
+     *
+     * Toutes les inscriptions sont chargees puis regroupees en PHP, et non
+     * filtrees par une meta_query sur opac_insc_saison : les demandes
+     * anterieures a ce champ n'en ont pas, une requete les perdrait en
+     * silence. saison_of() les rattache a la volee (cf. resolve_saison). Le
+     * volume le permet, la purge RGPD bornant la base a deux ans.
+     *
+     * @return array<string,array> Saisons, la plus recente d'abord.
+     */
+    private static function bilan_data() {
+        $posts = get_posts( [
+            'post_type'      => 'opac_inscription',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'no_found_rows'  => true,
+        ] );
+
+        $saisons = [];
+        foreach ( $posts as $p ) {
+            $id     = $p->ID;
+            $saison = self::saison_of( $id );
+            if ( '' === $saison ) {
+                continue;
+            }
+            if ( ! isset( $saisons[ $saison ] ) ) {
+                $saisons[ $saison ] = [
+                    'statuts'  => [],
+                    'adhesion' => [],
+                    'cibles'   => [],
+                    'communes' => [],
+                ];
+            }
+            $s = &$saisons[ $saison ];
+
+            $terms  = wp_get_object_terms( $id, 'opac_inscription_status', [ 'fields' => 'slugs' ] );
+            $statut = ( ! is_wp_error( $terms ) && ! empty( $terms ) ) ? $terms[0] : 'en-attente';
+
+            $s['statuts'][ $statut ] = ( $s['statuts'][ $statut ] ?? 0 ) + 1;
+
+            // Repartition par type d'adhesion : uniquement les inscriptions
+            // VALIDEES, comme la ligne « Inscrits ». Compter aussi les demandes
+            // en attente donnerait des sous-totaux superieurs a l'effectif
+            // annonce juste au-dessus, ce qui est la premiere chose qu'un
+            // instructeur de dossier verifie.
+            $adhesion = (string) get_post_meta( $id, 'opac_insc_adhesion', true );
+            if ( '' !== $adhesion && 'validee' === $statut ) {
+                $s['adhesion'][ $adhesion ] = ( $s['adhesion'][ $adhesion ] ?? 0 ) + 1;
+            }
+
+            $cible_id = (int) get_post_meta( $id, 'opac_insc_atelier_id', true );
+            if ( $cible_id ) {
+                if ( ! isset( $s['cibles'][ $cible_id ] ) ) {
+                    $s['cibles'][ $cible_id ] = [ 'validees' => 0, 'attente' => 0, 'creneaux' => [] ];
+                }
+                $c_id = (string) get_post_meta( $id, 'opac_insc_creneau_id', true );
+                if ( 'validee' === $statut ) {
+                    $s['cibles'][ $cible_id ]['validees']++;
+                    if ( '' !== $c_id ) {
+                        $s['cibles'][ $cible_id ]['creneaux'][ $c_id ] =
+                            ( $s['cibles'][ $cible_id ]['creneaux'][ $c_id ] ?? 0 ) + 1;
+                    }
+                } elseif ( 'liste-attente' === $statut ) {
+                    $s['cibles'][ $cible_id ]['attente']++;
+                }
+            }
+
+            if ( 'validee' === $statut ) {
+                $commune = trim( (string) get_post_meta( $id, 'opac_insc_commune', true ) );
+                $cp      = trim( (string) get_post_meta( $id, 'opac_insc_code_postal', true ) );
+                if ( '' !== $commune || '' !== $cp ) {
+                    $cle = $cp . '|' . $commune;
+                    $s['communes'][ $cle ] = ( $s['communes'][ $cle ] ?? 0 ) + 1;
+                }
+            }
+            unset( $s );
+        }
+
+        krsort( $saisons ); // la plus recente d'abord
+        return $saisons;
+    }
+
+    /**
+     * Compose le bilan CSV.
+     *
+     * Separateur POINT-VIRGULE et non virgule : Excel en configuration
+     * francaise decoupe sur le separateur de liste du systeme, qui est le
+     * point-virgule. Avec des virgules, le fichier s'ouvrait entierement dans
+     * la colonne A, ce qui le rendait inutilisable sans passer par l'assistant
+     * d'importation. C'est la raison pour laquelle l'export precedent ne
+     * servait a personne.
+     *
+     * Un CSV ne porte qu'une grille de colonnes, alors que le bilan compte
+     * plusieurs tableaux. Ils sont donc empiles, separes par une ligne vide et
+     * precedes de leur propre ligne d'en-tetes : Excel affiche des blocs
+     * lisibles les uns sous les autres.
+     *
+     * Les effectifs hors site (champ « Deja inscrits » des creneaux) ne sont
+     * comptes que pour la saison en cours : ce champ porte l'etat du moment,
+     * pas un historique, et l'appliquer a une saison passee lui preterait les
+     * effectifs d'aujourd'hui.
+     */
+    private static function write_bilan( $out, array $saisons ) {
+        $org      = class_exists( 'OPAC_Settings' ) ? (string) OPAC_Settings::get( 'opac_org_name' ) : 'OPAC';
+        $courante = class_exists( 'OPAC_Settings' ) ? OPAC_Settings::current_saison() : null;
+        $slug_cur = is_array( $courante ) ? $courante['slug'] : '';
+
+        self::csv_line( $out, [ __( 'Bilan des inscriptions', 'opac-custom' ), $org ] );
+        self::csv_line( $out, [ __( 'Document généré le', 'opac-custom' ), current_time( 'd/m/Y' ) ] );
+
+        if ( empty( $saisons ) ) {
+            self::csv_line( $out, [] );
+            self::csv_line( $out, [ __( 'Aucune inscription enregistrée.', 'opac-custom' ) ] );
+            return;
+        }
+
+        foreach ( $saisons as $slug => $s ) {
+            $saison     = OPAC_Settings::saison_by_start_year( (int) substr( $slug, 0, 4 ) );
+            $est_cur    = ( $slug === $slug_cur );
+            $validees   = (int) ( $s['statuts']['validee'] ?? 0 );
+            $attente    = (int) ( $s['statuts']['liste-attente'] ?? 0 );
+            $en_attente = (int) ( $s['statuts']['en-attente'] ?? 0 );
+
+            self::csv_line( $out, [] );
+            self::csv_line( $out, [
+                __( 'SAISON', 'opac-custom' ) . ' ' . $saison['label'],
+                __( 'du', 'opac-custom' ) . ' ' . self::date_fr( $saison['start'] ),
+                __( 'au', 'opac-custom' ) . ' ' . self::date_fr( $saison['end'] ),
+            ] );
+
+            // --- Synthese ---------------------------------------------------
+            self::csv_line( $out, [] );
+            self::csv_line( $out, [ __( 'Synthèse', 'opac-custom' ) ] );
+            self::csv_line( $out, [ __( 'Indicateur', 'opac-custom' ), __( 'Effectif', 'opac-custom' ) ] );
+
+            $hors_site_total = 0;
+            if ( $est_cur ) {
+                foreach ( array_keys( $s['cibles'] ) as $cible_id ) {
+                    foreach ( self::creneaux_of( $cible_id ) as $c ) {
+                        $hors_site_total += isset( $c['deja_inscrits'] ) ? max( 0, (int) $c['deja_inscrits'] ) : 0;
+                    }
+                }
+            }
+
+            self::csv_line( $out, [ __( 'Inscrits via le site', 'opac-custom' ), $validees ] );
+            if ( $est_cur ) {
+                self::csv_line( $out, [ __( 'Inscrits au secrétariat', 'opac-custom' ), $hors_site_total ] );
+                self::csv_line( $out, [ __( 'TOTAL INSCRITS', 'opac-custom' ), $validees + $hors_site_total ] );
+            }
+            self::csv_line( $out, [ __( 'Demandes en attente de traitement', 'opac-custom' ), $en_attente ] );
+            self::csv_line( $out, [ __( 'Liste d\'attente', 'opac-custom' ), $attente ] );
+
+            $adh_labels = OPAC_Labels::adhesions();
+            foreach ( $s['adhesion'] as $type => $n ) {
+                $label = $adh_labels[ $type ] ?? $type;
+                self::csv_line( $out, [ $label, $n ] );
+            }
+
+            // --- Par atelier ------------------------------------------------
+            self::csv_line( $out, [] );
+            self::csv_line( $out, [ __( 'Détail par atelier', 'opac-custom' ) ] );
+            self::csv_line( $out, [
+                __( 'Atelier', 'opac-custom' ),
+                __( 'Type', 'opac-custom' ),
+                __( 'Capacité', 'opac-custom' ),
+                __( 'Inscrits via le site', 'opac-custom' ),
+                __( 'Inscrits au secrétariat', 'opac-custom' ),
+                __( 'Total inscrits', 'opac-custom' ),
+                __( 'Taux de remplissage', 'opac-custom' ),
+                __( 'Liste d\'attente', 'opac-custom' ),
+            ] );
+
+            $tot = [ 'cap' => 0, 'site' => 0, 'hors' => 0, 'att' => 0 ];
+            foreach ( $s['cibles'] as $cible_id => $d ) {
+                $post = get_post( $cible_id );
+                if ( ! $post ) {
+                    continue;
+                }
+                $type = ( 'opac_stage' === $post->post_type )
+                    ? __( 'Éphémère', 'opac-custom' )
+                    : __( 'À l\'année', 'opac-custom' );
+
+                $cap  = 0;
+                $hors = 0;
+                foreach ( self::creneaux_of( $cible_id ) as $c ) {
+                    $cap += isset( $c['capacite'] ) ? max( 0, (int) $c['capacite'] ) : 0;
+                    if ( $est_cur ) {
+                        $hors += isset( $c['deja_inscrits'] ) ? max( 0, (int) $c['deja_inscrits'] ) : 0;
+                    }
+                }
+                $total = $d['validees'] + $hors;
+
+                self::csv_line( $out, [
+                    get_the_title( $post ),
+                    $type,
+                    $cap > 0 ? $cap : '',
+                    $d['validees'],
+                    $est_cur ? $hors : '',
+                    $total,
+                    self::taux( $total, $cap ),
+                    $d['attente'],
+                ] );
+
+                $tot['cap']  += $cap;
+                $tot['site'] += $d['validees'];
+                $tot['hors'] += $hors;
+                $tot['att']  += $d['attente'];
+            }
+            self::csv_line( $out, [
+                __( 'TOTAL', 'opac-custom' ),
+                '',
+                $tot['cap'] > 0 ? $tot['cap'] : '',
+                $tot['site'],
+                $est_cur ? $tot['hors'] : '',
+                $tot['site'] + $tot['hors'],
+                self::taux( $tot['site'] + $tot['hors'], $tot['cap'] ),
+                $tot['att'],
+            ] );
+
+            // --- Par creneau ------------------------------------------------
+            self::csv_line( $out, [] );
+            self::csv_line( $out, [ __( 'Détail par créneau', 'opac-custom' ) ] );
+            self::csv_line( $out, [
+                __( 'Atelier', 'opac-custom' ),
+                __( 'Créneau', 'opac-custom' ),
+                __( 'Capacité', 'opac-custom' ),
+                __( 'Inscrits via le site', 'opac-custom' ),
+                __( 'Inscrits au secrétariat', 'opac-custom' ),
+                __( 'Total inscrits', 'opac-custom' ),
+                __( 'Taux de remplissage', 'opac-custom' ),
+            ] );
+            foreach ( $s['cibles'] as $cible_id => $d ) {
+                $post = get_post( $cible_id );
+                if ( ! $post ) {
+                    continue;
+                }
+                $est_stage = ( 'opac_stage' === $post->post_type );
+                foreach ( self::creneaux_of( $cible_id ) as $c ) {
+                    $c_id  = isset( $c['id'] ) ? (string) $c['id'] : '';
+                    $label = $est_stage ? OPAC_Calendar::seance_label( $c ) : OPAC_Calendar::creneau_label( $c );
+                    $cap   = isset( $c['capacite'] ) ? max( 0, (int) $c['capacite'] ) : 0;
+                    $hors  = ( $est_cur && isset( $c['deja_inscrits'] ) ) ? max( 0, (int) $c['deja_inscrits'] ) : 0;
+                    $site  = (int) ( $d['creneaux'][ $c_id ] ?? 0 );
+                    self::csv_line( $out, [
+                        get_the_title( $post ),
+                        $label,
+                        $cap > 0 ? $cap : '',
+                        $site,
+                        $est_cur ? $hors : '',
+                        $site + $hors,
+                        self::taux( $site + $hors, $cap ),
+                    ] );
+                }
+            }
+
+            // --- Par commune ------------------------------------------------
+            self::csv_line( $out, [] );
+            self::csv_line( $out, [ __( 'Répartition par commune (inscriptions reçues via le site)', 'opac-custom' ) ] );
+            self::csv_line( $out, [
+                __( 'Code postal', 'opac-custom' ),
+                __( 'Commune', 'opac-custom' ),
+                __( 'Inscrits', 'opac-custom' ),
+            ] );
+            arsort( $s['communes'] );
+            foreach ( $s['communes'] as $cle => $n ) {
+                list( $cp, $commune ) = array_pad( explode( '|', $cle, 2 ), 2, '' );
+                self::csv_line( $out, [ $cp, $commune, $n ] );
+            }
+        }
+    }
+
+    /** Creneaux (atelier) ou seances (ephemere) structures d'une cible. */
+    private static function creneaux_of( $cible_id ) {
+        $type = get_post_type( (int) $cible_id );
+        if ( 'opac_atelier' === $type ) {
+            $struct = get_post_meta( (int) $cible_id, 'opac_creneaux', true );
+        } elseif ( 'opac_stage' === $type ) {
+            $struct = get_post_meta( (int) $cible_id, 'opac_stage_seances', true );
+        } else {
+            return [];
+        }
+        return is_array( $struct ) ? array_filter( $struct, 'is_array' ) : [];
     }
 
     /**
@@ -1333,6 +1602,66 @@ class OPAC_Inscriptions {
             }
         }
         return null;
+    }
+
+    /**
+     * Saison POUR LAQUELLE une inscription est prise, calculee a sa creation.
+     *
+     * Deux chemins, et le premier est exact :
+     *
+     * - Ephemere : sa date de debut fait foi. Un stage d'avril 2027 appartient
+     *   a la saison 2026-2027, quelle que soit la date de la demande. Aucune
+     *   heuristique, aucune correction a prevoir.
+     *
+     * - Atelier a l'annee : la fiche n'appartient a AUCUNE saison, c'est la
+     *   meme qui ressert tous les ans (lui en donner une imposerait de dupliquer
+     *   les vingt ateliers chaque annee, avec autant d'URLs neuves et le
+     *   referencement reparti de zero). L'information n'existe donc nulle part
+     *   ailleurs que dans la demande, et on la deduit de sa date via le pivot
+     *   du 1er mai (cf. OPAC_Settings::saison_for_inscription_date).
+     *
+     * Le resultat est STOCKE sur l'inscription plutot que recalcule a chaque
+     * lecture, pour deux raisons : il ne bouge pas si l'equipe modifie les
+     * reglages de saison l'annee suivante, et le cas que le pivot classe mal
+     * (rejoindre un atelier en juin pour finir la saison en cours) se corrige
+     * dans la fiche au lieu d'etre faux en silence.
+     *
+     * @return string Slug de saison ("2026-2027"), ou '' si indeterminable.
+     */
+    public static function resolve_saison( $cible_id, $date_ymd ) {
+        $cible_id = (int) $cible_id;
+
+        if ( $cible_id && 'opac_stage' === get_post_type( $cible_id ) ) {
+            $debut = (string) get_post_meta( $cible_id, 'opac_date_debut', true );
+            $s     = OPAC_Settings::saison_for_date( $debut );
+            if ( is_array( $s ) ) {
+                return $s['slug'];
+            }
+            // Ephemere sans date exploitable : on retombe sur la date de demande
+            // plutot que de laisser la saison vide.
+        }
+
+        $s = OPAC_Settings::saison_for_inscription_date( $date_ymd );
+        return is_array( $s ) ? $s['slug'] : '';
+    }
+
+    /**
+     * Saison d'une inscription pour l'affichage et le bilan.
+     *
+     * Lit la valeur stockee ; a defaut (demandes anterieures a l'ajout du
+     * champ) la recalcule a la volee, sans l'ecrire. Le bilan reste donc
+     * exploitable sur l'historique sans migration de base.
+     */
+    public static function saison_of( $insc_id ) {
+        $insc_id = (int) $insc_id;
+        $stored  = (string) get_post_meta( $insc_id, 'opac_insc_saison', true );
+        if ( '' !== $stored ) {
+            return $stored;
+        }
+        return self::resolve_saison(
+            (int) get_post_meta( $insc_id, 'opac_insc_atelier_id', true ),
+            (string) get_post_meta( $insc_id, 'opac_insc_date_submitted', true )
+        );
     }
 
     /**

@@ -763,6 +763,27 @@ class OPAC_Admin {
         }
         self::insc_detail_row( __( 'Date de la demande', 'opac-custom' ), $date_html );
 
+        // Saison de rattachement : pre-remplie, mais MODIFIABLE. Exacte pour un
+        // ephemere (sa date de debut fait foi) ; deduite par le pivot du 1er mai
+        // pour un atelier a l'annee, dont la fiche n'appartient a aucune saison.
+        // Le select existe pour le cas que le pivot classe mal : rejoindre un
+        // atelier en juin pour finir la saison en cours, et non pour la suivante.
+        $saison_courante = OPAC_Inscriptions::saison_of( $id );
+        $saisons         = OPAC_Settings::saisons_choices();
+        echo '<tr><th scope="row"><label for="opac_insc_saison">' . esc_html__( 'Saison', 'opac-custom' ) . '</label></th><td>';
+        echo '<select id="opac_insc_saison" name="opac_insc_saison">';
+        foreach ( $saisons as $slug => $label ) {
+            printf(
+                '<option value="%s" %s>%s</option>',
+                esc_attr( $slug ),
+                selected( $saison_courante, $slug, false ),
+                esc_html( $label )
+            );
+        }
+        echo '</select>';
+        echo '<p class="description">' . esc_html__( 'Saison pour laquelle l\'inscription est prise. Pré-remplie automatiquement : à corriger seulement si la personne rejoint un atelier en cours d\'année.', 'opac-custom' ) . '</p>';
+        echo '</td></tr>';
+
         // Message editable.
         printf(
             '<tr><th scope="row"><label for="opac_insc_message">%s</label></th><td><textarea id="opac_insc_message" name="opac_insc_message" rows="4" class="large-text">%s</textarea></td></tr>',
@@ -1032,6 +1053,20 @@ class OPAC_Admin {
         if ( '' === (string) get_post_meta( $post_id, 'opac_insc_source', true ) ) {
             update_post_meta( $post_id, 'opac_insc_source', 'saisie-admin' );
         }
+
+        // Saison de rattachement. Le select de la fiche fait foi quand il est
+        // renseigne : c'est lui qui permet de corriger le cas que le pivot
+        // classe mal (rejoindre un atelier a l'annee en juin pour finir la
+        // saison en cours). Vide ou inconnu, on retombe sur le calcul.
+        $saisons_ok = array_keys( OPAC_Settings::saisons_choices() );
+        $saison     = isset( $_POST['opac_insc_saison'] ) ? sanitize_text_field( wp_unslash( $_POST['opac_insc_saison'] ) ) : '';
+        if ( ! in_array( $saison, $saisons_ok, true ) ) {
+            $saison = OPAC_Inscriptions::resolve_saison(
+                $atelier_id,
+                (string) get_post_meta( $post_id, 'opac_insc_date_submitted', true )
+            );
+        }
+        update_post_meta( $post_id, 'opac_insc_saison', $saison );
     }
 
     /**
@@ -1464,7 +1499,7 @@ class OPAC_Admin {
         printf(
             '<a class="button" href="%s">%s</a> ',
             esc_url( add_query_arg( $export_args, admin_url( 'admin-post.php' ) ) ),
-            esc_html__( 'Exporter en CSV', 'opac-custom' )
+            esc_html__( 'Exporter le bilan (CSV)', 'opac-custom' )
         );
 
         // Bouton « Copier pour Excel » : cote client (admin-insc-copy-excel.js), copie

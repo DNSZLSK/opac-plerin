@@ -35,6 +35,10 @@ function sanitize_textarea_field($s) { return $s; }
 function home_url($p = '') { return 'http://example.test' . $p; }
 function get_bloginfo($k = '') { return ''; }
 function wp_timezone_string() { return 'Europe/Paris'; }
+// Date du jour pilotable : current_saison() s'en sert, et donc la fenetre de
+// saisons proposees dans les menus deroulants (section E).
+$GLOBALS['now'] = '2026-09-19';
+function current_time($format = 'Y-m-d') { return $GLOBALS['now']; }
 
 require __DIR__ . '/../includes/class-opac-settings.php';
 
@@ -83,6 +87,51 @@ set_boundary(1, 13);  check("mois 13 -> 9",             OPAC_Settings::saison_st
 set_boundary(1, 0);   check("mois 0 -> 9",              OPAC_Settings::saison_start()['month'], 9);
 set_boundary(31, 2);  check("31 fevrier -> 29 (bissextile toleree)", OPAC_Settings::saison_start()['day'], 29);
 set_boundary(31, 4);  check("31 avril -> 30",           OPAC_Settings::saison_start()['day'],   30);
+
+// ---------------------------------------------------------------------------
+echo "\n=== D. Rattachement d'une INSCRIPTION (pivot du 1er mai) ===\n";
+
+// saison_for_date repond « dans quelle saison tombe cette date », ce qui est la
+// bonne question pour un evenement et la mauvaise pour une inscription : les
+// reinscriptions ouvrent en mai POUR la saison qui commence en septembre.
+set_boundary(1, 9); // retour a la bascule standard apres la section C
+
+function insc($ymd) { return OPAC_Settings::saison_for_inscription_date($ymd)['slug']; }
+
+// Le coeur du correctif : toute la vague de mai a aout compte pour la saison
+// qui s'ouvre, alors que saison_for_date la classait dans la precedente.
+check("15 juin -> saison qui s'ouvre",    insc('2026-06-15'), '2026-2027');
+check("(saison_for_date aurait dit)",     OPAC_Settings::saison_for_date('2026-06-15')['slug'], '2025-2026');
+check("2 juillet",                        insc('2026-07-02'), '2026-2027');
+check("20 aout, veille de rentree",       insc('2026-08-20'), '2026-2027');
+
+// Bornes du pivot.
+check("30 avril -> saison en cours",      insc('2026-04-30'), '2025-2026');
+check("1er mai -> bascule",               insc('2026-05-01'), '2026-2027');
+check("18 mai (reinscription 2026)",      insc('2026-05-18'), '2026-2027');
+
+// Apres le 1er septembre, les deux regles doivent coincider : une inscription
+// de novembre concerne la saison en cours, pas la suivante.
+check("5 septembre",                      insc('2026-09-05'), '2026-2027');
+check("20 decembre",                      insc('2026-12-20'), '2026-2027');
+check("10 janvier",                       insc('2027-01-10'), '2026-2027');
+check("accord avec saison_for_date en novembre",
+    insc('2026-11-03'), OPAC_Settings::saison_for_date('2026-11-03')['slug']);
+
+check("date illisible -> null",           OPAC_Settings::saison_for_inscription_date('pas-une-date'), null);
+check("chaine vide -> null",              OPAC_Settings::saison_for_inscription_date(''), null);
+
+// ---------------------------------------------------------------------------
+echo "\n=== E. Saisons proposables dans le select ===\n";
+
+$GLOBALS['now'] = '2026-09-19';
+$choices = OPAC_Settings::saisons_choices();
+check("4 saisons par defaut (2 en arriere, 1 en avant)", count($choices), 4);
+check("la plus recente d'abord",          array_key_first($choices), '2027-2028');
+check("la saison en cours presente",      isset($choices['2026-2027']), true);
+check("la plus ancienne, bornee par la purge RGPD", array_key_last($choices), '2024-2025');
+check("libelle lisible",                  $choices['2026-2027'], '2026 / 2027');
+check("fenetre reglable",                 count(OPAC_Settings::saisons_choices(1, 0)), 2);
 
 echo "\n";
 printf("RESULTAT : %d cas, %d OK, %d FAIL\n", $n, $pass, $fail);
