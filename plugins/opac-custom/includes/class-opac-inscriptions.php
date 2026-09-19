@@ -356,8 +356,12 @@ class OPAC_Inscriptions {
         update_post_meta( $post_id, 'opac_insc_atelier_id',     $cible_id );
         update_post_meta( $post_id, 'opac_insc_creneau',        $creneau );
         update_post_meta( $post_id, 'opac_insc_message',        $message );
-        update_post_meta( $post_id, 'opac_insc_date_submitted', current_time( 'mysql' ) );
+        $date_submitted = current_time( 'mysql' );
+        update_post_meta( $post_id, 'opac_insc_date_submitted', $date_submitted );
         update_post_meta( $post_id, 'opac_insc_source',         'form-frontend' );
+        // Saison figee a la creation (cf. resolve_saison) : c'est elle qui
+        // regroupe les inscriptions dans le bilan annuel, pas la date de demande.
+        update_post_meta( $post_id, 'opac_insc_saison', self::resolve_saison( $cible_id, $date_submitted ) );
         if ( $adhesion ) {
             update_post_meta( $post_id, 'opac_insc_adhesion', $adhesion );
         }
@@ -1333,6 +1337,66 @@ class OPAC_Inscriptions {
             }
         }
         return null;
+    }
+
+    /**
+     * Saison POUR LAQUELLE une inscription est prise, calculee a sa creation.
+     *
+     * Deux chemins, et le premier est exact :
+     *
+     * - Ephemere : sa date de debut fait foi. Un stage d'avril 2027 appartient
+     *   a la saison 2026-2027, quelle que soit la date de la demande. Aucune
+     *   heuristique, aucune correction a prevoir.
+     *
+     * - Atelier a l'annee : la fiche n'appartient a AUCUNE saison, c'est la
+     *   meme qui ressert tous les ans (lui en donner une imposerait de dupliquer
+     *   les vingt ateliers chaque annee, avec autant d'URLs neuves et le
+     *   referencement reparti de zero). L'information n'existe donc nulle part
+     *   ailleurs que dans la demande, et on la deduit de sa date via le pivot
+     *   du 1er mai (cf. OPAC_Settings::saison_for_inscription_date).
+     *
+     * Le resultat est STOCKE sur l'inscription plutot que recalcule a chaque
+     * lecture, pour deux raisons : il ne bouge pas si l'equipe modifie les
+     * reglages de saison l'annee suivante, et le cas que le pivot classe mal
+     * (rejoindre un atelier en juin pour finir la saison en cours) se corrige
+     * dans la fiche au lieu d'etre faux en silence.
+     *
+     * @return string Slug de saison ("2026-2027"), ou '' si indeterminable.
+     */
+    public static function resolve_saison( $cible_id, $date_ymd ) {
+        $cible_id = (int) $cible_id;
+
+        if ( $cible_id && 'opac_stage' === get_post_type( $cible_id ) ) {
+            $debut = (string) get_post_meta( $cible_id, 'opac_date_debut', true );
+            $s     = OPAC_Settings::saison_for_date( $debut );
+            if ( is_array( $s ) ) {
+                return $s['slug'];
+            }
+            // Ephemere sans date exploitable : on retombe sur la date de demande
+            // plutot que de laisser la saison vide.
+        }
+
+        $s = OPAC_Settings::saison_for_inscription_date( $date_ymd );
+        return is_array( $s ) ? $s['slug'] : '';
+    }
+
+    /**
+     * Saison d'une inscription pour l'affichage et le bilan.
+     *
+     * Lit la valeur stockee ; a defaut (demandes anterieures a l'ajout du
+     * champ) la recalcule a la volee, sans l'ecrire. Le bilan reste donc
+     * exploitable sur l'historique sans migration de base.
+     */
+    public static function saison_of( $insc_id ) {
+        $insc_id = (int) $insc_id;
+        $stored  = (string) get_post_meta( $insc_id, 'opac_insc_saison', true );
+        if ( '' !== $stored ) {
+            return $stored;
+        }
+        return self::resolve_saison(
+            (int) get_post_meta( $insc_id, 'opac_insc_atelier_id', true ),
+            (string) get_post_meta( $insc_id, 'opac_insc_date_submitted', true )
+        );
     }
 
     /**

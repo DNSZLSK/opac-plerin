@@ -255,6 +255,10 @@ class OPAC_Meta {
         register_post_meta( 'opac_inscription', 'opac_insc_message', self::args_string( false ) );
         register_post_meta( 'opac_inscription', 'opac_insc_date_submitted', self::args_string( false ) );
         register_post_meta( 'opac_inscription', 'opac_insc_source', self::args_string( false ) );
+        // Saison POUR LAQUELLE l'inscription est prise, figee a la creation :
+        // c'est la cle de regroupement du bilan annuel, et non la date de
+        // demande (cf. OPAC_Inscriptions::resolve_saison).
+        register_post_meta( 'opac_inscription', 'opac_insc_saison', self::args_string( false ) );
         register_post_meta( 'opac_inscription', 'opac_insc_adhesion', self::args_string( false ) );
         register_post_meta( 'opac_inscription', 'opac_insc_code_postal', self::args_string( false ) );
         register_post_meta( 'opac_inscription', 'opac_insc_commune', self::args_string( false ) );

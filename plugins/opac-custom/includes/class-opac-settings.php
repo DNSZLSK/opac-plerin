@@ -802,6 +802,92 @@ class OPAC_Settings {
     }
 
     /**
+     * Pivot de rattachement des inscriptions : 1er mai.
+     *
+     * saison_for_date() repond « dans quelle saison tombe cette date », ce qui
+     * est la bonne question pour un evenement, et la mauvaise pour une
+     * inscription. Les reinscriptions prioritaires ouvrent en mai et les
+     * inscriptions se prennent jusqu'en aout POUR la saison qui commence en
+     * septembre : une demande du 15 juin 2026 concerne 2026-2027, alors que
+     * saison_for_date la classerait en 2025-2026. Sans ce pivot, l'essentiel
+     * des inscriptions de l'annee atterrit dans le bilan de la saison
+     * precedente, qui se retrouve gonfle pendant que la saison en cours parait
+     * vide.
+     *
+     * Pourquoi une date fixe plutot que opac_insc_date_reinscription : ce
+     * reglage ne contient que la date de l'annee en cours et n'est pas
+     * historise, il ne peut donc pas servir a rattacher les inscriptions
+     * passees. Le 1er mai est stable, anterieur aux reinscriptions (18 mai en
+     * 2026), et explicable a l'equipe en une phrase.
+     *
+     * La regle reste une heuristique : quelqu'un qui rejoint un atelier a
+     * l'annee en juin pour finir la saison en cours sera mal classe. C'est
+     * pourquoi la saison est STOCKEE sur l'inscription et modifiable en fiche
+     * (cf. OPAC_Inscriptions::resolve_saison), au lieu d'etre recalculee a
+     * chaque lecture : le cas particulier se corrige, il n'est pas fige dans un
+     * calcul.
+     */
+    const SAISON_PIVOT_MONTH = 5;
+    const SAISON_PIVOT_DAY   = 1;
+
+    /**
+     * Saisons proposables dans un menu deroulant : slug => libelle.
+     *
+     * Fenetre glissante autour de la saison en cours, de $back saisons en
+     * arriere a $forward en avant. L'avant sert aux inscriptions prises au
+     * printemps pour la rentree suivante, l'arriere a la correction d'une
+     * demande mal classee.
+     *
+     * Pourquoi seulement 2 en arriere : la purge RGPD (cf. OPAC_RGPD) supprime
+     * les inscriptions passe opac_insc_purge_months, 24 mois aujourd'hui. Au
+     * dela de deux saisons, il n'existe plus aucune inscription a rattacher, et
+     * proposer ces annees laisserait croire le contraire.
+     *
+     * A ne pas confondre avec la profondeur du bilan annuel : celui-ci ne
+     * recalcule pas l'historique, il archive les chiffres agreges de chaque
+     * saison a sa cloture, justement parce que les donnees personnelles qui les
+     * ont produits ont vocation a disparaitre.
+     *
+     * @return array<string,string>
+     */
+    public static function saisons_choices( $back = 2, $forward = 1 ) {
+        $current = self::current_saison();
+        if ( ! is_array( $current ) ) {
+            return [];
+        }
+        $choices = [];
+        for ( $i = (int) $forward; $i >= -(int) $back; $i-- ) {
+            $s = self::saison_by_start_year( $current['start_year'] + $i );
+            $choices[ $s['slug'] ] = $s['label'];
+        }
+        return $choices;
+    }
+
+    /**
+     * Saison POUR LAQUELLE une inscription est prise, d'apres sa date de
+     * demande. A partir du pivot, la demande compte pour la saison qui commence
+     * la meme annee civile ; avant, pour la saison en cours.
+     *
+     * @return array{slug:string,label:string,start:string,end:string,start_year:int}|null
+     */
+    public static function saison_for_inscription_date( $ymd ) {
+        if ( ! preg_match( '/^(\d{4})-(\d{2})-(\d{2})/', (string) $ymd, $m ) ) {
+            return null;
+        }
+        $year  = (int) $m[1];
+        $month = (int) $m[2];
+        $day   = (int) $m[3];
+
+        $apres_pivot = ( $month > self::SAISON_PIVOT_MONTH )
+            || ( $month === self::SAISON_PIVOT_MONTH && $day >= self::SAISON_PIVOT_DAY );
+
+        if ( $apres_pivot ) {
+            return self::saison_by_start_year( $year );
+        }
+        return self::saison_for_date( $ymd );
+    }
+
+    /**
      * Construit la structure d'une saison a partir de son annee de debut.
      *
      * @return array{slug:string,label:string,start:string,end:string,start_year:int}
